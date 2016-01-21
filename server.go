@@ -13,6 +13,13 @@ import (
 	"sync/atomic"
 )
 
+// CoreProtocolVersion is the ProtocolVersion of the plugin system itself.
+// We will increment this whenever we change any protocol behavior. This
+// will invalidate any prior plugins but will at least allow us to iterate
+// on the core in a safe way. We will do our best to do this very
+// infrequently.
+const CoreProtocolVersion = 1
+
 // HandshakeConfig is the configuration used by client and servers to
 // handshake before starting a plugin connection. This is embedded by
 // both ServeConfig and ClientConfig.
@@ -92,7 +99,8 @@ func Serve(opts *ServeConfig) {
 	// Output the address and service name to stdout so that core can bring it up.
 	log.Printf("Plugin address: %s %s\n",
 		listener.Addr().Network(), listener.Addr().String())
-	fmt.Printf("%d|%s|%s\n",
+	fmt.Printf("%d|%d|%s|%s\n",
+		CoreProtocolVersion,
 		opts.ProtocolVersion,
 		listener.Addr().Network(),
 		listener.Addr().String())

@@ -347,15 +347,36 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line := strings.TrimSpace(string(lineBytes))
-		parts := strings.SplitN(line, "|", 3)
-		if len(parts) < 3 {
-			err = fmt.Errorf("Unrecognized remote plugin message: %s", line)
+		parts := strings.SplitN(line, "|", 4)
+		if len(parts) < 4 {
+			err = fmt.Errorf(
+				"Unrecognized remote plugin message: %s\n\n"+
+					"This usually means that the plugin is either invalid or simply\n"+
+					"needs to be recompiled to support the latest protocol.", line)
 			return
+		}
+
+		// Check the core protocol. Wrapped in a {} for scoping.
+		{
+			var coreProtocol int64
+			coreProtocol, err = strconv.ParseInt(parts[0], 10, 0)
+			if err != nil {
+				err = fmt.Errorf("Error parsing core protocol version: %s", err)
+				return
+			}
+
+			if int(coreProtocol) != CoreProtocolVersion {
+				err = fmt.Errorf("Incompatible core API version with plugin. "+
+					"Plugin version: %s, Ours: %d\n\n"+
+					"To fix this, the plugin usually only needs to be recompiled.\n"+
+					"Please report this to the plugin author.", parts[0], CoreProtocolVersion)
+				return
+			}
 		}
 
 		// Parse the protocol version
 		var protocol int64
-		protocol, err = strconv.ParseInt(parts[0], 10, 0)
+		protocol, err = strconv.ParseInt(parts[1], 10, 0)
 		if err != nil {
 			err = fmt.Errorf("Error parsing protocol version: %s", err)
 			return
@@ -364,17 +385,17 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Test the API version
 		if uint(protocol) != c.config.ProtocolVersion {
 			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Ours: %d", parts[0], c.config.ProtocolVersion)
+				"Plugin version: %s, Ours: %d", parts[1], c.config.ProtocolVersion)
 			return
 		}
 
-		switch parts[1] {
+		switch parts[2] {
 		case "tcp":
-			addr, err = net.ResolveTCPAddr("tcp", parts[2])
+			addr, err = net.ResolveTCPAddr("tcp", parts[3])
 		case "unix":
-			addr, err = net.ResolveUnixAddr("unix", parts[2])
+			addr, err = net.ResolveUnixAddr("unix", parts[3])
 		default:
-			err = fmt.Errorf("Unknown address type: %s", parts[1])
+			err = fmt.Errorf("Unknown address type: %s", parts[3])
 		}
 	}
 

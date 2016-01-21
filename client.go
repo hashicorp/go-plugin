@@ -239,8 +239,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	env := []string{
 		fmt.Sprintf("%s=%s", MagicCookieKey, MagicCookieValue),
-		fmt.Sprintf("OTTO_PLUGIN_MIN_PORT=%d", c.config.MinPort),
-		fmt.Sprintf("OTTO_PLUGIN_MAX_PORT=%d", c.config.MaxPort),
+		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
+		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
 	}
 
 	stdout_r, stdout_w := io.Pipe()

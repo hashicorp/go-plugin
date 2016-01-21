@@ -115,12 +115,12 @@ func serverListener() (net.Listener, error) {
 }
 
 func serverListener_tcp() (net.Listener, error) {
-	minPort, err := strconv.ParseInt(os.Getenv("OTTO_PLUGIN_MIN_PORT"), 10, 32)
+	minPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MIN_PORT"), 10, 32)
 	if err != nil {
 		return nil, err
 	}
 
-	maxPort, err := strconv.ParseInt(os.Getenv("OTTO_PLUGIN_MAX_PORT"), 10, 32)
+	maxPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MAX_PORT"), 10, 32)
 	if err != nil {
 		return nil, err
 	}

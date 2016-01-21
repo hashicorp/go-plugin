@@ -19,21 +19,6 @@ type RPCClient struct {
 	stdout, stderr net.Conn
 }
 
-// Dial opens a connection to an RPC server and returns a client.
-func Dial(network, address string, plugins map[string]Plugin) (*RPCClient, error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return nil, err
-	}
-
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
-	}
-
-	return NewRPCClient(conn, plugins)
-}
-
 // NewRPCClient creates a client from an already-open connection-like value.
 // Dial is typically used instead.
 func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClient, error) {

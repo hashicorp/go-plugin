@@ -104,10 +104,6 @@ func TestHelperProcess(*testing.T) {
 	case "bad-version":
 		fmt.Printf("%s1|tcp|:1234\n", APIVersion)
 		<-make(chan int)
-	case "app":
-		Serve(&ServeOpts{
-			AppFunc: testAppFixed(new(app.Mock)),
-		})
 	case "invalid-rpc-address":
 		fmt.Println("lolinvalid")
 	case "mock":

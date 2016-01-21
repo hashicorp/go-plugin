@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 	"unicode"
-
-	pluginrpc "github.com/hashicorp/otto/rpc"
 )
 
 // If this is true, then the "unexpected EOF" panic will not be
@@ -37,13 +35,18 @@ type Client struct {
 	doneLogging chan struct{}
 	l           sync.Mutex
 	address     net.Addr
-	client      *pluginrpc.Client
+	client      *RPCClient
 }
 
 // ClientConfig is the configuration used to initialize a new
 // plugin client. After being used to initialize a plugin client,
 // that configuration must not be modified again.
 type ClientConfig struct {
+	// Plugins are the plugins that support being dispensed. This should
+	// match the server side. If it doesn't, the ProtocolVersion should
+	// be incremented.
+	Plugins map[string]Plugin
+
 	// The unstarted subprocess for starting the plugin.
 	Cmd *exec.Cmd
 
@@ -143,7 +146,7 @@ func NewClient(config *ClientConfig) (c *Client) {
 // Client returns an RPC client for the plugin.
 //
 // Subsequent calls to this will return the same RPC client.
-func (c *Client) Client() (*pluginrpc.Client, error) {
+func (c *Client) Client() (*RPCClient, error) {
 	addr, err := c.Start()
 	if err != nil {
 		return nil, err
@@ -156,8 +159,20 @@ func (c *Client) Client() (*pluginrpc.Client, error) {
 		return c.client, nil
 	}
 
-	c.client, err = pluginrpc.Dial(addr.Network(), addr.String())
+	// Connect to the client
+	conn, err := net.Dial(addr.Network(), addr.String())
 	if err != nil {
+		return nil, err
+	}
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		// Make sure to set keep alive so that the connection doesn't die
+		tcpConn.SetKeepAlive(true)
+	}
+
+	// Create the actual RPC client
+	c.client, err = NewRPCClient(conn, c.config.Plugins)
+	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 

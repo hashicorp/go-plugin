@@ -11,8 +11,6 @@ import (
 	"runtime"
 	"strconv"
 	"sync/atomic"
-
-	pluginrpc "github.com/hashicorp/otto/rpc"
 )
 
 // The APIVersion is outputted along with the RPC address. The plugin
@@ -28,7 +26,8 @@ const MagicCookieValue = "11aab7ff21cb9ff7b0e9975d53f17a8dab571eac9b5ff019173004
 
 // ServeOpts configures what sorts of plugins are served.
 type ServeOpts struct {
-	AppFunc pluginrpc.AppFunc
+	// Plugins are the plugins that are served.
+	Plugins map[string]Plugin
 }
 
 // Serve serves the plugins given by ServeOpts.
@@ -70,8 +69,8 @@ func Serve(opts *ServeOpts) {
 	defer listener.Close()
 
 	// Create the RPC server to dispense
-	server := &pluginrpc.Server{
-		AppFunc: opts.AppFunc,
+	server := &RPCServer{
+		Plugins: opts.Plugins,
 		Stdout:  stdout_r,
 		Stderr:  stderr_r,
 	}

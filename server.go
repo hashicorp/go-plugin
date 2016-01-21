@@ -13,11 +13,6 @@ import (
 	"sync/atomic"
 )
 
-// The APIVersion is outputted along with the RPC address. The plugin
-// client validates this API version and will show an error if it doesn't
-// know how to speak it.
-const APIVersion = "1"
-
 // The "magic cookie" is used to verify that the user intended to
 // actually run this binary. If this cookie isn't present as an
 // environmental variable, then we bail out early with an error.
@@ -28,6 +23,11 @@ const MagicCookieValue = "11aab7ff21cb9ff7b0e9975d53f17a8dab571eac9b5ff019173004
 type ServeOpts struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
+
+	// ProtocolVersion is the version that clients must match on to
+	// agree they can communicate. This should match the ProtocolVersion
+	// set on ClientConfig when using a plugin.
+	ProtocolVersion uint
 }
 
 // Serve serves the plugins given by ServeOpts.
@@ -78,8 +78,8 @@ func Serve(opts *ServeOpts) {
 	// Output the address and service name to stdout so that core can bring it up.
 	log.Printf("Plugin address: %s %s\n",
 		listener.Addr().Network(), listener.Addr().String())
-	fmt.Printf("%s|%s|%s\n",
-		APIVersion,
+	fmt.Printf("%d|%s|%s\n",
+		opts.ProtocolVersion,
 		listener.Addr().Network(),
 		listener.Addr().String())
 	os.Stdout.Sync()

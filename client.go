@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,11 @@ type ClientConfig struct {
 	// match the server side. If it doesn't, the ProtocolVersion should
 	// be incremented.
 	Plugins map[string]Plugin
+
+	// ProtocolVersion is the version that the client expects the
+	// server to be speaking at a protocol layer. This should be set
+	// and match the plugin side.
+	ProtocolVersion uint
 
 	// The unstarted subprocess for starting the plugin.
 	Cmd *exec.Cmd
@@ -341,10 +347,18 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			return
 		}
 
+		// Parse the protocol version
+		var protocol int64
+		protocol, err = strconv.ParseInt(parts[0], 10, 0)
+		if err != nil {
+			err = fmt.Errorf("Error parsing protocol version: %s", err)
+			return
+		}
+
 		// Test the API version
-		if parts[0] != APIVersion {
+		if uint(protocol) != c.config.ProtocolVersion {
 			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Ours: %s", parts[0], APIVersion)
+				"Plugin version: %s, Ours: %d", parts[0], c.config.ProtocolVersion)
 			return
 		}
 

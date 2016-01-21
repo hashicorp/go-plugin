@@ -13,6 +13,9 @@ import (
 	pluginrpc "github.com/hashicorp/otto/rpc"
 )
 
+// testAPIVersion is the ProtocolVersion we use for testing.
+const testAPIVersion uint = 1
+
 // testInterface is the test interface we use for plugins.
 type testInterface interface {
 	Double(int) int
@@ -102,22 +105,22 @@ func TestHelperProcess(*testing.T) {
 	cmd, args := args[0], args[1:]
 	switch cmd {
 	case "bad-version":
-		fmt.Printf("%s1|tcp|:1234\n", APIVersion)
+		fmt.Printf("%d1|tcp|:1234\n", testAPIVersion)
 		<-make(chan int)
 	case "invalid-rpc-address":
 		fmt.Println("lolinvalid")
 	case "mock":
-		fmt.Printf("%s|tcp|:1234\n", APIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
 		<-make(chan int)
 	case "start-timeout":
 		time.Sleep(1 * time.Minute)
 		os.Exit(1)
 	case "stderr":
-		fmt.Printf("%s|tcp|:1234\n", APIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
 		log.Println("HELLO")
 		log.Println("WORLD")
 	case "stdin":
-		fmt.Printf("%s|tcp|:1234\n", APIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
 		data := make([]byte, 5)
 		if _, err := os.Stdin.Read(data); err != nil {
 			log.Printf("stdin read error: %s", err)

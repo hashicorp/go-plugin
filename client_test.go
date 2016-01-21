@@ -11,7 +11,7 @@ import (
 
 func TestClient(t *testing.T) {
 	process := helperProcess("mock")
-	c := NewClient(&ClientConfig{Cmd: process})
+	c := NewClient(&ClientConfig{Cmd: process, ProtocolVersion: testAPIVersion})
 	defer c.Kill()
 
 	// Test that it parses the proper address
@@ -43,8 +43,9 @@ func TestClient(t *testing.T) {
 
 func TestClientStart_badVersion(t *testing.T) {
 	config := &ClientConfig{
-		Cmd:          helperProcess("bad-version"),
-		StartTimeout: 50 * time.Millisecond,
+		Cmd:             helperProcess("bad-version"),
+		StartTimeout:    50 * time.Millisecond,
+		ProtocolVersion: testAPIVersion,
 	}
 
 	c := NewClient(config)
@@ -58,8 +59,9 @@ func TestClientStart_badVersion(t *testing.T) {
 
 func TestClient_Start_Timeout(t *testing.T) {
 	config := &ClientConfig{
-		Cmd:          helperProcess("start-timeout"),
-		StartTimeout: 50 * time.Millisecond,
+		Cmd:             helperProcess("start-timeout"),
+		StartTimeout:    50 * time.Millisecond,
+		ProtocolVersion: testAPIVersion,
 	}
 
 	c := NewClient(config)
@@ -75,8 +77,9 @@ func TestClient_Stderr(t *testing.T) {
 	stderr := new(bytes.Buffer)
 	process := helperProcess("stderr")
 	c := NewClient(&ClientConfig{
-		Cmd:    process,
-		Stderr: stderr,
+		Cmd:             process,
+		Stderr:          stderr,
+		ProtocolVersion: testAPIVersion,
 	})
 	defer c.Kill()
 
@@ -123,7 +126,7 @@ func TestClient_Stdin(t *testing.T) {
 	os.Stdin = tf
 
 	process := helperProcess("stdin")
-	c := NewClient(&ClientConfig{Cmd: process})
+	c := NewClient(&ClientConfig{Cmd: process, ProtocolVersion: testAPIVersion})
 	defer c.Kill()
 
 	_, err = c.Start()

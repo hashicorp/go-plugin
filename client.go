@@ -43,15 +43,11 @@ type Client struct {
 // plugin client. After being used to initialize a plugin client,
 // that configuration must not be modified again.
 type ClientConfig struct {
-	// Plugins are the plugins that support being dispensed. This should
-	// match the server side. If it doesn't, the ProtocolVersion should
-	// be incremented.
-	Plugins map[string]Plugin
+	// HandshakeConfig is the configuration that must match servers.
+	HandshakeConfig
 
-	// ProtocolVersion is the version that the client expects the
-	// server to be speaking at a protocol layer. This should be set
-	// and match the plugin side.
-	ProtocolVersion uint
+	// Plugins are the plugins that can be consumed.
+	Plugins map[string]Plugin
 
 	// The unstarted subprocess for starting the plugin.
 	Cmd *exec.Cmd
@@ -238,7 +234,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	c.doneLogging = make(chan struct{})
 
 	env := []string{
-		fmt.Sprintf("%s=%s", MagicCookieKey, MagicCookieValue),
+		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
 		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
 		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
 	}

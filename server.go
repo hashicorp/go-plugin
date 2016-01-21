@@ -13,21 +13,33 @@ import (
 	"sync/atomic"
 )
 
-// The "magic cookie" is used to verify that the user intended to
-// actually run this binary. If this cookie isn't present as an
-// environmental variable, then we bail out early with an error.
-const MagicCookieKey = "OTTO_PLUGIN_MAGIC_COOKIE"
-const MagicCookieValue = "11aab7ff21cb9ff7b0e9975d53f17a8dab571eac9b5ff0191730046698f07b7f"
-
-// ServeConfig configures what sorts of plugins are served.
-type ServeConfig struct {
-	// Plugins are the plugins that are served.
-	Plugins map[string]Plugin
-
+// HandshakeConfig is the configuration used by client and servers to
+// handshake before starting a plugin connection. This is embedded by
+// both ServeConfig and ClientConfig.
+//
+// In practice, the plugin host creates a HandshakeConfig that is exported
+// and plugins then can easily consume it.
+type HandshakeConfig struct {
 	// ProtocolVersion is the version that clients must match on to
 	// agree they can communicate. This should match the ProtocolVersion
 	// set on ClientConfig when using a plugin.
 	ProtocolVersion uint
+
+	// MagicCookieKey and value are used as a very basic verification
+	// that a plugin is intended to be launched. This is not a security
+	// measure, just a UX feature. If the magic cookie doesn't match,
+	// we show human-friendly output.
+	MagicCookieKey   string
+	MagicCookieValue string
+}
+
+// ServeConfig configures what sorts of plugins are served.
+type ServeConfig struct {
+	// HandshakeConfig is the configuration that must match clients.
+	HandshakeConfig
+
+	// Plugins are the plugins that are served.
+	Plugins map[string]Plugin
 }
 
 // Serve serves the plugins given by ServeConfig.
@@ -36,7 +48,7 @@ type ServeConfig struct {
 // errors will be outputted to the log.
 func Serve(opts *ServeConfig) {
 	// First check the cookie
-	if os.Getenv(MagicCookieKey) != MagicCookieValue {
+	if os.Getenv(opts.MagicCookieKey) != opts.MagicCookieValue {
 		fmt.Fprintf(os.Stderr,
 			"This binary is a plugin. These are not meant to be executed directly.\n"+
 				"Please execute the program that consumes these plugins, which will\n"+

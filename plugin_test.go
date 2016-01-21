@@ -11,7 +11,11 @@ import (
 )
 
 // testAPIVersion is the ProtocolVersion we use for testing.
-const testAPIVersion uint = 1
+var testHandshake = HandshakeConfig{
+	ProtocolVersion:  1,
+	MagicCookieKey:   "TEST_MAGIC_COOKIE",
+	MagicCookieValue: "test",
+}
 
 // testInterface is the test interface we use for plugins.
 type testInterface interface {
@@ -102,22 +106,22 @@ func TestHelperProcess(*testing.T) {
 	cmd, args := args[0], args[1:]
 	switch cmd {
 	case "bad-version":
-		fmt.Printf("%d1|tcp|:1234\n", testAPIVersion)
+		fmt.Printf("%d1|tcp|:1234\n", testHandshake.ProtocolVersion)
 		<-make(chan int)
 	case "invalid-rpc-address":
 		fmt.Println("lolinvalid")
 	case "mock":
-		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testHandshake.ProtocolVersion)
 		<-make(chan int)
 	case "start-timeout":
 		time.Sleep(1 * time.Minute)
 		os.Exit(1)
 	case "stderr":
-		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testHandshake.ProtocolVersion)
 		log.Println("HELLO")
 		log.Println("WORLD")
 	case "stdin":
-		fmt.Printf("%d|tcp|:1234\n", testAPIVersion)
+		fmt.Printf("%d|tcp|:1234\n", testHandshake.ProtocolVersion)
 		data := make([]byte, 5)
 		if _, err := os.Stdin.Read(data); err != nil {
 			log.Printf("stdin read error: %s", err)

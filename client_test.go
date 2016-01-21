@@ -11,7 +11,7 @@ import (
 
 func TestClient(t *testing.T) {
 	process := helperProcess("mock")
-	c := NewClient(&ClientConfig{Cmd: process, ProtocolVersion: testAPIVersion})
+	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
 	defer c.Kill()
 
 	// Test that it parses the proper address
@@ -45,7 +45,7 @@ func TestClientStart_badVersion(t *testing.T) {
 	config := &ClientConfig{
 		Cmd:             helperProcess("bad-version"),
 		StartTimeout:    50 * time.Millisecond,
-		ProtocolVersion: testAPIVersion,
+		HandshakeConfig: testHandshake,
 	}
 
 	c := NewClient(config)
@@ -61,7 +61,7 @@ func TestClient_Start_Timeout(t *testing.T) {
 	config := &ClientConfig{
 		Cmd:             helperProcess("start-timeout"),
 		StartTimeout:    50 * time.Millisecond,
-		ProtocolVersion: testAPIVersion,
+		HandshakeConfig: testHandshake,
 	}
 
 	c := NewClient(config)
@@ -79,7 +79,7 @@ func TestClient_Stderr(t *testing.T) {
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		Stderr:          stderr,
-		ProtocolVersion: testAPIVersion,
+		HandshakeConfig: testHandshake,
 	})
 	defer c.Kill()
 
@@ -126,7 +126,7 @@ func TestClient_Stdin(t *testing.T) {
 	os.Stdin = tf
 
 	process := helperProcess("stdin")
-	c := NewClient(&ClientConfig{Cmd: process, ProtocolVersion: testAPIVersion})
+	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
 	defer c.Kill()
 
 	_, err = c.Start()

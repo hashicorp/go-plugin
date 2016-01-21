@@ -46,6 +46,8 @@ type ServeConfig struct {
 //
 // Serve doesn't return until the plugin is done being executed. Any
 // errors will be outputted to the log.
+//
+// This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
 	// First check the cookie
 	if os.Getenv(opts.MagicCookieKey) != opts.MagicCookieValue {

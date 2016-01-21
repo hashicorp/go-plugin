@@ -29,9 +29,17 @@ var Killed uint32 = 0
 // calling Cleanup
 var managedClients = make([]*Client, 0, 5)
 
-// Client handles the lifecycle of a plugin application, determining its
-// RPC address, and returning various types of interface implementations
-// across the multi-process communication layer.
+// Client handles the lifecycle of a plugin application. It launches
+// plugins, connects to them, dispenses interface implementations, and handles
+// killing the process.
+//
+// Plugin hosts should use one Client for each plugin executable. To
+// dispense a plugin type, use the `Client.Client` function, and then
+// cal `Dispense`. This awkward API is mostly historical but is used to split
+// the client that deals with subprocess management and the client that
+// does RPC management.
+//
+// See NewClient and ClientConfig for using a Client.
 type Client struct {
 	config      *ClientConfig
 	exited      bool

@@ -20,7 +20,8 @@ import (
 )
 
 // If this is true, then the "unexpected EOF" panic will not be
-// raised throughout the clients.
+// raised throughout the clients. This is very rarely set, and is set
+// by CleanupClients.
 var Killed = false
 
 // This is a slice of the "managed" clients which are cleaned up when

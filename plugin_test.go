@@ -3,6 +3,7 @@ package plugin
 import (
 	"fmt"
 	"log"
+	"net/rpc"
 	"os"
 	"os/exec"
 	"testing"
@@ -11,6 +12,54 @@ import (
 	"github.com/hashicorp/otto/app"
 	pluginrpc "github.com/hashicorp/otto/rpc"
 )
+
+// testInterface is the test interface we use for plugins.
+type testInterface interface {
+	Double(int) int
+}
+
+// testInterfacePlugin is the implementation of Plugin to create
+// RPC client/server implementations for testInterface.
+type testInterfacePlugin struct{}
+
+func (p *testInterfacePlugin) Server(b *MuxBroker) (interface{}, error) {
+	return &testInterfaceServer{Impl: new(testInterfaceImpl)}, nil
+}
+
+func (p *testInterfacePlugin) Client(b *MuxBroker, c *rpc.Client) (interface{}, error) {
+	return &testInterfaceClient{Client: c}, nil
+}
+
+// testInterfaceImpl implements testInterface concretely
+type testInterfaceImpl struct{}
+
+func (i *testInterfaceImpl) Double(v int) int { return v * 2 }
+
+// testInterfaceClient implements testInterface to communicate over RPC
+type testInterfaceClient struct {
+	Client *rpc.Client
+}
+
+func (impl *testInterfaceClient) Double(v int) int {
+	var resp int
+	err := impl.Client.Call("Plugin.Double", v, &resp)
+	if err != nil {
+		panic(err)
+	}
+
+	return resp
+}
+
+// testInterfaceServer is the RPC server for testInterfaceClient
+type testInterfaceServer struct {
+	Broker *MuxBroker
+	Impl   testInterface
+}
+
+func (s *testInterfaceServer) Double(arg int, resp *int) error {
+	*resp = s.Impl.Double(arg)
+	return nil
+}
 
 func helperProcess(s ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--"}

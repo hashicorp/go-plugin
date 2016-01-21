@@ -28,7 +28,7 @@ process. This plugin system handles the communication in between.
 provides APIs for handling complex arguments and return values such
 as interfaces, `io.Reader/Writer`, etc. We do this by giving you a library
 (`MuxBroker`) for creating new connections between the client/server to
-server additional interfaces or transfer raw data.
+serve additional interfaces or transfer raw data.
 
 **Bidirectional communication.** Because the plugin system supports
 complex arguments, the host process can send it interface implementations

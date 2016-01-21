@@ -6,7 +6,7 @@ import (
 )
 
 // ServeMuxMap is the type that is used to configure ServeMux
-type ServeMuxMap map[string]*ServeOpts
+type ServeMuxMap map[string]*ServeConfig
 
 // ServeMux is like Serve, but serves multiple types of plugins determined
 // by the argument given on the command-line.

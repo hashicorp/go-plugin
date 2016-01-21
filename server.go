@@ -19,8 +19,8 @@ import (
 const MagicCookieKey = "OTTO_PLUGIN_MAGIC_COOKIE"
 const MagicCookieValue = "11aab7ff21cb9ff7b0e9975d53f17a8dab571eac9b5ff0191730046698f07b7f"
 
-// ServeOpts configures what sorts of plugins are served.
-type ServeOpts struct {
+// ServeConfig configures what sorts of plugins are served.
+type ServeConfig struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
@@ -30,11 +30,11 @@ type ServeOpts struct {
 	ProtocolVersion uint
 }
 
-// Serve serves the plugins given by ServeOpts.
+// Serve serves the plugins given by ServeConfig.
 //
 // Serve doesn't return until the plugin is done being executed. Any
 // errors will be outputted to the log.
-func Serve(opts *ServeOpts) {
+func Serve(opts *ServeConfig) {
 	// First check the cookie
 	if os.Getenv(MagicCookieKey) != MagicCookieValue {
 		fmt.Fprintf(os.Stderr,

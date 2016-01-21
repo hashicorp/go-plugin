@@ -38,9 +38,9 @@ func Serve(opts *ServeOpts) {
 	// First check the cookie
 	if os.Getenv(MagicCookieKey) != MagicCookieValue {
 		fmt.Fprintf(os.Stderr,
-			"This binary is an Otto plugin. These are not meant to be\n"+
-				"executed directly. Please execute `otto`, which will load\n"+
-				"any plugins automatically.\n")
+			"This binary is a plugin. These are not meant to be executed directly.\n"+
+				"Please execute the program that consumes these plugins, which will\n"+
+				"load any plugins automatically\n")
 		os.Exit(1)
 	}
 
@@ -51,12 +51,12 @@ func Serve(opts *ServeOpts) {
 	// stdout/stderr so that it works across the stream boundary.
 	stdout_r, stdout_w, err := os.Pipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing Otto plugin: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
 		os.Exit(1)
 	}
 	stderr_r, stderr_w, err := os.Pipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing Otto plugin: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -137,7 +137,7 @@ func serverListener_tcp() (net.Listener, error) {
 }
 
 func serverListener_unix() (net.Listener, error) {
-	tf, err := ioutil.TempFile("", "otto-plugin")
+	tf, err := ioutil.TempFile("", "plugin")
 	if err != nil {
 		return nil, err
 	}

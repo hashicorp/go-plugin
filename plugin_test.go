@@ -8,9 +8,6 @@ import (
 	"os/exec"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/otto/app"
-	pluginrpc "github.com/hashicorp/otto/rpc"
 )
 
 // testAPIVersion is the ProtocolVersion we use for testing.
@@ -69,8 +66,8 @@ func helperProcess(s ...string) *exec.Cmd {
 	cs = append(cs, s...)
 	env := []string{
 		"GO_WANT_HELPER_PROCESS=1",
-		"OTTO_PLUGIN_MIN_PORT=10000",
-		"OTTO_PLUGIN_MAX_PORT=25000",
+		"PLUGIN_MIN_PORT=10000",
+		"PLUGIN_MAX_PORT=25000",
 	}
 
 	cmd := exec.Command(os.Args[0], cs...)
@@ -135,11 +132,5 @@ func TestHelperProcess(*testing.T) {
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", cmd)
 		os.Exit(2)
-	}
-}
-
-func testAppFixed(p app.App) pluginrpc.AppFunc {
-	return func() app.App {
-		return p
 	}
 }

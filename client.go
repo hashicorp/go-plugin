@@ -14,14 +14,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 )
 
-// If this is true, then the "unexpected EOF" panic will not be
-// raised throughout the clients. This is very rarely set, and is set
-// by CleanupClients.
-var Killed = false
+// If this is 1, then we've called CleanupClients. This can be used
+// by plugin RPC implementations to change error behavior since you
+// can expected network connection errors at this point. This should be
+// read by using sync/atomic.
+var Killed uint32 = 0
 
 // This is a slice of the "managed" clients which are cleaned up when
 // calling Cleanup
@@ -91,7 +93,7 @@ type ClientConfig struct {
 // This must only be called _once_.
 func CleanupClients() {
 	// Set the killed to true so that we don't get unexpected panics
-	Killed = true
+	atomic.StoreUint32(&Killed, 1)
 
 	// Kill all the managed clients in parallel and use a WaitGroup
 	// to wait for them all to finish up.

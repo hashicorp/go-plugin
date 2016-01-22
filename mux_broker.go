@@ -12,19 +12,6 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-// MuxAcceptAndServe is used to accept a specific stream ID and immediately
-// serve an RPC server on that stream ID. This is used to easily serve
-// complex arguments.
-func MuxAcceptAndServe(mux *MuxBroker, id uint32, n string, v interface{}) {
-	conn, err := mux.Accept(id)
-	if err != nil {
-		log.Printf("[ERR] Plugin acceptAndServe: %s", err)
-		return
-	}
-
-	serve(conn, n, v)
-}
-
 // MuxBroker is responsible for brokering multiplexed connections by unique ID.
 //
 // It is used by plugins to multiplex multiple RPC connections and data
@@ -83,6 +70,19 @@ func (m *MuxBroker) Accept(id uint32) (net.Conn, error) {
 	}
 
 	return c, nil
+}
+
+// AcceptAndServe is used to accept a specific stream ID and immediately
+// serve an RPC server on that stream ID. This is used to easily serve
+// complex arguments.
+func (m *MuxBroker) AcceptAndServe(id uint32, n string, v interface{}) {
+	conn, err := m.Accept(id)
+	if err != nil {
+		log.Printf("[ERR] Plugin acceptAndServe: %s", err)
+		return
+	}
+
+	serve(conn, n, v)
 }
 
 // Close closes the connection and all sub-connections.

@@ -129,16 +129,6 @@ func (d *dispenseServer) Dispense(
 	return nil
 }
 
-func acceptAndServe(mux *MuxBroker, id uint32, n string, v interface{}) {
-	conn, err := mux.Accept(id)
-	if err != nil {
-		log.Printf("[ERR] Plugin acceptAndServe: %s", err)
-		return
-	}
-
-	serve(conn, n, v)
-}
-
 func serve(conn io.ReadWriteCloser, name string, v interface{}) {
 	server := rpc.NewServer()
 	if err := server.RegisterName(name, v); err != nil {

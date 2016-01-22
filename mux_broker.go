@@ -3,6 +3,7 @@ package plugin
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,19 @@ import (
 
 	"github.com/hashicorp/yamux"
 )
+
+// MuxAcceptAndServe is used to accept a specific stream ID and immediately
+// serve an RPC server on that stream ID. This is used to easily serve
+// complex arguments.
+func MuxAcceptAndServe(mux *MuxBroker, id uint32, n string, v interface{}) {
+	conn, err := mux.Accept(id)
+	if err != nil {
+		log.Printf("[ERR] Plugin acceptAndServe: %s", err)
+		return
+	}
+
+	serve(conn, n, v)
+}
 
 // MuxBroker is responsible for brokering multiplexed connections by unique ID.
 //

@@ -75,14 +75,16 @@ func (m *MuxBroker) Accept(id uint32) (net.Conn, error) {
 // AcceptAndServe is used to accept a specific stream ID and immediately
 // serve an RPC server on that stream ID. This is used to easily serve
 // complex arguments.
-func (m *MuxBroker) AcceptAndServe(id uint32, n string, v interface{}) {
+//
+// The served interface is always registered to the "Plugin" name.
+func (m *MuxBroker) AcceptAndServe(id uint32, v interface{}) {
 	conn, err := m.Accept(id)
 	if err != nil {
 		log.Printf("[ERR] Plugin acceptAndServe: %s", err)
 		return
 	}
 
-	serve(conn, n, v)
+	serve(conn, "Plugin", v)
 }
 
 // Close closes the connection and all sub-connections.

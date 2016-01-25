@@ -56,6 +56,15 @@ type ServeConfig struct {
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
+	// Validate the handshake config
+	if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
+		fmt.Fprintf(os.Stderr,
+			"Misconfigured ServeConfig given to serve this plugin: no magic cookie\n"+
+				"key or value was set. Please notify the plugin author and report\n"+
+				"this as a bug.\n")
+		os.Exit(1)
+	}
+
 	// First check the cookie
 	if os.Getenv(opts.MagicCookieKey) != opts.MagicCookieValue {
 		fmt.Fprintf(os.Stderr,

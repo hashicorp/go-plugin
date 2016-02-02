@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +50,82 @@ func TestClient_testInterface(t *testing.T) {
 		Plugins:         testPluginMap,
 	})
 	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	impl, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	result := impl.Double(21)
+	if result != 42 {
+		t.Fatalf("bad: %#v", result)
+	}
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+}
+
+func TestClient_testInterfaceReattach(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no daemonization on Windows")
+		return
+	}
+
+	process := helperProcess("test-interface-daemon")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+
+	// Start it so we can get the reattach info
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// New client with reattach info
+	reattach := c.ReattachConfig()
+	if reattach == nil {
+		c.Kill()
+		t.Fatal("reattach config should be non-nil")
+	}
+
+	// Find the process and defer a kill so we know it is gone
+	p, err := os.FindProcess(reattach.Pid)
+	if err != nil {
+		c.Kill()
+		t.Fatalf("couldn't find process: %s", err)
+	}
+	defer p.Kill()
+
+	// Reattach
+	c = NewClient(&ClientConfig{
+		Reattach:        reattach,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+
+	// Start shouldn't error
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
 	// Grab the RPC client
 	client, err := c.Client()

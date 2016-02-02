@@ -46,6 +46,7 @@ type Client struct {
 	doneLogging chan struct{}
 	l           sync.Mutex
 	address     net.Addr
+	process     *os.Process
 	client      *RPCClient
 }
 
@@ -231,13 +232,12 @@ func (c *Client) Exited() bool {
 //
 // This method can safely be called multiple times.
 func (c *Client) Kill() {
-	cmd := c.config.Cmd
-
-	if cmd.Process == nil {
+	if c.process == nil {
 		return
 	}
 
-	cmd.Process.Kill()
+	// Kill the process
+	c.process.Kill()
 
 	// Wait for the client to finish logging so we have a complete log
 	<-c.doneLogging
@@ -268,7 +268,39 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
+	// Create the logging channel for when we kill
 	c.doneLogging = make(chan struct{})
+
+	if c.config.Reattach != nil {
+		// Verify the process still exists. If not, then it is an error
+		p, err := os.FindProcess(c.config.Reattach.Pid)
+		if err != nil {
+			return nil, err
+		}
+
+		// Goroutine to mark exit status
+		go func() {
+			// Wait for the process to die
+			p.Wait()
+
+			// Log so we can see it
+			log.Printf("[DEBUG] reattached plugin process exited\n")
+
+			// Mark it
+			c.l.Lock()
+			defer c.l.Unlock()
+			c.exited = true
+
+			// Close the logging channel since that doesn't work on reattach
+			close(c.doneLogging)
+		}()
+
+		// Set the address and process
+		c.address = c.config.Reattach.Addr
+		c.process = p
+
+		return c.address, nil
+	}
 
 	env := []string{
 		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
@@ -291,6 +323,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	if err != nil {
 		return
 	}
+
+	// Set the process
+	c.process = cmd.Process
 
 	// Make sure the command is properly cleaned up if there is an error
 	defer func() {

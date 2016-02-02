@@ -65,6 +65,11 @@ func (s *testInterfaceServer) Double(arg int, resp *int) error {
 	return nil
 }
 
+// testPluginMap can be used for tests as a plugin map
+var testPluginMap = map[string]Plugin{
+	"test": new(testInterfacePlugin),
+}
+
 func helperProcess(s ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--"}
 	cs = append(cs, s...)
@@ -133,6 +138,14 @@ func TestHelperProcess(*testing.T) {
 		}
 
 		os.Exit(1)
+	case "test-interface":
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", cmd)
 		os.Exit(2)

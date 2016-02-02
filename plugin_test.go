@@ -147,6 +147,10 @@ func TestHelperProcess(*testing.T) {
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface-daemon":
+		// Daemonize
+		daemonize()
+
+		// Serve!
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,

@@ -41,6 +41,21 @@ func TestClient(t *testing.T) {
 	}
 }
 
+func TestClient_cmdAndReattach(t *testing.T) {
+	config := &ClientConfig{
+		Cmd:      helperProcess("start-timeout"),
+		Reattach: &ReattachConfig{},
+	}
+
+	c := NewClient(config)
+	defer c.Kill()
+
+	_, err := c.Start()
+	if err == nil {
+		t.Fatal("err should not be nil")
+	}
+}
+
 func TestClientStart_badVersion(t *testing.T) {
 	config := &ClientConfig{
 		Cmd:             helperProcess("bad-version"),

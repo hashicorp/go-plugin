@@ -59,8 +59,16 @@ type ClientConfig struct {
 	// Plugins are the plugins that can be consumed.
 	Plugins map[string]Plugin
 
-	// The unstarted subprocess for starting the plugin.
-	Cmd *exec.Cmd
+	// One of the following must be set, but not both.
+	//
+	// Cmd is the unstarted subprocess for starting the plugin. If this is
+	// set, then the Client starts the plugin process on its own and connects
+	// to it.
+	//
+	// Reattach is configuration for reattaching to an existing plugin process
+	// that is already running. This isn't common.
+	Cmd      *exec.Cmd
+	Reattach *ReattachConfig
 
 	// Managed represents if the client should be managed by the
 	// plugin package or not. If true, then by calling CleanupClients,
@@ -92,6 +100,14 @@ type ClientConfig struct {
 	// sync any of these streams.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
+}
+
+// ReattachConfig is used to configure a client to reattach to an
+// already-running plugin process. You can retrieve this information by
+// calling ReattachConfig on Client.
+type ReattachConfig struct {
+	Addr net.Addr
+	Pid  int
 }
 
 // This makes sure all the managed subprocesses are killed and properly
@@ -239,6 +255,17 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	if c.address != nil {
 		return c.address, nil
+	}
+
+	// If one of cmd or reattach isn't set, then it is an error. We wrap
+	// this in a {} for scoping reasons, and hopeful that the escape
+	// analysis will pop the stock here.
+	{
+		cmdSet := c.config.Cmd != nil
+		attachSet := c.config.Reattach != nil
+		if cmdSet == attachSet {
+			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
+		}
 	}
 
 	c.doneLogging = make(chan struct{})
@@ -401,6 +428,28 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	c.address = addr
 	return
+}
+
+// ReattachConfig returns the information that must be provided to NewClient
+// to reattach to the plugin process that this client started. This is
+// useful for plugins that detach from their parent process.
+//
+// If this returns nil then the process hasn't been started yet. Please
+// call Start or Client before calling this.
+func (c *Client) ReattachConfig() *ReattachConfig {
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	if c.address == nil || c.config.Cmd.Process == nil {
+		return nil
+	}
+
+	// TODO: if we connected wit reattach, return that
+
+	return &ReattachConfig{
+		Addr: c.address,
+		Pid:  c.config.Cmd.Process.Pid,
+	}
 }
 
 func (c *Client) logStderr(r io.Reader) {

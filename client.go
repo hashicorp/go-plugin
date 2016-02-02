@@ -46,6 +46,7 @@ type Client struct {
 	doneLogging chan struct{}
 	l           sync.Mutex
 	address     net.Addr
+	process     *os.Process
 	client      *RPCClient
 }
 
@@ -59,8 +60,16 @@ type ClientConfig struct {
 	// Plugins are the plugins that can be consumed.
 	Plugins map[string]Plugin
 
-	// The unstarted subprocess for starting the plugin.
-	Cmd *exec.Cmd
+	// One of the following must be set, but not both.
+	//
+	// Cmd is the unstarted subprocess for starting the plugin. If this is
+	// set, then the Client starts the plugin process on its own and connects
+	// to it.
+	//
+	// Reattach is configuration for reattaching to an existing plugin process
+	// that is already running. This isn't common.
+	Cmd      *exec.Cmd
+	Reattach *ReattachConfig
 
 	// Managed represents if the client should be managed by the
 	// plugin package or not. If true, then by calling CleanupClients,
@@ -92,6 +101,14 @@ type ClientConfig struct {
 	// sync any of these streams.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
+}
+
+// ReattachConfig is used to configure a client to reattach to an
+// already-running plugin process. You can retrieve this information by
+// calling ReattachConfig on Client.
+type ReattachConfig struct {
+	Addr net.Addr
+	Pid  int
 }
 
 // This makes sure all the managed subprocesses are killed and properly
@@ -215,13 +232,12 @@ func (c *Client) Exited() bool {
 //
 // This method can safely be called multiple times.
 func (c *Client) Kill() {
-	cmd := c.config.Cmd
-
-	if cmd.Process == nil {
+	if c.process == nil {
 		return
 	}
 
-	cmd.Process.Kill()
+	// Kill the process
+	c.process.Kill()
 
 	// Wait for the client to finish logging so we have a complete log
 	<-c.doneLogging
@@ -241,7 +257,50 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		return c.address, nil
 	}
 
+	// If one of cmd or reattach isn't set, then it is an error. We wrap
+	// this in a {} for scoping reasons, and hopeful that the escape
+	// analysis will pop the stock here.
+	{
+		cmdSet := c.config.Cmd != nil
+		attachSet := c.config.Reattach != nil
+		if cmdSet == attachSet {
+			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
+		}
+	}
+
+	// Create the logging channel for when we kill
 	c.doneLogging = make(chan struct{})
+
+	if c.config.Reattach != nil {
+		// Verify the process still exists. If not, then it is an error
+		p, err := os.FindProcess(c.config.Reattach.Pid)
+		if err != nil {
+			return nil, err
+		}
+
+		// Goroutine to mark exit status
+		go func() {
+			// Wait for the process to die
+			p.Wait()
+
+			// Log so we can see it
+			log.Printf("[DEBUG] reattached plugin process exited\n")
+
+			// Mark it
+			c.l.Lock()
+			defer c.l.Unlock()
+			c.exited = true
+
+			// Close the logging channel since that doesn't work on reattach
+			close(c.doneLogging)
+		}()
+
+		// Set the address and process
+		c.address = c.config.Reattach.Addr
+		c.process = p
+
+		return c.address, nil
+	}
 
 	env := []string{
 		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
@@ -264,6 +323,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	if err != nil {
 		return
 	}
+
+	// Set the process
+	c.process = cmd.Process
 
 	// Make sure the command is properly cleaned up if there is an error
 	defer func() {
@@ -401,6 +463,28 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	c.address = addr
 	return
+}
+
+// ReattachConfig returns the information that must be provided to NewClient
+// to reattach to the plugin process that this client started. This is
+// useful for plugins that detach from their parent process.
+//
+// If this returns nil then the process hasn't been started yet. Please
+// call Start or Client before calling this.
+func (c *Client) ReattachConfig() *ReattachConfig {
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	if c.address == nil || c.config.Cmd.Process == nil {
+		return nil
+	}
+
+	// TODO: if we connected wit reattach, return that
+
+	return &ReattachConfig{
+		Addr: c.address,
+		Pid:  c.config.Cmd.Process.Pid,
+	}
 }
 
 func (c *Client) logStderr(r io.Reader) {

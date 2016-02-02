@@ -29,6 +29,13 @@ var Killed uint32 = 0
 // calling Cleanup
 var managedClients = make([]*Client, 0, 5)
 
+// Error types
+var (
+	// ErrProcessNotFound is returned when a client is instantiated to
+	// reattach to an existing process and it isn't found.
+	ErrProcessNotFound = errors.New("Reattachment process not found")
+)
+
 // Client handles the lifecycle of a plugin application. It launches
 // plugins, connects to them, dispenses interface implementations, and handles
 // killing the process.
@@ -277,6 +284,17 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Attempt to connect to the addr since on Unix systems FindProcess
+		// doesn't actually return an error if it can't find the process.
+		conn, err := net.Dial(
+			c.config.Reattach.Addr.Network(),
+			c.config.Reattach.Addr.String())
+		if err != nil {
+			p.Kill()
+			return nil, ErrProcessNotFound
+		}
+		conn.Close()
 
 		// Goroutine to mark exit status
 		go func() {

@@ -3,6 +3,7 @@ package plugin
 import (
 	"bytes"
 	"io/ioutil"
+	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -170,6 +171,42 @@ func TestClient_cmdAndReattach(t *testing.T) {
 	_, err := c.Start()
 	if err == nil {
 		t.Fatal("err should not be nil")
+	}
+}
+
+func TestClient_reattachNotFound(t *testing.T) {
+	// Find a bad pid
+	var pid int = 5000
+	for i := pid; i < 32000; i++ {
+		if _, err := os.FindProcess(i); err != nil {
+			pid = i
+			break
+		}
+	}
+
+	// Addr that won't work
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	addr := l.Addr()
+	l.Close()
+
+	// Reattach
+	c := NewClient(&ClientConfig{
+		Reattach: &ReattachConfig{
+			Addr: addr,
+			Pid:  pid,
+		},
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+
+	// Start shouldn't error
+	if _, err := c.Start(); err == nil {
+		t.Fatal("should error")
+	} else if err != ErrProcessNotFound {
+		t.Fatalf("err: %s", err)
 	}
 }
 

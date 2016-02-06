@@ -297,9 +297,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		conn.Close()
 
 		// Goroutine to mark exit status
-		go func() {
+		go func(pid int) {
 			// Wait for the process to die
-			p.Wait()
+			Wait(pid)
 
 			// Log so we can see it
 			log.Printf("[DEBUG] reattached plugin process exited\n")
@@ -311,7 +311,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			// Close the logging channel since that doesn't work on reattach
 			close(c.doneLogging)
-		}()
+		}(p.Pid)
 
 		// Set the address and process
 		c.address = c.config.Reattach.Addr

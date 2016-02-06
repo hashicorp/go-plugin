@@ -493,11 +493,18 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 	c.l.Lock()
 	defer c.l.Unlock()
 
-	if c.address == nil || c.config.Cmd.Process == nil {
+	if c.address == nil {
 		return nil
 	}
 
-	// TODO: if we connected wit reattach, return that
+	if c.config.Cmd != nil && c.config.Cmd.Process == nil {
+		return nil
+	}
+
+	// If we connected via reattach, just return the information as-is
+	if c.config.Reattach != nil {
+		return c.config.Reattach
+	}
 
 	return &ReattachConfig{
 		Addr: c.address,

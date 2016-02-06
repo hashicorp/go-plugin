@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -148,6 +149,15 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 	result := impl.Double(21)
 	if result != 42 {
 		t.Fatalf("bad: %#v", result)
+	}
+
+	// Test the resulting reattach config
+	reattach2 := c.ReattachConfig()
+	if reattach2 == nil {
+		t.Fatal("reattach from reattached should not be nil")
+	}
+	if !reflect.DeepEqual(reattach, reattach2) {
+		t.Fatalf("bad: %#v", reattach)
 	}
 
 	// Kill it

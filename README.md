@@ -56,6 +56,12 @@ a TTY to work. For example, a plugin can execute `ssh` and even though there
 are multiple subprocesses and RPC happening, it will look and act perfectly
 to the end user.
 
+**Host upgrade while a plugin is running.** Plugins can be "reattached"
+so that the host process can be upgraded while the plugin is still running.
+This requires the host/plugin to know this is possible and daemonize
+properly. `NewClient` takes a `ReattachConfig` to determine if and how to
+reattach.
+
 ## Architecture
 
 The HashiCorp plugin system works by launching subprocesses and communicating

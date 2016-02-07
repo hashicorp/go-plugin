@@ -299,7 +299,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Goroutine to mark exit status
 		go func(pid int) {
 			// Wait for the process to die
-			Wait(pid)
+			pidWait(pid)
 
 			// Log so we can see it
 			log.Printf("[DEBUG] reattached plugin process exited\n")

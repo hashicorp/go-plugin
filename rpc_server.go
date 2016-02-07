@@ -55,7 +55,10 @@ func (s *RPCServer) ServeConn(conn io.ReadWriteCloser) {
 	control, err := mux.Accept()
 	if err != nil {
 		mux.Close()
-		log.Printf("[ERR] plugin: %s", err)
+		if err != io.EOF {
+			log.Printf("[ERR] plugin: %s", err)
+		}
+
 		return
 	}
 

@@ -5,15 +5,19 @@ import (
 	"syscall"
 )
 
-const STILL_ACTIVE = 259
+const (
+	// Weird name but matches the MSDN docs
+	exit_STILL_ACTIVE = 259
+
+	processDesiredAccess = syscall.STANDARD_RIGHTS_READ |
+		syscall.PROCESS_QUERY_INFORMATION |
+		syscall.SYNCHRONIZE
+)
 
 // _pidAlive tests whether a process is alive or not
 func _pidAlive(pid int) bool {
-	const da = syscall.STANDARD_RIGHTS_READ |
-		syscall.PROCESS_QUERY_INFORMATION |
-		syscall.SYNCHRONIZE
-	h, e := syscall.OpenProcess(da, false, uint32(pid))
-	if e != nil {
+	h, err := syscall.OpenProcess(processDesiredAccess, false, uint32(pid))
+	if err != nil {
 		return false
 	}
 
@@ -23,5 +27,5 @@ func _pidAlive(pid int) bool {
 		return false
 	}
 
-	return ec == STILL_ACTIVE
+	return ec == exit_STILL_ACTIVE
 }

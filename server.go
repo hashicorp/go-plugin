@@ -1,15 +1,11 @@
 package plugin
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"os/signal"
-	"runtime"
-	"strconv"
 	"sync/atomic"
 )
 
@@ -137,51 +133,20 @@ func Serve(opts *ServeConfig) {
 	server.Accept(listener)
 }
 
-func serverListener() (net.Listener, error) {
-	if runtime.GOOS == "windows" {
-		return serverListener_tcp()
-	}
-
-	return serverListener_unix()
-}
-
-func serverListener_tcp() (net.Listener, error) {
-	minPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MIN_PORT"), 10, 32)
+func newTempPath(dir string) (string, error) {
+	tf, err := ioutil.TempFile(dir, "plugin")
 	if err != nil {
-		return nil, err
-	}
-
-	maxPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MAX_PORT"), 10, 32)
-	if err != nil {
-		return nil, err
-	}
-
-	for port := minPort; port <= maxPort; port++ {
-		address := fmt.Sprintf("127.0.0.1:%d", port)
-		listener, err := net.Listen("tcp", address)
-		if err == nil {
-			return listener, nil
-		}
-	}
-
-	return nil, errors.New("Couldn't bind plugin TCP listener")
-}
-
-func serverListener_unix() (net.Listener, error) {
-	tf, err := ioutil.TempFile("", "plugin")
-	if err != nil {
-		return nil, err
+		return "", err
 	}
 	path := tf.Name()
 
 	// Close the file and remove it because it has to not exist for
 	// the domain socket.
 	if err := tf.Close(); err != nil {
-		return nil, err
+		return "", err
 	}
 	if err := os.Remove(path); err != nil {
-		return nil, err
+		return "", err
 	}
-
-	return net.Listen("unix", path)
+	return path, nil
 }

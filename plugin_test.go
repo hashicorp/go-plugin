@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
@@ -138,6 +139,24 @@ func TestHelperProcess(*testing.T) {
 		}
 
 		os.Exit(1)
+	case "cleanup":
+		// Create a defer to write the file. This tests that we get cleaned
+		// up properly versus just calling os.Exit
+		path := args[0]
+		defer func() {
+			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+		})
+
+		// Exit
+		return
 	case "test-interface":
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,

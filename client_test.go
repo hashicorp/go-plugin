@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,40 @@ func TestClient(t *testing.T) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+}
+
+func TestClient_testCleanup(t *testing.T) {
+	// Create a temporary dir to store the result file
+	td, err := ioutil.TempDir("", "plugin")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.RemoveAll(td)
+
+	// Create a path that the helper process will write on cleanup
+	path := filepath.Join(td, "output")
+
+	// Test the cleanup
+	process := helperProcess("cleanup", path)
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+
+	// Grab the client so the process starts
+	if _, err := c.Client(); err != nil {
+		c.Kill()
+		t.Fatalf("err: %s", err)
+	}
+
+	// Kill it gracefully
+	c.Kill()
+
+	// Test for the file
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("err: %s", err)
 	}
 }
 

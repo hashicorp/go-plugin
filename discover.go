@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -31,15 +32,19 @@ func Discover(glob, dir string) ([]string, error) {
 	for _, f := range ls {
 		stats, err := os.Stat(f)
 		if err != nil {
-			return nil, err
+			log.Printf("[ERR] Could not open plugin %s: %s", f, err)
+			continue
 		}
 		// Skip directories
 		if stats.IsDir() {
+			log.Println("[Warn] Skipping directory ", f)
 			continue
 		}
 		// If file is executable add to plugins
 		if stats.Mode()&0111 != 0 {
 			plugins = append(plugins, f)
+		} else {
+			log.Println("[Info] Skipping non-executable plugin: ", f)
 		}
 
 	}

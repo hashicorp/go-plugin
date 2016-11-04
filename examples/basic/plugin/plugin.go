@@ -1,46 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"log"
 	"net/rpc"
-	"os/exec"
-
 	"github.com/hashicorp/go-plugin"
 )
 
 func main() {
-
-	// We don't want to see the plugin logs.
-	log.SetOutput(ioutil.Discard)
-
-	// We're a host! Start by launching the plugin process.
-	client := plugin.NewClient(&plugin.ClientConfig{
+	// We're a plugin! Serve the plugin. We set the handshake config
+	// so that the host and our plugin can verify they can talk to each other.
+	// Then we set the plugin map to say what plugins we're serving.
+	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
-		Cmd:             exec.Command("plugin/plugin"),
 	})
-	defer client.Kill()
-
-	// Connect via RPC
-	rpcClient, err := client.Client()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Request the plugin
-	raw, err := rpcClient.Dispense("greeter")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// We should have a Greeter now! This feels like a normal interface
-	// implementation but is in fact over an RPC connection.
-	greeter := raw.(Greeter)
-	fmt.Println(greeter.Greet())
 }
-
 
 // handshakeConfigs are used to just do a basic handshake between
 // a plugin and host. If the handshake fails, a user friendly error is shown.

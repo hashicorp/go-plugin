@@ -28,6 +28,7 @@ var Killed uint32 = 0
 // This is a slice of the "managed" clients which are cleaned up when
 // calling Cleanup
 var managedClients = make([]*Client, 0, 5)
+var managedClientsLock sync.Mutex
 
 // Error types
 var (
@@ -130,6 +131,7 @@ func CleanupClients() {
 	// Kill all the managed clients in parallel and use a WaitGroup
 	// to wait for them all to finish up.
 	var wg sync.WaitGroup
+	managedClientsLock.Lock()
 	for _, client := range managedClients {
 		wg.Add(1)
 
@@ -138,6 +140,7 @@ func CleanupClients() {
 			wg.Done()
 		}(client)
 	}
+	managedClientsLock.Unlock()
 
 	log.Println("[DEBUG] plugin: waiting for all plugin processes to complete...")
 	wg.Wait()
@@ -173,7 +176,9 @@ func NewClient(config *ClientConfig) (c *Client) {
 
 	c = &Client{config: config}
 	if config.Managed {
+		managedClientsLock.Lock()
 		managedClients = append(managedClients, c)
+		managedClientsLock.Unlock()
 	}
 
 	return

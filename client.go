@@ -239,23 +239,58 @@ func (c *Client) Exited() bool {
 //
 // This method can safely be called multiple times.
 func (c *Client) Kill() {
-	if c.process == nil {
+	// Grab a lock to read some private fields.
+	c.l.Lock()
+	process := c.process
+	addr := c.address
+	doneCh := c.doneLogging
+	c.l.Unlock()
+
+	// If there is no process, we never started anything. Nothing to kill.
+	if process == nil {
 		return
 	}
 
-	// Close the client to cleanly exit the process
-	client, err := c.Client()
-	if err == nil {
-		err = client.Close()
-	}
-	if err != nil {
-		// If something went wrong somewhere gracefully quitting the
-		// plugin, we just force kill it.
-		c.process.Kill()
+	// We need to check for address here. It is possible that the plugin
+	// started (process != nil) but has no address (addr == nil) if the
+	// plugin failed at startup. If we do have an address, we need to close
+	// the plugin net connections.
+	graceful := false
+	if addr != nil {
+		// Close the client to cleanly exit the process.
+		client, err := c.Client()
+		if err == nil {
+			err = client.Close()
+
+			// If there is no error, then we attempt to wait for a graceful
+			// exit. If there was an error, we assume that graceful cleanup
+			// won't happen and just force kill.
+			graceful = err == nil
+			if err != nil {
+				// If there was an error just log it. We're going to force
+				// kill in a moment anyways.
+				log.Printf(
+					"[WARN] plugin: error closing client during Kill: %s", err)
+			}
+		}
 	}
 
+	// If we're attempting a graceful exit, then we wait for a short period
+	// of time to allow that to happen. To wait for this we just wait on the
+	// doneCh which would be closed if the process exits.
+	if graceful {
+		select {
+		case <-doneCh:
+			return
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+
+	// If graceful exiting failed, just kill it
+	process.Kill()
+
 	// Wait for the client to finish logging so we have a complete log
-	<-c.doneLogging
+	<-doneCh
 }
 
 // Starts the underlying subprocess, communicating with it to negotiate

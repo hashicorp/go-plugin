@@ -43,6 +43,57 @@ func TestClient(t *testing.T) {
 	}
 }
 
+// This tests a bug where Kill would start
+func TestClient_killStart(t *testing.T) {
+	// Create a temporary dir to store the result file
+	td, err := ioutil.TempDir("", "plugin")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.RemoveAll(td)
+
+	// Start the client
+	path := filepath.Join(td, "booted")
+	process := helperProcess("bad-version", path)
+	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
+	defer c.Kill()
+
+	// Verify our path doesn't exist
+	if _, err := os.Stat(path); err == nil || !os.IsNotExist(err) {
+		t.Fatalf("bad: %s", err)
+	}
+
+	// Test that it parses the proper address
+	if _, err := c.Start(); err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Verify we started
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("bad: %s", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatalf("bad: %s", err)
+	}
+
+	// Test that Kill does nothing really
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+
+	if process.ProcessState == nil {
+		t.Fatal("should have no process state")
+	}
+
+	// Verify our path doesn't exist
+	if _, err := os.Stat(path); err == nil || !os.IsNotExist(err) {
+		t.Fatalf("bad: %s", err)
+	}
+}
+
 func TestClient_testCleanup(t *testing.T) {
 	// Create a temporary dir to store the result file
 	td, err := ioutil.TempDir("", "plugin")

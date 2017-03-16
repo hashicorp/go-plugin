@@ -2,8 +2,11 @@ package plugin
 
 import (
 	"bufio"
+	"crypto/subtle"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"log"
@@ -76,8 +79,11 @@ type ClientConfig struct {
 	//
 	// Reattach is configuration for reattaching to an existing plugin process
 	// that is already running. This isn't common.
-	Cmd      *exec.Cmd
-	Reattach *ReattachConfig
+	Cmd          *exec.Cmd
+	Reattach     *ReattachConfig
+	SecureConfig *SecureConfig
+
+	TLSConfig *tls.Config
 
 	// Managed represents if the client should be managed by the
 	// plugin package or not. If true, then by calling CleanupClients,
@@ -117,6 +123,28 @@ type ClientConfig struct {
 type ReattachConfig struct {
 	Addr net.Addr
 	Pid  int
+}
+
+type SecureConfig struct {
+	Checksum []byte
+	Hash     hash.Hash
+}
+
+func (s *SecureConfig) Check(filePath string) (bool, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(s.Hash, file)
+	if err != nil {
+		return false, err
+	}
+
+	sum := s.Hash.Sum(nil)
+
+	return subtle.ConstantTimeCompare(sum, s.Checksum) == 1, nil
 }
 
 // This makes sure all the managed subprocesses are killed and properly
@@ -208,6 +236,10 @@ func (c *Client) Client() (*RPCClient, error) {
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		// Make sure to set keep alive so that the connection doesn't die
 		tcpConn.SetKeepAlive(true)
+	}
+
+	if c.config.TLSConfig != nil {
+		conn = tls.Client(conn, c.config.TLSConfig)
 	}
 
 	// Create the actual RPC client
@@ -318,8 +350,13 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	{
 		cmdSet := c.config.Cmd != nil
 		attachSet := c.config.Reattach != nil
+		secureSet := c.config.SecureConfig != nil
 		if cmdSet == attachSet {
 			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
+		}
+
+		if secureSet == attachSet {
+			return nil, fmt.Errorf("Only one of Cmd or SecureConfig can be set")
 		}
 	}
 
@@ -383,6 +420,14 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = stderr_w
 	cmd.Stdout = stdout_w
+
+	if c.config.SecureConfig != nil {
+		if ok, err := c.config.SecureConfig.Check(cmd.Path); err != nil {
+			return nil, err
+		} else if !ok {
+			return nil, errors.New("Checksums did not match")
+		}
+	}
 
 	log.Printf("[DEBUG] plugin: starting plugin: %s %#v", cmd.Path, cmd.Args)
 	err = cmd.Start()

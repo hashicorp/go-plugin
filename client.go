@@ -355,8 +355,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
 		}
 
-		if secureSet == attachSet {
-			return nil, fmt.Errorf("Only one of Cmd or SecureConfig can be set")
+		if secureSet && attachSet {
+			return nil, fmt.Errorf("Only one of Reattach or SecureConfig can be set")
 		}
 	}
 

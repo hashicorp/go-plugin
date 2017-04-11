@@ -41,6 +41,12 @@ var (
 	// ErrChecksumsDoNotMatch is returned when binary's checksum doesn't match
 	// the one provided in the SecureConfig.
 	ErrChecksumsDoNotMatch = errors.New("checksums did not match")
+	// ErrSecureNoChecksum is returned when an empty checksum is provided to the
+	// SecureConfig.
+	ErrSecureConfigNoChecksum = errors.New("no checksum provided")
+	// ErrSecureNoHash is returned when a nil Hash object is provided to the
+	// SecureConfig.
+	ErrSecureConfigNoHash = errors.New("no hash implementation provided")
 )
 
 // Client handles the lifecycle of a plugin application. It launches
@@ -82,10 +88,14 @@ type ClientConfig struct {
 	//
 	// Reattach is configuration for reattaching to an existing plugin process
 	// that is already running. This isn't common.
-	Cmd          *exec.Cmd
-	Reattach     *ReattachConfig
+	Cmd      *exec.Cmd
+	Reattach *ReattachConfig
+
+	// SecureConfig is configuration for verifying the integrity of the
+	// executable. It can not be used with Reattach.
 	SecureConfig *SecureConfig
 
+	// TLSConfig is used to enable TLS on the RPC client.
 	TLSConfig *tls.Config
 
 	// Managed represents if the client should be managed by the
@@ -128,12 +138,27 @@ type ReattachConfig struct {
 	Pid  int
 }
 
+// SecureConfig is used to configure a client to verify the integrity of an
+// executable before running. It does this by verifying the checksum is
+// expected. Hash is used to specify the hashing method to use when checksumming
+// the file.  The configufation is verified by the client by calling the
+// SecureConfig.Check() function.
 type SecureConfig struct {
 	Checksum []byte
 	Hash     hash.Hash
 }
 
+// Check takes the filepath to an executable and returns true if the checksum of
+// the file matches the checksum provided in the SecureConfig.
 func (s *SecureConfig) Check(filePath string) (bool, error) {
+	if len(s.Checksum) == 0 {
+		return false, ErrSecureConfigNoChecksum
+	}
+
+	if s.Hash == nil {
+		return false, ErrSecureConfigNoHash
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return false, err
@@ -359,7 +384,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		if secureSet && attachSet {
-			return nil, fmt.Errorf("Only one of Reattach or SecureConfig can be set")
+			return nil, fmt.Errorf("only one of Reattach or SecureConfig can be set")
 		}
 	}
 

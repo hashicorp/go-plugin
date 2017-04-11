@@ -330,7 +330,7 @@ func TestClient_Stdin(t *testing.T) {
 func TestClient_SecureConfig(t *testing.T) {
 	// Test failure case
 	secureConfig := &SecureConfig{
-		Checksum: []byte{},
+		Checksum: []byte{'1'},
 		Hash:     sha256.New(),
 	}
 	process := helperProcess("test-interface")

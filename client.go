@@ -38,6 +38,9 @@ var (
 	// ErrProcessNotFound is returned when a client is instantiated to
 	// reattach to an existing process and it isn't found.
 	ErrProcessNotFound = errors.New("Reattachment process not found")
+	// ErrChecksumsDoNotMatch is returned when binary's checksum doesn't match
+	// the one provided in the SecureConfig.
+	ErrChecksumsDoNotMatch = errors.New("checksums did not match")
 )
 
 // Client handles the lifecycle of a plugin application. It launches
@@ -425,7 +428,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if ok, err := c.config.SecureConfig.Check(cmd.Path); err != nil {
 			return nil, err
 		} else if !ok {
-			return nil, errors.New("Checksums did not match")
+			return nil, ErrChecksumsDoNotMatch
 		}
 	}
 

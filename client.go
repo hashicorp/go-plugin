@@ -141,7 +141,7 @@ type ReattachConfig struct {
 // SecureConfig is used to configure a client to verify the integrity of an
 // executable before running. It does this by verifying the checksum is
 // expected. Hash is used to specify the hashing method to use when checksumming
-// the file.  The configufation is verified by the client by calling the
+// the file.  The configuration is verified by the client by calling the
 // SecureConfig.Check() function.
 type SecureConfig struct {
 	Checksum []byte

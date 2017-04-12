@@ -38,15 +38,22 @@ var (
 	// ErrProcessNotFound is returned when a client is instantiated to
 	// reattach to an existing process and it isn't found.
 	ErrProcessNotFound = errors.New("Reattachment process not found")
+
 	// ErrChecksumsDoNotMatch is returned when binary's checksum doesn't match
 	// the one provided in the SecureConfig.
 	ErrChecksumsDoNotMatch = errors.New("checksums did not match")
+
 	// ErrSecureNoChecksum is returned when an empty checksum is provided to the
 	// SecureConfig.
 	ErrSecureConfigNoChecksum = errors.New("no checksum provided")
+
 	// ErrSecureNoHash is returned when a nil Hash object is provided to the
 	// SecureConfig.
 	ErrSecureConfigNoHash = errors.New("no hash implementation provided")
+
+	// ErrSecureConfigAndReattach is returned when both Reattach and
+	// SecureConfig are set.
+	ErrSecureConfigAndReattach = errors.New("only one of Reattach or SecureConfig can be set")
 )
 
 // Client handles the lifecycle of a plugin application. It launches
@@ -143,6 +150,11 @@ type ReattachConfig struct {
 // expected. Hash is used to specify the hashing method to use when checksumming
 // the file.  The configuration is verified by the client by calling the
 // SecureConfig.Check() function.
+//
+// The host process should ensure the checksum was provided by a trusted and
+// authoritative source. The binary should be installed in such a way that it
+// can not be modified by an unauthorized user between the time of this check
+// and the time of execution.
 type SecureConfig struct {
 	Checksum []byte
 	Hash     hash.Hash
@@ -384,7 +396,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		if secureSet && attachSet {
-			return nil, fmt.Errorf("only one of Reattach or SecureConfig can be set")
+			return nil, ErrSecureConfigAndReattach
 		}
 	}
 
@@ -451,7 +463,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	if c.config.SecureConfig != nil {
 		if ok, err := c.config.SecureConfig.Check(cmd.Path); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error verifying checksum: %s", err)
 		} else if !ok {
 			return nil, ErrChecksumsDoNotMatch
 		}

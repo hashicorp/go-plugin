@@ -453,3 +453,18 @@ func TestClient_TLS(t *testing.T) {
 		t.Fatal("should say client has exited")
 	}
 }
+
+func TestClient_secureConfigAndReattach(t *testing.T) {
+	config := &ClientConfig{
+		SecureConfig: &SecureConfig{},
+		Reattach:     &ReattachConfig{},
+	}
+
+	c := NewClient(config)
+	defer c.Kill()
+
+	_, err := c.Start()
+	if err != ErrSecureConfigAndReattach {
+		t.Fatal("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
+	}
+}

@@ -49,6 +49,7 @@ type ServeConfig struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
+	// TLSProvider is a function that returns a configured tls.Config.
 	TLSProvider func() (*tls.Config, error)
 }
 

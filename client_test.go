@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -322,5 +324,147 @@ func TestClient_Stdin(t *testing.T) {
 
 	if !process.ProcessState.Success() {
 		t.Fatal("process didn't exit cleanly")
+	}
+}
+
+func TestClient_SecureConfig(t *testing.T) {
+	// Test failure case
+	secureConfig := &SecureConfig{
+		Checksum: []byte{'1'},
+		Hash:     sha256.New(),
+	}
+	process := helperProcess("test-interface")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		SecureConfig:    secureConfig,
+	})
+
+	// Grab the RPC client, should error
+	_, err := c.Client()
+	c.Kill()
+	if err != ErrChecksumsDoNotMatch {
+		t.Fatal("err should be %s, got %s", ErrChecksumsDoNotMatch, err)
+	}
+
+	// Get the checksum of the executable
+	file, err := os.Open(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sum := hash.Sum(nil)
+
+	secureConfig = &SecureConfig{
+		Checksum: sum,
+		Hash:     sha256.New(),
+	}
+
+	c = NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		SecureConfig:    secureConfig,
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	_, err = c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+}
+
+func TestClient_TLS(t *testing.T) {
+	// Test failure case
+	process := helperProcess("test-interface-tls")
+	cBad := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer cBad.Kill()
+
+	// Grab the RPC client
+	clientBad, err := cBad.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := clientBad.Dispense("test")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	cBad.Kill()
+
+	// Add TLS config to client
+	tlsConfig, err := helperTLSProvider()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	process = helperProcess("test-interface-tls")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		TLSConfig:       tlsConfig,
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err = client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	impl, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	result := impl.Double(21)
+	if result != 42 {
+		t.Fatalf("bad: %#v", result)
+	}
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+}
+
+func TestClient_secureConfigAndReattach(t *testing.T) {
+	config := &ClientConfig{
+		SecureConfig: &SecureConfig{},
+		Reattach:     &ReattachConfig{},
+	}
+
+	c := NewClient(config)
+	defer c.Kill()
+
+	_, err := c.Start()
+	if err != ErrSecureConfigAndReattach {
+		t.Fatal("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
 	}
 }

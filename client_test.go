@@ -468,3 +468,30 @@ func TestClient_secureConfigAndReattach(t *testing.T) {
 		t.Fatal("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
 	}
 }
+
+func TestClient_ping(t *testing.T) {
+	process := helperProcess("test-interface")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	// Get the client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ping, should work
+	if err := client.Ping(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Kill it
+	c.Kill()
+	if err := client.Ping(); err == nil {
+		t.Fatal("should error")
+	}
+}

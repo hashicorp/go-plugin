@@ -460,6 +460,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = stderr_w
 	cmd.Stdout = stdout_w
+	c.isolateCmd(cmd)
 
 	if c.config.SecureConfig != nil {
 		if ok, err := c.config.SecureConfig.Check(cmd.Path); err != nil {

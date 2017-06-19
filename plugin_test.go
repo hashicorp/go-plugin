@@ -215,7 +215,18 @@ func TestHelperProcess(*testing.T) {
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
-			GRPCServer:      grpc.NewServer(),
+			GRPCServer:      DefaultGRPCServer,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-grpc-tls":
+		// Serve!
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+			GRPCServer:      DefaultGRPCServer,
+			TLSProvider:     helperTLSProvider,
 		})
 
 		// Shouldn't reach here but make sure we exit anyways

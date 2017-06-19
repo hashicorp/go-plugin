@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
@@ -18,10 +19,16 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 	// go-plugin expects to block the connection
 	opts = append(opts, grpc.WithBlock())
 
+	// Fail right away
+	opts = append(opts, grpc.FailOnNonTempDialError(true))
+
 	// If we have no TLS configuration set, we need to explicitly tell grpc
 	// that we're connecting with an insecure connection.
 	if c.config.TLSConfig == nil {
 		opts = append(opts, grpc.WithInsecure())
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(
+			credentials.NewTLS(c.config.TLSConfig)))
 	}
 
 	// Connect. Note the first parameter is unused because we use a custom

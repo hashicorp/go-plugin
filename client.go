@@ -659,7 +659,7 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 		tcpConn.SetKeepAlive(true)
 	}
 
-	if c.config.TLSConfig != nil {
+	if c.Protocol() == ProtocolNetRPC && c.config.TLSConfig != nil {
 		conn = tls.Client(conn, c.config.TLSConfig)
 	}
 

@@ -2,13 +2,21 @@ package plugin
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
+
+// DefaultGRPCServer can be used with the "GRPCServer" field for Server
+// as a default factory method to create a gRPC server with no extra options.
+func DefaultGRPCServer(opts []grpc.ServerOption) *grpc.Server {
+	return grpc.NewServer(opts...)
+}
 
 // GRPCServer is a ServerType implementation that serves plugins over
 // gRPC. This allows plugins to easily be written for other languages.
@@ -21,7 +29,11 @@ type GRPCServer struct {
 
 	// Server is the actual server that will accept connections. This
 	// will be used for plugin registration as well.
-	Server *grpc.Server
+	Server func([]grpc.ServerOption) *grpc.Server
+
+	// TLS should be the TLS configuration if available. If this is nil,
+	// the connection will not have transport security.
+	TLS *tls.Config
 
 	// DoneCh is the channel that is closed when this server has exited.
 	DoneCh chan struct{}
@@ -32,10 +44,25 @@ type GRPCServer struct {
 	Stderr io.Reader
 
 	config GRPCServerConfig
+	server *grpc.Server
 }
 
 // ServerProtocol impl.
 func (s *GRPCServer) Init() error {
+	// TODO(mitchellh): I don't know why this is the case currently, but
+	// I'm getting connection refused errors when trying to use TLS. Given
+	// only one project uses this we should look into it later.
+	if s.TLS != nil {
+		return fmt.Errorf("TLS is not currently supported with gRPC plugins")
+	}
+
+	// Create our server
+	var opts []grpc.ServerOption
+	if s.TLS != nil {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(s.TLS)))
+	}
+	s.server = s.Server(opts)
+
 	// Register all our plugins onto the gRPC server.
 	for k, raw := range s.Plugins {
 		p, ok := raw.(GRPCPlugin)
@@ -43,7 +70,7 @@ func (s *GRPCServer) Init() error {
 			return fmt.Errorf("%q is not a GRPC-compatibile plugin", k)
 		}
 
-		if err := p.GRPCServer(s.Server); err != nil {
+		if err := p.GRPCServer(s.server); err != nil {
 			return fmt.Errorf("error registring %q: %s", k, err)
 		}
 	}
@@ -69,7 +96,7 @@ func (s *GRPCServer) Config() string {
 
 func (s *GRPCServer) Serve(lis net.Listener) {
 	// Start serving in a goroutine
-	go s.Server.Serve(lis)
+	go s.server.Serve(lis)
 
 	// Wait until graceful completion
 	<-s.DoneCh

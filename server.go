@@ -55,10 +55,11 @@ type ServeConfig struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
-	// GRPCServer is a gRPC server to serve plugins across. If this is
-	// non-nil, then gRPC will be used as the mechanism for serving
-	// these plugins.
-	GRPCServer *grpc.Server
+	// GRPCServer shoudl be non-nil to enable serving the plugins over
+	// gRPC. This is a function to create the server when needed with the
+	// given server options. The server options populated by go-plugin will
+	// be for TLS if set. You may modify the input slice.
+	GRPCServer func([]grpc.ServerOption) *grpc.Server
 }
 
 // Protocol returns the protocol that this server should speak.
@@ -119,15 +120,20 @@ func Serve(opts *ServeConfig) {
 		return
 	}
 
+	// Close the listener on return. We wrap this in a func() on purpose
+	// because the "listener" reference may change to TLS.
+	defer func() {
+		listener.Close()
+	}()
+
+	var tlsConfig *tls.Config
 	if opts.TLSProvider != nil {
-		tlsConfig, err := opts.TLSProvider()
+		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
 			log.Printf("[ERR] plugin: plugin tls init: %s", err)
 			return
 		}
-		listener = tls.NewListener(listener, tlsConfig)
 	}
-	defer listener.Close()
 
 	// Create the channel to tell us when we're done
 	doneCh := make(chan struct{})
@@ -136,6 +142,12 @@ func Serve(opts *ServeConfig) {
 	var server ServerProtocol
 	switch opts.Protocol() {
 	case ProtocolNetRPC:
+		// If we have a TLS configuration then we wrap the listener
+		// ourselves and do it at that level.
+		if tlsConfig != nil {
+			listener = tls.NewListener(listener, tlsConfig)
+		}
+
 		// Create the RPC server to dispense
 		server = &RPCServer{
 			Plugins: opts.Plugins,
@@ -149,6 +161,7 @@ func Serve(opts *ServeConfig) {
 		server = &GRPCServer{
 			Plugins: opts.Plugins,
 			Server:  opts.GRPCServer,
+			TLS:     tlsConfig,
 			Stdout:  stdout_r,
 			Stderr:  stderr_r,
 			DoneCh:  doneCh,

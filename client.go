@@ -429,6 +429,10 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		c.address = c.config.Reattach.Addr
 		c.process = p
 		c.protocol = c.config.Reattach.Protocol
+		if c.protocol == "" {
+			// Default the protocol to net/rpc for backwards compatibility
+			c.protocol = ProtocolNetRPC
+		}
 
 		return c.address, nil
 	}

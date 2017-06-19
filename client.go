@@ -136,6 +136,19 @@ type ClientConfig struct {
 	// sync any of these streams.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
+
+	// AllowedProtocols is a list of allowed protocols. If this isn't set,
+	// then all protocols are allowed and attempted, though they may fail
+	// for other reasons. For example, a gRPC connection will fail if the
+	// plugin doesn't support gRPC clients.
+	//
+	// By setting this, you can cause an error immediately on plugin start
+	// if an unsupported protocol is used with a good error message.
+	//
+	// If this isn't set at all (nil value), then only net/rpc is accepted.
+	// This is done for legacy reasons. You must explicitly opt-in to
+	// new protocols.
+	AllowedProtocols []Protocol
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -242,6 +255,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 	if config.SyncStderr == nil {
 		config.SyncStderr = ioutil.Discard
+	}
+
+	if config.AllowedProtocols == nil {
+		config.AllowedProtocols = []Protocol{ProtocolNetRPC}
 	}
 
 	c = &Client{config: config}
@@ -609,6 +626,20 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if len(parts) >= 5 {
 			c.protocol = Protocol(parts[4])
 		}
+
+		found := false
+		for _, p := range c.config.AllowedProtocols {
+			if p == c.protocol {
+				found = true
+				break
+			}
+		}
+		if !found {
+			err = fmt.Errorf("Unsupported plugin protocol %q. Supported; %v",
+				c.protocol, c.config.AllowedProtocols)
+			return
+		}
+
 	}
 
 	c.address = addr

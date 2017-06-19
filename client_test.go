@@ -173,9 +173,10 @@ func TestClient_testInterface(t *testing.T) {
 func TestClient_grpc(t *testing.T) {
 	process := helperProcess("test-grpc")
 	c := NewClient(&ClientConfig{
-		Cmd:             process,
-		HandshakeConfig: testHandshake,
-		Plugins:         testPluginMap,
+		Cmd:              process,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testPluginMap,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
 	})
 	defer c.Kill()
 
@@ -215,6 +216,20 @@ func TestClient_grpc(t *testing.T) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+}
+
+func TestClient_grpcNotAllowed(t *testing.T) {
+	process := helperProcess("test-grpc")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	if _, err := c.Start(); err == nil {
+		t.Fatal("should error")
 	}
 }
 

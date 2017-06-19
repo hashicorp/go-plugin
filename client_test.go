@@ -361,6 +361,64 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 	}
 }
 
+func TestClient_reattachGRPC(t *testing.T) {
+	process := helperProcess("test-grpc")
+	c := NewClient(&ClientConfig{
+		Cmd:              process,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testPluginMap,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	_, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Get the reattach configuration
+	reattach := c.ReattachConfig()
+
+	// Create a new client
+	c = NewClient(&ClientConfig{
+		Reattach:         reattach,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testPluginMap,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+	})
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	impl, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	result := impl.Double(21)
+	if result != 42 {
+		t.Fatalf("bad: %#v", result)
+	}
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+}
+
 func TestClient_reattachNotFound(t *testing.T) {
 	// Find a bad pid
 	var pid int = 5000

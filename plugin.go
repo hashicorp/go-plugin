@@ -9,6 +9,7 @@
 package plugin
 
 import (
+	"errors"
 	"net/rpc"
 
 	"google.golang.org/grpc"
@@ -37,4 +38,19 @@ type GRPCPlugin interface {
 	// GRPCClient should return the interface implementation for the plugin
 	// you're serving via gRPC.
 	GRPCClient(*grpc.ClientConn) (interface{}, error)
+}
+
+// NetRPCUnsupportedPlugin implements Plugin but returns errors for the
+// Server and Client functions. This will effectively disable support for
+// net/rpc based plugins.
+//
+// This struct can be embedded in your struct.
+type NetRPCUnsupportedPlugin struct{}
+
+func (p NetRPCUnsupportedPlugin) Server(*MuxBroker) (interface{}, error) {
+	return nil, errors.New("net/rpc plugin protocol not supported")
+}
+
+func (p NetRPCUnsupportedPlugin) Client(*MuxBroker, *rpc.Client) (interface{}, error) {
+	return nil, errors.New("net/rpc plugin protocol not supported")
 }

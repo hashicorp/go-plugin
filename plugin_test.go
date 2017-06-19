@@ -17,6 +17,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Test that NetRPCUnsupportedPlugin implements the correct interfaces.
+var _ Plugin = new(NetRPCUnsupportedPlugin)
+
 // testAPIVersion is the ProtocolVersion we use for testing.
 var testHandshake = HandshakeConfig{
 	ProtocolVersion:  1,

@@ -10,6 +10,8 @@ package plugin
 
 import (
 	"net/rpc"
+
+	"google.golang.org/grpc"
 )
 
 // Plugin is the interface that is implemented to serve/connect to an
@@ -22,4 +24,17 @@ type Plugin interface {
 	// Client returns an interface implementation for the plugin you're
 	// serving that communicates to the server end of the plugin.
 	Client(*MuxBroker, *rpc.Client) (interface{}, error)
+}
+
+// GRPCPlugin is the interface that is implemented to serve/connect to
+// a plugin over gRPC.
+type GRPCPlugin interface {
+	// GRPCServer should register this plugin for serving with the
+	// given GRPCServer. Unlike Plugin.Server, this is only called once
+	// since gRPC plugins serve singletons.
+	GRPCServer(*grpc.Server) error
+
+	// GRPCClient should return the interface implementation for the plugin
+	// you're serving via gRPC.
+	GRPCClient(*grpc.ClientConn) (interface{}, error)
 }

@@ -74,7 +74,8 @@ type Client struct {
 	l           sync.Mutex
 	address     net.Addr
 	process     *os.Process
-	client      *RPCClient
+	client      ClientProtocol
+	protocol    Protocol
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -141,8 +142,9 @@ type ClientConfig struct {
 // already-running plugin process. You can retrieve this information by
 // calling ReattachConfig on Client.
 type ReattachConfig struct {
-	Addr net.Addr
-	Pid  int
+	Protocol Protocol
+	Addr     net.Addr
+	Pid      int
 }
 
 // SecureConfig is used to configure a client to verify the integrity of an
@@ -252,11 +254,11 @@ func NewClient(config *ClientConfig) (c *Client) {
 	return
 }
 
-// Client returns an RPC client for the plugin.
+// Client returns the protocol client for this connection.
 //
-// Subsequent calls to this will return the same RPC client.
-func (c *Client) Client() (*RPCClient, error) {
-	addr, err := c.Start()
+// Subsequent calls to this will return the same client.
+func (c *Client) Client() (ClientProtocol, error) {
+	_, err := c.Start()
 	if err != nil {
 		return nil, err
 	}
@@ -268,33 +270,18 @@ func (c *Client) Client() (*RPCClient, error) {
 		return c.client, nil
 	}
 
-	// Connect to the client
-	conn, err := net.Dial(addr.Network(), addr.String())
-	if err != nil {
-		return nil, err
-	}
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
+	switch c.Protocol() {
+	case ProtocolNetRPC:
+		c.client, err = newRPCClient(c)
+
+	case ProtocolGRPC:
+		c.client, err = newGRPCClient(c)
+
+	default:
+		return nil, fmt.Errorf("unknown server protocol: %s", c.Protocol())
 	}
 
-	if c.config.TLSConfig != nil {
-		conn = tls.Client(conn, c.config.TLSConfig)
-	}
-
-	// Create the actual RPC client
-	c.client, err = NewRPCClient(conn, c.config.Plugins)
 	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	// Begin the stream syncing so that stdin, out, err work properly
-	err = c.client.SyncStreams(
-		c.config.SyncStdout,
-		c.config.SyncStderr)
-	if err != nil {
-		c.client.Close()
 		c.client = nil
 		return nil, err
 	}
@@ -441,6 +428,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Set the address and process
 		c.address = c.config.Reattach.Addr
 		c.process = p
+		c.protocol = c.config.Reattach.Protocol
 
 		return c.address, nil
 	}
@@ -560,7 +548,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line := strings.TrimSpace(string(lineBytes))
-		parts := strings.SplitN(line, "|", 4)
+		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
 			err = fmt.Errorf(
 				"Unrecognized remote plugin message: %s\n\n"+
@@ -610,6 +598,13 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		default:
 			err = fmt.Errorf("Unknown address type: %s", parts[3])
 		}
+
+		// If we have a server type, then record that. We default to net/rpc
+		// for backwards compatibility.
+		c.protocol = ProtocolNetRPC
+		if len(parts) >= 5 {
+			c.protocol = Protocol(parts[4])
+		}
 	}
 
 	c.address = addr
@@ -640,9 +635,35 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 	}
 
 	return &ReattachConfig{
-		Addr: c.address,
-		Pid:  c.config.Cmd.Process.Pid,
+		Protocol: c.protocol,
+		Addr:     c.address,
+		Pid:      c.config.Cmd.Process.Pid,
 	}
+}
+
+// Protocol returns the protocol of server on the remote end.
+func (c *Client) Protocol() Protocol {
+	return c.protocol
+}
+
+// dialer is compatible with grpc.WithDialer and creates the connection
+// to the plugin.
+func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
+	// Connect to the client
+	conn, err := net.Dial(c.address.Network(), c.address.String())
+	if err != nil {
+		return nil, err
+	}
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		// Make sure to set keep alive so that the connection doesn't die
+		tcpConn.SetKeepAlive(true)
+	}
+
+	if c.config.TLSConfig != nil {
+		conn = tls.Client(conn, c.config.TLSConfig)
+	}
+
+	return conn, nil
 }
 
 func (c *Client) logStderr(r io.Reader) {

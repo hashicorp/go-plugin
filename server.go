@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,8 @@ import (
 	"runtime"
 	"strconv"
 	"sync/atomic"
+
+	"google.golang.org/grpc"
 )
 
 // CoreProtocolVersion is the ProtocolVersion of the plugin system itself.
@@ -46,11 +49,26 @@ type ServeConfig struct {
 	// HandshakeConfig is the configuration that must match clients.
 	HandshakeConfig
 
+	// TLSProvider is a function that returns a configured tls.Config.
+	TLSProvider func() (*tls.Config, error)
+
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
-	// TLSProvider is a function that returns a configured tls.Config.
-	TLSProvider func() (*tls.Config, error)
+	// GRPCServer is a gRPC server to serve plugins across. If this is
+	// non-nil, then gRPC will be used as the mechanism for serving
+	// these plugins.
+	GRPCServer *grpc.Server
+}
+
+// Protocol returns the protocol that this server should speak.
+func (c *ServeConfig) Protocol() Protocol {
+	result := ProtocolNetRPC
+	if c.GRPCServer != nil {
+		result = ProtocolGRPC
+	}
+
+	return result
 }
 
 // Serve serves the plugins given by ServeConfig.
@@ -114,22 +132,57 @@ func Serve(opts *ServeConfig) {
 	// Create the channel to tell us when we're done
 	doneCh := make(chan struct{})
 
-	// Create the RPC server to dispense
-	server := &RPCServer{
-		Plugins: opts.Plugins,
-		Stdout:  stdout_r,
-		Stderr:  stderr_r,
-		DoneCh:  doneCh,
+	// Build the server type
+	var server ServerProtocol
+	switch opts.Protocol() {
+	case ProtocolNetRPC:
+		// Create the RPC server to dispense
+		server = &RPCServer{
+			Plugins: opts.Plugins,
+			Stdout:  stdout_r,
+			Stderr:  stderr_r,
+			DoneCh:  doneCh,
+		}
+
+	case ProtocolGRPC:
+		// Create the gRPC server
+		server = &GRPCServer{
+			Plugins: opts.Plugins,
+			Server:  opts.GRPCServer,
+			Stdout:  stdout_r,
+			Stderr:  stderr_r,
+			DoneCh:  doneCh,
+		}
+
+	default:
+		panic("unknown server protocol: " + opts.Protocol())
+	}
+
+	// Initialize the servers
+	if err := server.Init(); err != nil {
+		log.Printf("[ERR] plugin: protocol init: %s", err)
+		return
+	}
+
+	// Build the extra configuration
+	extra := ""
+	if v := server.Config(); v != "" {
+		extra = base64.StdEncoding.EncodeToString([]byte(v))
+	}
+	if extra != "" {
+		extra = "|" + extra
 	}
 
 	// Output the address and service name to stdout so that core can bring it up.
 	log.Printf("[DEBUG] plugin: plugin address: %s %s\n",
 		listener.Addr().Network(), listener.Addr().String())
-	fmt.Printf("%d|%d|%s|%s\n",
+	fmt.Printf("%d|%d|%s|%s|%s%s\n",
 		CoreProtocolVersion,
 		opts.ProtocolVersion,
 		listener.Addr().Network(),
-		listener.Addr().String())
+		listener.Addr().String(),
+		opts.Protocol(),
+		extra)
 	os.Stdout.Sync()
 
 	// Eat the interrupts
@@ -150,10 +203,8 @@ func Serve(opts *ServeConfig) {
 	os.Stdout = stdout_w
 	os.Stderr = stderr_w
 
-	// Serve
-	go server.Accept(listener)
-
-	// Wait for the graceful exit
+	// Accept connections and wait for completion
+	go server.Serve(listener)
 	<-doneCh
 }
 

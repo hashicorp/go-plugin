@@ -11,6 +11,10 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-plugin/test/grpc"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 // testAPIVersion is the ProtocolVersion we use for testing.
@@ -35,6 +39,15 @@ func (p *testInterfacePlugin) Server(b *MuxBroker) (interface{}, error) {
 
 func (p *testInterfacePlugin) Client(b *MuxBroker, c *rpc.Client) (interface{}, error) {
 	return &testInterfaceClient{Client: c}, nil
+}
+
+func (p *testInterfacePlugin) GRPCServer(s *grpc.Server) error {
+	grpctest.RegisterTestServer(s, &testGRPCServer{Impl: new(testInterfaceImpl)})
+	return nil
+}
+
+func (p *testInterfacePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+	return &testGRPCClient{Client: grpctest.NewTestClient(c)}, nil
 }
 
 // testInterfaceImpl implements testInterface concretely
@@ -71,6 +84,36 @@ func (s *testInterfaceServer) Double(arg int, resp *int) error {
 // testPluginMap can be used for tests as a plugin map
 var testPluginMap = map[string]Plugin{
 	"test": new(testInterfacePlugin),
+}
+
+// testGRPCServer is the implementation of our GRPC service.
+type testGRPCServer struct {
+	Impl testInterface
+}
+
+func (s *testGRPCServer) Double(
+	ctx context.Context,
+	req *grpctest.TestRequest) (*grpctest.TestResponse, error) {
+	return &grpctest.TestResponse{
+		Output: int32(s.Impl.Double(int(req.Input))),
+	}, nil
+}
+
+// testGRPCClient is an implementation of TestInterface that communicates
+// over gRPC.
+type testGRPCClient struct {
+	Client grpctest.TestClient
+}
+
+func (c *testGRPCClient) Double(v int) int {
+	resp, err := c.Client.Double(context.Background(), &grpctest.TestRequest{
+		Input: int32(v),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return int(resp.Output)
 }
 
 func helperProcess(s ...string) *exec.Cmd {
@@ -168,6 +211,15 @@ func TestHelperProcess(*testing.T) {
 
 		// Exit
 		return
+	case "test-grpc":
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+			GRPCServer:      grpc.NewServer(),
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
 	case "test-interface":
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,

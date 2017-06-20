@@ -7,6 +7,9 @@ import grpc
 import kv_pb2
 import kv_pb2_grpc
 
+from grpc_health.v1.health import HealthServicer
+from grpc_health.v1 import health_pb2, health_pb2_grpc
+
 class KVServicer(kv_pb2_grpc.KVServicer):
     """Implementation of KV service."""
 
@@ -26,9 +29,14 @@ class KVServicer(kv_pb2_grpc.KVServicer):
         return kv_pb2.Empty()
 
 def serve():
-    # Start the server
+    # We need to build a health service to work with go-plugin
+    health = HealthServicer()
+    health.set("plugin", health_pb2.HealthCheckResponse.ServingStatus.Value('SERVING'))
+
+    # Start the server.
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     kv_pb2_grpc.add_KVServicer_to_server(KVServicer(), server)
+    health_pb2_grpc.add_HealthServicer_to_server(health, server)
     server.add_insecure_port(':1234')
     server.start()
 

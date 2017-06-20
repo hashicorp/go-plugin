@@ -44,12 +44,28 @@ $ go build -o kv-go-netrpc ./plugin-go-netrpc
 $ export KV_PLUGIN="./kv-go-netrpc"
 ```
 
+### Plugin: plugin-python
+
+This plugin is written in Python:
+
+```
+$ export KV_PLUGIN="python plugin-python/plugin.py"
+```
+
 ## Updating the Protocol
 
 If you update the protocol buffers file, you can regenerate the file
 using the following command from this directory. You do not need to run
 this if you're just trying the example.
 
+For Go:
+
 ```sh
 $ protoc -I proto/ proto/kv.proto --go_out=plugins=grpc:proto/
+```
+
+For Python:
+
+```sh
+$ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto
 ```

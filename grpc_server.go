@@ -53,7 +53,7 @@ func (s *GRPCServer) Init() error {
 	// I'm getting connection refused errors when trying to use TLS. Given
 	// only one project uses this we should look into it later.
 	if s.TLS != nil {
-		return fmt.Errorf("TLS is not currently supported with gRPC plugins")
+		//return fmt.Errorf("TLS is not currently supported with gRPC plugins")
 	}
 
 	// Create our server

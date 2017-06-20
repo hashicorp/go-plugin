@@ -635,7 +635,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			}
 		}
 		if !found {
-			err = fmt.Errorf("Unsupported plugin protocol %q. Supported; %v",
+			err = fmt.Errorf("Unsupported plugin protocol %q. Supported: %v",
 				c.protocol, c.config.AllowedProtocols)
 			return
 		}

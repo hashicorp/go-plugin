@@ -77,8 +77,8 @@ func TestPluginRPCConn(t *testing.T, ps map[string]Plugin) (*RPCClient, *RPCServ
 	return client, server
 }
 
-// TestPluginGRPCConn returns a plugin RPC client and server that are connected
-// together and configured.
+// TestPluginGRPCConn returns a plugin gRPC client and server that are connected
+// together and configured. This is used to test gRPC connections.
 func TestPluginGRPCConn(t *testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCServer) {
 	// Create a listener
 	l, err := net.Listen("tcp", "127.0.0.1:0")

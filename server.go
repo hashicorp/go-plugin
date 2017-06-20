@@ -59,6 +59,10 @@ type ServeConfig struct {
 	// gRPC. This is a function to create the server when needed with the
 	// given server options. The server options populated by go-plugin will
 	// be for TLS if set. You may modify the input slice.
+	//
+	// Note that the grpc.Server will automatically be registered with
+	// the gRPC health checking service. This is not optional since go-plugin
+	// relies on this to implement Ping().
 	GRPCServer func([]grpc.ServerOption) *grpc.Server
 }
 

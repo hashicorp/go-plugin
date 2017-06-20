@@ -3,8 +3,10 @@ package plugin
 import (
 	"fmt"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
@@ -72,6 +74,10 @@ func (c *GRPCClient) Dispense(name string) (interface{}, error) {
 
 // ClientProtocol impl.
 func (c *GRPCClient) Ping() error {
-	// TODO
-	return nil
+	client := grpc_health_v1.NewHealthClient(c.Conn)
+	_, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{
+		Service: GRPCServiceName,
+	})
+
+	return err
 }

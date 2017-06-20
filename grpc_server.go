@@ -10,7 +10,13 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
+
+// GRPCServiceName is the name of the service that the health check should
+// return as passing.
+const GRPCServiceName = "plugin"
 
 // DefaultGRPCServer can be used with the "GRPCServer" field for Server
 // as a default factory method to create a gRPC server with no extra options.
@@ -49,19 +55,18 @@ type GRPCServer struct {
 
 // ServerProtocol impl.
 func (s *GRPCServer) Init() error {
-	// TODO(mitchellh): I don't know why this is the case currently, but
-	// I'm getting connection refused errors when trying to use TLS. Given
-	// only one project uses this we should look into it later.
-	if s.TLS != nil {
-		//return fmt.Errorf("TLS is not currently supported with gRPC plugins")
-	}
-
 	// Create our server
 	var opts []grpc.ServerOption
 	if s.TLS != nil {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(s.TLS)))
 	}
 	s.server = s.Server(opts)
+
+	// Register the health service
+	healthCheck := health.NewServer()
+	healthCheck.SetServingStatus(
+		GRPCServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
+	grpc_health_v1.RegisterHealthServer(s.server, healthCheck)
 
 	// Register all our plugins onto the gRPC server.
 	for k, raw := range s.Plugins {

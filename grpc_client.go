@@ -38,27 +38,16 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 		return nil, err
 	}
 
-	// Make the plugins
-	ps := make(map[string]GRPCPlugin)
-	for k, raw := range c.config.Plugins {
-		p, ok := raw.(GRPCPlugin)
-		if !ok {
-			return nil, fmt.Errorf("%q is not a gRPC-compatible plugin", k)
-		}
-
-		ps[k] = p
-	}
-
 	return &GRPCClient{
 		Conn:    conn,
-		Plugins: ps,
+		Plugins: c.config.Plugins,
 	}, nil
 }
 
 // GRPCClient connects to a GRPCServer over gRPC to dispense plugin types.
 type GRPCClient struct {
 	Conn    *grpc.ClientConn
-	Plugins map[string]GRPCPlugin
+	Plugins map[string]Plugin
 }
 
 // ClientProtocol impl.
@@ -68,9 +57,14 @@ func (c *GRPCClient) Close() error {
 
 // ClientProtocol impl.
 func (c *GRPCClient) Dispense(name string) (interface{}, error) {
-	p, ok := c.Plugins[name]
+	raw, ok := c.Plugins[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown plugin type: %s", name)
+	}
+
+	p, ok := raw.(GRPCPlugin)
+	if !ok {
+		return nil, fmt.Errorf("plugin %q doesn't support gRPC", name)
 	}
 
 	return p.GRPCClient(c.Conn)

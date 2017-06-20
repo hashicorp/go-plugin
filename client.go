@@ -287,7 +287,7 @@ func (c *Client) Client() (ClientProtocol, error) {
 		return c.client, nil
 	}
 
-	switch c.Protocol() {
+	switch c.protocol {
 	case ProtocolNetRPC:
 		c.client, err = newRPCClient(c)
 
@@ -295,7 +295,7 @@ func (c *Client) Client() (ClientProtocol, error) {
 		c.client, err = newGRPCClient(c)
 
 	default:
-		return nil, fmt.Errorf("unknown server protocol: %s", c.Protocol())
+		return nil, fmt.Errorf("unknown server protocol: %s", c.protocol)
 	}
 
 	if err != nil {
@@ -676,8 +676,17 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 	}
 }
 
-// Protocol returns the protocol of server on the remote end.
+// Protocol returns the protocol of server on the remote end. This will
+// start the plugin process if it isn't already started. Errors from
+// starting the plugin are surpressed and ProtocolInvalid is returned. It
+// is recommended you call Start explicitly before calling Protocol to ensure
+// no errors occur.
 func (c *Client) Protocol() Protocol {
+	_, err := c.Start()
+	if err != nil {
+		return ProtocolInvalid
+	}
+
 	return c.protocol
 }
 
@@ -694,7 +703,7 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 		tcpConn.SetKeepAlive(true)
 	}
 
-	if c.Protocol() == ProtocolNetRPC && c.config.TLSConfig != nil {
+	if c.protocol == ProtocolNetRPC && c.config.TLSConfig != nil {
 		conn = tls.Client(conn, c.config.TLSConfig)
 	}
 

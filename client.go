@@ -138,9 +138,9 @@ type ClientConfig struct {
 	SyncStderr io.Writer
 
 	// AllowedProtocols is a list of allowed protocols. If this isn't set,
-	// then all protocols are allowed and attempted, though they may fail
-	// for other reasons. For example, a gRPC connection will fail if the
-	// plugin doesn't support gRPC clients.
+	// then only netrpc is allowed. This is so that older go-plugin systems
+	// can show friendly errors if they see a plugin with an unknown
+	// protocol.
 	//
 	// By setting this, you can cause an error immediately on plugin start
 	// if an unsupported protocol is used with a good error message.
@@ -703,6 +703,8 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 		tcpConn.SetKeepAlive(true)
 	}
 
+	// If we have a TLS config we wrap our connection. We only do this
+	// for net/rpc since gRPC uses its own mechanism for TLS.
 	if c.protocol == ProtocolNetRPC && c.config.TLSConfig != nil {
 		conn = tls.Client(conn, c.config.TLSConfig)
 	}

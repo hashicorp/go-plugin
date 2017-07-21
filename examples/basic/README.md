@@ -1,13 +1,13 @@
 Plugin Example
 --------------
 
-Compile this driver via:
-
-    go build .
-
 Compile the plugin itself via:
 
-    cd plugin/ && go build .
+    go build -o ./plugin/greeter ./plugin/greeter_impl.go
+
+Compile this driver via:
+
+    go build -o basic .
 
 You can then launch the plugin sample via:
 

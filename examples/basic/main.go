@@ -2,23 +2,29 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/basic/commons"
 )
 
 func main() {
-	// We don't want to see the plugin logs.
-	log.SetOutput(ioutil.Discard)
+	// Create an hclog.Logger
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   "plugin",
+		Output: os.Stdout,
+		Level:  hclog.Debug,
+	})
 
 	// We're a host! Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
-		Cmd:             exec.Command("./plugin/plugin", "plugin"),
+		Cmd:             exec.Command("./plugin/greeter"),
+		Logger:          logger,
 	})
 	defer client.Kill()
 

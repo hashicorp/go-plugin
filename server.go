@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -55,7 +54,7 @@ type ServeConfig struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
-	// GRPCServer shoudl be non-nil to enable serving the plugins over
+	// GRPCServer should be non-nil to enable serving the plugins over
 	// gRPC. This is a function to create the server when needed with the
 	// given server options. The server options populated by go-plugin will
 	// be for TLS if set. You may modify the input slice.
@@ -79,7 +78,7 @@ func (c *ServeConfig) Protocol() Protocol {
 // Serve serves the plugins given by ServeConfig.
 //
 // Serve doesn't return until the plugin is done being executed. Any
-// errors will be outputted to the log.
+// errors will be outputted to os.Stderr.
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
@@ -101,9 +100,6 @@ func Serve(opts *ServeConfig) {
 		os.Exit(1)
 	}
 
-	// Logging goes to the original stderr
-	log.SetOutput(os.Stderr)
-
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
 	stdout_r, stdout_w, err := os.Pipe()
@@ -120,7 +116,8 @@ func Serve(opts *ServeConfig) {
 	// Register a listener so we can accept a connection
 	listener, err := serverListener()
 	if err != nil {
-		log.Printf("[ERR] plugin: plugin init: %s", err)
+		output := payload("plugin init", "ERROR", "error", err)
+		fmt.Fprint(os.Stderr, output)
 		return
 	}
 
@@ -134,7 +131,8 @@ func Serve(opts *ServeConfig) {
 	if opts.TLSProvider != nil {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
-			log.Printf("[ERR] plugin: plugin tls init: %s", err)
+			output := payload("plugin tls init", "ERROR", "error", err)
+			fmt.Fprint(os.Stderr, output)
 			return
 		}
 	}
@@ -177,7 +175,8 @@ func Serve(opts *ServeConfig) {
 
 	// Initialize the servers
 	if err := server.Init(); err != nil {
-		log.Printf("[ERR] plugin: protocol init: %s", err)
+		output := payload("protocol init", "ERROR", "error", err)
+		fmt.Fprint(os.Stderr, output)
 		return
 	}
 
@@ -190,9 +189,12 @@ func Serve(opts *ServeConfig) {
 		extra = "|" + extra
 	}
 
+	output := payload("plugin address", "DEBUG",
+		"network", listener.Addr().Network(), "address", listener.Addr().String())
+	// Send output to stderr for host consumption
+	fmt.Fprint(os.Stderr, output)
+
 	// Output the address and service name to stdout so that core can bring it up.
-	log.Printf("[DEBUG] plugin: plugin address: %s %s\n",
-		listener.Addr().Network(), listener.Addr().String())
 	fmt.Printf("%d|%d|%s|%s|%s%s\n",
 		CoreProtocolVersion,
 		opts.ProtocolVersion,
@@ -210,9 +212,10 @@ func Serve(opts *ServeConfig) {
 		for {
 			<-ch
 			newCount := atomic.AddInt32(&count, 1)
-			log.Printf(
-				"[DEBUG] plugin: received interrupt signal (count: %d). Ignoring.",
-				newCount)
+			output := payload("plugin received interrupt signal, ignoring", "DEBUG",
+				"count", newCount)
+			// Send output to stderr for host consumption
+			fmt.Fprint(os.Stderr, output)
 		}
 	}()
 

@@ -21,6 +21,8 @@ import (
 	"time"
 	"unicode"
 
+	"encoding/json"
+
 	hclog "github.com/hashicorp/go-hclog"
 )
 
@@ -732,9 +734,36 @@ func (c *Client) logStderr(r io.Reader) {
 		line, err := bufR.ReadString('\n')
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
-
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
-			c.logger.Named(filepath.Base(c.config.Cmd.Path)).Debug(line)
+
+			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+			// If output is not JSON format, print directly as error
+			if !isJSON(line) {
+				l.Debug("Error from plugin", "error", line)
+			} else {
+				// Convert line output to hclog format and print via
+				// the client's logger
+				var output Output
+				err := json.Unmarshal([]byte(line), &output)
+				if err != nil {
+					c.logger.Error("Unable to parse output from plugin")
+				}
+				out := flattenKVPairs(output.KVPairs)
+
+				l = l.With("timestamp", output.Timestamp.Format(hclog.TimeFormat))
+				switch hclog.LevelFromString(output.Level) {
+				case hclog.Trace:
+					l.Trace(output.Message, out...)
+				case hclog.Debug:
+					l.Debug(output.Message, out...)
+				case hclog.Info:
+					l.Info(output.Message, out...)
+				case hclog.Warn:
+					l.Warn(output.Message, out...)
+				case hclog.Error:
+					l.Error(output.Message, out...)
+				}
+			}
 		}
 
 		if err == io.EOF {
@@ -744,4 +773,9 @@ func (c *Client) logStderr(r io.Reader) {
 
 	// Flag that we've completed logging for others
 	close(c.doneLogging)
+}
+
+func isJSON(str string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(str), &js) == nil
 }

@@ -78,6 +78,49 @@ func flattenKVPairs(kvs []*logEntryKV) []interface{} {
 	return result
 }
 
+// parseHCLogJSON turns a JSON formatted hclog output
+// into a logEntry formatted JSON payload
+func parseHCLogJSON(output string) (string, error) {
+	var raw map[string]interface{}
+
+	err := json.Unmarshal([]byte(output), &raw)
+	if err != nil {
+		return "", err
+	}
+	// rawTime, err := time.Parse("2017-07-27T17:44:47.289975-04:00", raw["@timestamp"].(string))
+	// if err != nil {
+	// 	return "", err
+	// }
+	entry := &logEntry{
+		Message:   raw["@message"].(string),
+		Level:     raw["@level"].(string),
+		Timestamp: time.Now(),
+		KVPairs:   []*logEntryKV{},
+	}
+	delete(raw, "@message")
+	delete(raw, "@level")
+	delete(raw, "@timestamp")
+
+	kvs := []interface{}{}
+	for k, v := range raw {
+		kvs = append(kvs, k)
+		kvs = append(kvs, v.(string))
+	}
+
+	pairs, err := parseKVPairs(kvs...)
+	if err != nil {
+		return "", err
+	}
+	entry.KVPairs = pairs
+
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s\n", payload), nil
+}
+
 // Payload returns a payload given a message, level, and kv pairs/
 // If unable to parse KVs, it sets and returns the error message
 // as the payload.

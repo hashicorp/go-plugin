@@ -735,16 +735,27 @@ func (c *Client) logStderr(r io.Reader) {
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
+			// c.logger.Debug("current line", "line", line)
 
 			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 			// If output is not JSON format, print directly as error
 			if !isJSON(line) {
 				l.Debug("log from plugin", "entry", line)
 			} else {
+				if isHCLogJSON(line) {
+					// Try to parse hclog-formatted JSON
+					hjson, err := parseHCLogJSON(line)
+					if err == nil {
+						line = hjson
+					} else {
+						c.logger.Error("Unable to parse hclog json", "err", err)
+					}
+				}
+
 				// Convert line output to hclog format and print via
 				// the client's logger
 				var entry logEntry
-				err := json.Unmarshal([]byte(line), &entry)
+				err = json.Unmarshal([]byte(line), &entry)
 				if err != nil {
 					c.logger.Error("Unable to parse log entry from plugin")
 				}
@@ -778,4 +789,14 @@ func (c *Client) logStderr(r io.Reader) {
 func isJSON(str string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(str), &js) == nil
+}
+
+func isHCLogJSON(str string) bool {
+	var js map[string]interface{}
+	err := json.Unmarshal([]byte(str), &js)
+	if err != nil {
+		return false
+	}
+	_, ok := js["@message"]
+	return ok
 }

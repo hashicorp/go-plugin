@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 func TestClient(t *testing.T) {
@@ -775,5 +777,49 @@ func TestClient_ping(t *testing.T) {
 	c.Kill()
 	if err := client.Ping(); err == nil {
 		t.Fatal("should error")
+	}
+}
+
+func TestClient_Logger(t *testing.T) {
+	// Custom hclog.Logger
+	testLogger := hclog.New(&hclog.LoggerOptions{
+		Name:  "test-logger",
+		Level: hclog.Trace,
+	})
+
+	process := helperProcess("test-interface")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		Logger:          testLogger,
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	impl, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	impl.PrintKV("foo", "bar")
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
 	}
 }

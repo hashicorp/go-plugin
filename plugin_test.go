@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/test/grpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -30,6 +31,7 @@ var testHandshake = HandshakeConfig{
 // testInterface is the test interface we use for plugins.
 type testInterface interface {
 	Double(int) int
+	PrintKV(string, string)
 }
 
 // testInterfacePlugin is the implementation of Plugin to create
@@ -37,7 +39,12 @@ type testInterface interface {
 type testInterfacePlugin struct{}
 
 func (p *testInterfacePlugin) Server(b *MuxBroker) (interface{}, error) {
-	return &testInterfaceServer{Impl: new(testInterfaceImpl)}, nil
+	impl := &testInterfaceImpl{
+		logger: hclog.New(&hclog.LoggerOptions{
+			Output: os.Stderr,
+		}),
+	}
+	return &testInterfaceServer{Impl: impl}, nil
 }
 
 func (p *testInterfacePlugin) Client(b *MuxBroker, c *rpc.Client) (interface{}, error) {
@@ -54,9 +61,15 @@ func (p *testInterfacePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error
 }
 
 // testInterfaceImpl implements testInterface concretely
-type testInterfaceImpl struct{}
+type testInterfaceImpl struct {
+	logger hclog.Logger
+}
 
 func (i *testInterfaceImpl) Double(v int) int { return v * 2 }
+
+func (i *testInterfaceImpl) PrintKV(key, value string) {
+	i.logger.Info("PrintKV called", key, value)
+}
 
 // testInterfaceClient implements testInterface to communicate over RPC
 type testInterfaceClient struct {
@@ -73,6 +86,16 @@ func (impl *testInterfaceClient) Double(v int) int {
 	return resp
 }
 
+func (impl *testInterfaceClient) PrintKV(key, value string) {
+	err := impl.Client.Call("Plugin.PrintKV", map[string]string{
+		"key":   key,
+		"value": value,
+	}, &struct{}{})
+	if err != nil {
+		panic(err)
+	}
+}
+
 // testInterfaceServer is the RPC server for testInterfaceClient
 type testInterfaceServer struct {
 	Broker *MuxBroker
@@ -81,6 +104,11 @@ type testInterfaceServer struct {
 
 func (s *testInterfaceServer) Double(arg int, resp *int) error {
 	*resp = s.Impl.Double(arg)
+	return nil
+}
+
+func (s *testInterfaceServer) PrintKV(args map[string]string, _ *struct{}) error {
+	s.Impl.PrintKV(args["key"], args["value"])
 	return nil
 }
 

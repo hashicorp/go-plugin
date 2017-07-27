@@ -739,29 +739,29 @@ func (c *Client) logStderr(r io.Reader) {
 			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 			// If output is not JSON format, print directly as error
 			if !isJSON(line) {
-				l.Debug("Error from plugin", "error", line)
+				l.Debug("log from plugin", "entry", line)
 			} else {
 				// Convert line output to hclog format and print via
 				// the client's logger
-				var output Output
-				err := json.Unmarshal([]byte(line), &output)
+				var entry logEntry
+				err := json.Unmarshal([]byte(line), &entry)
 				if err != nil {
-					c.logger.Error("Unable to parse output from plugin")
+					c.logger.Error("Unable to parse log entry from plugin")
 				}
-				out := flattenKVPairs(output.KVPairs)
+				out := flattenKVPairs(entry.KVPairs)
 
-				l = l.With("timestamp", output.Timestamp.Format(hclog.TimeFormat))
-				switch hclog.LevelFromString(output.Level) {
+				l = l.With("timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+				switch hclog.LevelFromString(entry.Level) {
 				case hclog.Trace:
-					l.Trace(output.Message, out...)
+					l.Trace(entry.Message, out...)
 				case hclog.Debug:
-					l.Debug(output.Message, out...)
+					l.Debug(entry.Message, out...)
 				case hclog.Info:
-					l.Info(output.Message, out...)
+					l.Info(entry.Message, out...)
 				case hclog.Warn:
-					l.Warn(output.Message, out...)
+					l.Warn(entry.Message, out...)
 				case hclog.Error:
-					l.Error(output.Message, out...)
+					l.Error(entry.Message, out...)
 				}
 			}
 		}

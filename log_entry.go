@@ -7,23 +7,23 @@ import (
 	"time"
 )
 
-// Output is the JSON payload that gets sent to Stderr from the plugin to the host
-type Output struct {
-	Message   string    `json:"message"`
-	Level     string    `json:"level"`
-	Timestamp time.Time `json:"timestamp"`
-	KVPairs   []*KVPair `json:"kv_pairs"`
+// logEntry is the JSON payload that gets sent to Stderr from the plugin to the host
+type logEntry struct {
+	Message   string        `json:"message"`
+	Level     string        `json:"level"`
+	Timestamp time.Time     `json:"timestamp"`
+	KVPairs   []*logEntryKV `json:"kv_pairs"`
 }
 
-// KVPair is a key value pair within the Output payload
-type KVPair struct {
+// logEntryKV is a key value pair within the Output payload
+type logEntryKV struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-// parseKVPairs transforms string inputs into []*KVPair
-func parseKVPairs(kvs ...interface{}) ([]*KVPair, error) {
-	var result []*KVPair
+// parseKVPairs transforms string inputs into []*logEntryKV
+func parseKVPairs(kvs ...interface{}) ([]*logEntryKV, error) {
+	var result []*logEntryKV
 	if len(kvs)%2 != 0 {
 		return nil, fmt.Errorf("kv slice needs to be even number, got %d", len(kvs))
 	}
@@ -57,7 +57,7 @@ func parseKVPairs(kvs ...interface{}) ([]*KVPair, error) {
 			val = fmt.Sprintf("%v", st)
 		}
 
-		result = append(result, &KVPair{
+		result = append(result, &logEntryKV{
 			Key:   kvs[i].(string),
 			Value: val,
 		})
@@ -68,7 +68,7 @@ func parseKVPairs(kvs ...interface{}) ([]*KVPair, error) {
 
 // flattenKVPairs is used to flatten KVPair slice into []interface{}
 // for hclog consumption.
-func flattenKVPairs(kvs []*KVPair) []interface{} {
+func flattenKVPairs(kvs []*logEntryKV) []interface{} {
 	var result []interface{}
 	for _, kv := range kvs {
 		result = append(result, kv.Key)
@@ -86,13 +86,13 @@ func payload(message string, level string, kvs ...interface{}) string {
 	if err != nil {
 		return fmt.Sprintf("Unable to parse kv: %s\n", err)
 	}
-	output := &Output{
+	entry := &logEntry{
 		Message:   message,
 		Level:     level,
 		Timestamp: time.Now(),
 		KVPairs:   pairs,
 	}
-	payload, err := json.Marshal(output)
+	payload, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Sprintf("Unable to marshal output: %s\n", err)
 	}

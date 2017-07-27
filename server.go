@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -99,6 +100,9 @@ func Serve(opts *ServeConfig) {
 				"load any plugins automatically\n")
 		os.Exit(1)
 	}
+
+	// Logging goes to the original stderr
+	log.SetOutput(os.Stderr)
 
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.

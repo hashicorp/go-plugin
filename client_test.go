@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -781,10 +782,13 @@ func TestClient_ping(t *testing.T) {
 }
 
 func TestClient_Logger(t *testing.T) {
+	buffer := bytes.NewBuffer([]byte{})
+	stderr := io.MultiWriter(os.Stderr, buffer)
 	// Custom hclog.Logger
 	clientLogger := hclog.New(&hclog.LoggerOptions{
-		Name:  "test-logger",
-		Level: hclog.Trace,
+		Name:   "test-logger",
+		Level:  hclog.Trace,
+		Output: stderr,
 	})
 
 	process := helperProcess("test-interface-logger")
@@ -813,7 +817,23 @@ func TestClient_Logger(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
+	// Discard everything else, and capture the
+	// output we care about
+	buffer.Reset()
 	impl.PrintKV("foo", "bar")
+	line, err := buffer.ReadString('\n')
+	if err != nil {
+		t.Fatal(err)
+	}
+	re, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}-\d{4} \[[A-Z ]+\].*foo=bar`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	re.MatchString(line)
+	matched := re.MatchString(line)
+	if !matched {
+		t.Fatalf("incorrect log output from plugin on PrintKV; got: %s", line)
+	}
 
 	// Kill it
 	c.Kill()

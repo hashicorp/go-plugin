@@ -36,15 +36,15 @@ type testInterface interface {
 
 // testInterfacePlugin is the implementation of Plugin to create
 // RPC client/server implementations for testInterface.
-type testInterfacePlugin struct{}
+type testInterfacePlugin struct {
+	Impl testInterface
+}
 
 func (p *testInterfacePlugin) Server(b *MuxBroker) (interface{}, error) {
-	impl := &testInterfaceImpl{
-		logger: hclog.New(&hclog.LoggerOptions{
-			Output: os.Stderr,
-		}),
+	if p.Impl == nil {
+		log.Println("p.Impl is nil")
 	}
-	return &testInterfaceServer{Impl: impl}, nil
+	return &testInterfaceServer{Impl: p.Impl}, nil
 }
 
 func (p *testInterfacePlugin) Client(b *MuxBroker, c *rpc.Client) (interface{}, error) {
@@ -108,6 +108,9 @@ func (s *testInterfaceServer) Double(arg int, resp *int) error {
 }
 
 func (s *testInterfaceServer) PrintKV(args map[string]string, _ *struct{}) error {
+	// if s.Impl == nil {
+	// 	log.Println("s.Impl is nil")
+	// }
 	s.Impl.PrintKV(args["key"], args["value"])
 	return nil
 }
@@ -268,6 +271,26 @@ func TestHelperProcess(*testing.T) {
 			Plugins:         testPluginMap,
 		})
 
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-interface-logger":
+		pluginLogger := hclog.New(&hclog.LoggerOptions{
+			Level:      hclog.Trace,
+			Output:     os.Stderr,
+			JSONFormat: true,
+		})
+
+		testPlugin := &testInterfaceImpl{
+			logger: pluginLogger,
+		}
+		localTestPluginMap := map[string]Plugin{
+			"test": &testInterfacePlugin{Impl: testPlugin},
+		}
+
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         localTestPluginMap,
+		})
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface-daemon":

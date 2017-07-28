@@ -9,8 +9,8 @@ import (
 
 // logEntry is the JSON payload that gets sent to Stderr from the plugin to the host
 type logEntry struct {
-	Message   string        `json:"message"`
-	Level     string        `json:"level"`
+	Message   string        `json:"@message"`
+	Level     string        `json:"@level"`
 	Timestamp time.Time     `json:"timestamp"`
 	KVPairs   []*logEntryKV `json:"kv_pairs"`
 }
@@ -78,68 +78,47 @@ func flattenKVPairs(kvs []*logEntryKV) []interface{} {
 	return result
 }
 
-// parseHCLogJSON turns a JSON formatted hclog output
-// into a logEntry formatted JSON payload
-func parseHCLogJSON(output string) (string, error) {
+// parseJSON handles parsing JSON output
+func parseJSON(input string) (*logEntry, error) {
 	var raw map[string]interface{}
+	entry := &logEntry{}
 
-	err := json.Unmarshal([]byte(output), &raw)
+	err := json.Unmarshal([]byte(input), &raw)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	// rawTime, err := time.Parse("2017-07-27T17:44:47.289975-04:00", raw["@timestamp"].(string))
-	// if err != nil {
-	// 	return "", err
-	// }
-	entry := &logEntry{
-		Message:   raw["@message"].(string),
-		Level:     raw["@level"].(string),
-		Timestamp: time.Now(),
-		KVPairs:   []*logEntryKV{},
-	}
-	delete(raw, "@message")
-	delete(raw, "@level")
-	delete(raw, "@timestamp")
 
+	// Parse hclog-specific objects
+	if v, ok := raw["@message"]; ok {
+		entry.Message = v.(string)
+		delete(raw, "@message")
+	}
+
+	if v, ok := raw["@level"]; ok {
+		entry.Level = v.(string)
+		delete(raw, "@level")
+	}
+
+	if v, ok := raw["@timestamp"]; ok {
+		t, err := time.Parse("2006-01-02T15:04:05.000000Z07:00", v.(string))
+		if err != nil {
+			return nil, err
+		}
+		entry.Timestamp = t
+		delete(raw, "@timestamp")
+	}
+
+	// Parse dynamic KV args from the hclog payload.
 	kvs := []interface{}{}
 	for k, v := range raw {
 		kvs = append(kvs, k)
 		kvs = append(kvs, v.(string))
 	}
-
 	pairs, err := parseKVPairs(kvs...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	entry.KVPairs = pairs
 
-	payload, err := json.Marshal(entry)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s\n", payload), nil
-}
-
-// Payload returns a payload given a message, level, and kv pairs/
-// If unable to parse KVs, it sets and returns the error message
-// as the payload.
-func payload(message string, level string, kvs ...interface{}) string {
-	pairs, err := parseKVPairs(kvs...)
-	if err != nil {
-		return fmt.Sprintf("Unable to parse kv: %s\n", err)
-	}
-	entry := &logEntry{
-		Message:   message,
-		Level:     level,
-		Timestamp: time.Now(),
-		KVPairs:   pairs,
-	}
-	payload, err := json.Marshal(entry)
-	if err != nil {
-		return fmt.Sprintf("Unable to marshal output: %s\n", err)
-	}
-
-	// Appedn newline to payload
-	return fmt.Sprintf("%s\n", payload)
+	return entry, nil
 }

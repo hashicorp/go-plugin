@@ -14,7 +14,7 @@ type GreeterHello struct {
 }
 
 func (g *GreeterHello) Greet() string {
-	g.logger.Debug("message from greet!")
+	g.logger.Debug("message from GreeterHello.Greet")
 	return "Hello!"
 }
 

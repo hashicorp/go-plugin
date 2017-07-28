@@ -735,29 +735,17 @@ func (c *Client) logStderr(r io.Reader) {
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
-			// c.logger.Debug("current line", "line", line)
 
 			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 			// If output is not JSON format, print directly as error
 			if !isJSON(line) {
 				l.Debug("log from plugin", "entry", line)
 			} else {
-				if isHCLogJSON(line) {
-					// Try to parse hclog-formatted JSON
-					hjson, err := parseHCLogJSON(line)
-					if err == nil {
-						line = hjson
-					} else {
-						c.logger.Error("Unable to parse hclog json", "err", err)
-					}
-				}
-
-				// Convert line output to hclog format and print via
+				// Parse JSON line received from the plugin into logEntry, and print via
 				// the client's logger
-				var entry logEntry
-				err = json.Unmarshal([]byte(line), &entry)
+				entry, err := parseJSON(line)
 				if err != nil {
-					c.logger.Error("Unable to parse log entry from plugin")
+					l.Error("error parsing json from plugin", "error", err)
 				}
 				out := flattenKVPairs(entry.KVPairs)
 

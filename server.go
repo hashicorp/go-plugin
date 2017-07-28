@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/hashicorp/go-hclog"
+
 	"google.golang.org/grpc"
 )
 
@@ -104,6 +106,13 @@ func Serve(opts *ServeConfig) {
 	// Logging goes to the original stderr
 	log.SetOutput(os.Stderr)
 
+	// internal logger to os.Stderr
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Trace,
+		Output:     os.Stderr,
+		JSONFormat: true,
+	})
+
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
 	stdout_r, stdout_w, err := os.Pipe()
@@ -120,8 +129,7 @@ func Serve(opts *ServeConfig) {
 	// Register a listener so we can accept a connection
 	listener, err := serverListener()
 	if err != nil {
-		output := payload("plugin init", "ERROR", "error", err)
-		fmt.Fprint(os.Stderr, output)
+		logger.Error("plugin init error", "error", err)
 		return
 	}
 
@@ -135,8 +143,7 @@ func Serve(opts *ServeConfig) {
 	if opts.TLSProvider != nil {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
-			output := payload("plugin tls init", "ERROR", "error", err)
-			fmt.Fprint(os.Stderr, output)
+			logger.Error("plugin tls init", "error", err)
 			return
 		}
 	}
@@ -179,8 +186,7 @@ func Serve(opts *ServeConfig) {
 
 	// Initialize the servers
 	if err := server.Init(); err != nil {
-		output := payload("protocol init", "ERROR", "error", err)
-		fmt.Fprint(os.Stderr, output)
+		logger.Error("protocol init", "error", err)
 		return
 	}
 
@@ -193,10 +199,7 @@ func Serve(opts *ServeConfig) {
 		extra = "|" + extra
 	}
 
-	output := payload("plugin address", "DEBUG",
-		"network", listener.Addr().Network(), "address", listener.Addr().String())
-	// Send output to stderr for host consumption
-	fmt.Fprint(os.Stderr, output)
+	logger.Debug("plugin address", "network", listener.Addr().Network(), "address", listener.Addr().String())
 
 	// Output the address and service name to stdout so that core can bring it up.
 	fmt.Printf("%d|%d|%s|%s|%s%s\n",
@@ -216,10 +219,7 @@ func Serve(opts *ServeConfig) {
 		for {
 			<-ch
 			newCount := atomic.AddInt32(&count, 1)
-			output := payload("plugin received interrupt signal, ignoring", "DEBUG",
-				"count", newCount)
-			// Send output to stderr for host consumption
-			fmt.Fprint(os.Stderr, output)
+			logger.Debug("plugin received interrupt signal, ignoring", "count", newCount)
 		}
 	}()
 

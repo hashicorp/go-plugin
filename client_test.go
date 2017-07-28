@@ -581,7 +581,7 @@ func TestClient_SecureConfig(t *testing.T) {
 	_, err := c.Client()
 	c.Kill()
 	if err != ErrChecksumsDoNotMatch {
-		t.Fatal("err should be %s, got %s", ErrChecksumsDoNotMatch, err)
+		t.Fatalf("err should be %s, got %s", ErrChecksumsDoNotMatch, err)
 	}
 
 	// Get the checksum of the executable
@@ -749,7 +749,7 @@ func TestClient_secureConfigAndReattach(t *testing.T) {
 
 	_, err := c.Start()
 	if err != ErrSecureConfigAndReattach {
-		t.Fatal("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
+		t.Fatalf("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
 	}
 }
 
@@ -782,17 +782,17 @@ func TestClient_ping(t *testing.T) {
 
 func TestClient_Logger(t *testing.T) {
 	// Custom hclog.Logger
-	testLogger := hclog.New(&hclog.LoggerOptions{
+	clientLogger := hclog.New(&hclog.LoggerOptions{
 		Name:  "test-logger",
 		Level: hclog.Trace,
 	})
 
-	process := helperProcess("test-interface")
+	process := helperProcess("test-interface-logger")
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger,
+		Logger:          clientLogger,
 	})
 	defer c.Kill()
 

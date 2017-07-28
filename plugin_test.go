@@ -41,9 +41,6 @@ type testInterfacePlugin struct {
 }
 
 func (p *testInterfacePlugin) Server(b *MuxBroker) (interface{}, error) {
-	if p.Impl == nil {
-		log.Println("p.Impl is nil")
-	}
 	return &testInterfaceServer{Impl: p.Impl}, nil
 }
 
@@ -188,6 +185,22 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(2)
 	}
 
+	// override testPluginMap with one that uses
+	// hclog logger on its implementation
+	pluginLogger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Trace,
+		Output:     os.Stderr,
+		JSONFormat: true,
+	})
+
+	testPlugin := &testInterfaceImpl{
+		logger: pluginLogger,
+	}
+
+	testPluginMap := map[string]Plugin{
+		"test": &testInterfacePlugin{Impl: testPlugin},
+	}
+
 	cmd, args := args[0], args[1:]
 	switch cmd {
 	case "bad-version":
@@ -274,22 +287,9 @@ func TestHelperProcess(*testing.T) {
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface-logger":
-		pluginLogger := hclog.New(&hclog.LoggerOptions{
-			Level:      hclog.Trace,
-			Output:     os.Stderr,
-			JSONFormat: true,
-		})
-
-		testPlugin := &testInterfaceImpl{
-			logger: pluginLogger,
-		}
-		localTestPluginMap := map[string]Plugin{
-			"test": &testInterfacePlugin{Impl: testPlugin},
-		}
-
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,
-			Plugins:         localTestPluginMap,
+			Plugins:         testPluginMap,
 		})
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)

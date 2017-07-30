@@ -130,6 +130,13 @@ func (s *testGRPCServer) Double(
 	}, nil
 }
 
+func (s *testGRPCServer) PrintKV(
+	ctx context.Context,
+	req *grpctest.PrintKVRequest) (*grpctest.PrintKVResponse, error) {
+	s.Impl.PrintKV(req.Key, req.Value)
+	return &grpctest.PrintKVResponse{}, nil
+}
+
 // testGRPCClient is an implementation of TestInterface that communicates
 // over gRPC.
 type testGRPCClient struct {
@@ -145,6 +152,16 @@ func (c *testGRPCClient) Double(v int) int {
 	}
 
 	return int(resp.Output)
+}
+
+func (c *testGRPCClient) PrintKV(key, value string) {
+	_, err := c.Client.PrintKV(context.Background(), &grpctest.PrintKVRequest{
+		Key:   key,
+		Value: value,
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func helperProcess(s ...string) *exec.Cmd {

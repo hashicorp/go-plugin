@@ -15,7 +15,7 @@ class KVServicer(kv_pb2_grpc.KVServicer):
 
     def Get(self, request, context):
         filename = "kv_"+request.key
-        with open(filename, 'r') as f:
+        with open(filename, 'r+b') as f:
             result = kv_pb2.GetResponse()
             result.value = f.read()
             return result

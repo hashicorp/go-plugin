@@ -778,13 +778,3 @@ func isJSON(str string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(str), &js) == nil
 }
-
-func isHCLogJSON(str string) bool {
-	var js map[string]interface{}
-	err := json.Unmarshal([]byte(str), &js)
-	if err != nil {
-		return false
-	}
-	_, ok := js["@message"]
-	return ok
-}

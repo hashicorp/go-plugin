@@ -41,13 +41,10 @@ and the plugin can call back into the host process.
 **Built-in Logging.** Any plugins that use the `log` standard library
 will have log data automatically sent to the host process. The host
 process will mirror this output prefixed with the path to the plugin
-binary. This makes debugging with plugins simple.
-
-**Optional hlog.Logger Support.** Plugins can also print `hclog` formatted
-output by passing in a `hclog.Logger` that outputs to `io.Stderr` with
-`JSONFormat` enabled to its concrete implementation. The host process
-optionally accepts a `hclog.Logger` as part of its `ClientConfig`, which
-enables it to direct output to any arbitrary `hclog` logger.
+binary. This makes debugging with plugins simple. If the host system
+uses [hclog](https://github.com/hashicorp/go-hclog) then the log data
+will be structured. If the plugin also uses hclog, logs from the plugin
+will be sent to the host hclog and be structured.
 
 **Protocol Versioning.** A very basic "protocol version" is supported that
 can be incremented to invalidate any previous plugins. This is useful when

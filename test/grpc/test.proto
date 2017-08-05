@@ -9,6 +9,16 @@ message TestResponse {
     int32 Output = 2;
 }
 
+message PrintKVRequest {
+    string Key = 1;
+    string Value = 2;
+}
+
+message PrintKVResponse {
+    
+}
+
 service Test {
     rpc Double(TestRequest) returns (TestResponse) {}
+    rpc PrintKV(PrintKVRequest) returns (PrintKVResponse) {}
 }

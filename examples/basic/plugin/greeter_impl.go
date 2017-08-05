@@ -1,14 +1,22 @@
 package main
 
 import (
+	"os"
+
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/basic/commons"
 )
 
 // Here is a real implementation of Greeter
-type GreeterHello struct{}
+type GreeterHello struct {
+	logger hclog.Logger
+}
 
-func (GreeterHello) Greet() string { return "Hello!" }
+func (g *GreeterHello) Greet() string {
+	g.logger.Debug("message from GreeterHello.Greet")
+	return "Hello!"
+}
 
 // handshakeConfigs are used to just do a basic handshake between
 // a plugin and host. If the handshake fails, a user friendly error is shown.
@@ -20,12 +28,23 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "hello",
 }
 
-// pluginMap is the map of plugins we can dispense.
-var pluginMap = map[string]plugin.Plugin{
-	"greeter": &example.GreeterPlugin{Impl: new(GreeterHello)},
-}
-
 func main() {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Trace,
+		Output:     os.Stderr,
+		JSONFormat: true,
+	})
+
+	greeter := &GreeterHello{
+		logger: logger,
+	}
+	// pluginMap is the map of plugins we can dispense.
+	var pluginMap = map[string]plugin.Plugin{
+		"greeter": &example.GreeterPlugin{Impl: greeter},
+	}
+
+	logger.Debug("message from plugin", "foo", "bar")
+
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,

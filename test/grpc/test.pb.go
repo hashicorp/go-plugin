@@ -10,6 +10,8 @@ It is generated from these files:
 It has these top-level messages:
 	TestRequest
 	TestResponse
+	PrintKVRequest
+	PrintKVResponse
 */
 package grpctest
 
@@ -65,9 +67,43 @@ func (m *TestResponse) GetOutput() int32 {
 	return 0
 }
 
+type PrintKVRequest struct {
+	Key   string `protobuf:"bytes,1,opt,name=Key" json:"Key,omitempty"`
+	Value string `protobuf:"bytes,2,opt,name=Value" json:"Value,omitempty"`
+}
+
+func (m *PrintKVRequest) Reset()                    { *m = PrintKVRequest{} }
+func (m *PrintKVRequest) String() string            { return proto.CompactTextString(m) }
+func (*PrintKVRequest) ProtoMessage()               {}
+func (*PrintKVRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *PrintKVRequest) GetKey() string {
+	if m != nil {
+		return m.Key
+	}
+	return ""
+}
+
+func (m *PrintKVRequest) GetValue() string {
+	if m != nil {
+		return m.Value
+	}
+	return ""
+}
+
+type PrintKVResponse struct {
+}
+
+func (m *PrintKVResponse) Reset()                    { *m = PrintKVResponse{} }
+func (m *PrintKVResponse) String() string            { return proto.CompactTextString(m) }
+func (*PrintKVResponse) ProtoMessage()               {}
+func (*PrintKVResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
 func init() {
 	proto.RegisterType((*TestRequest)(nil), "grpctest.TestRequest")
 	proto.RegisterType((*TestResponse)(nil), "grpctest.TestResponse")
+	proto.RegisterType((*PrintKVRequest)(nil), "grpctest.PrintKVRequest")
+	proto.RegisterType((*PrintKVResponse)(nil), "grpctest.PrintKVResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -82,6 +118,7 @@ const _ = grpc.SupportPackageIsVersion4
 
 type TestClient interface {
 	Double(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error)
+	PrintKV(ctx context.Context, in *PrintKVRequest, opts ...grpc.CallOption) (*PrintKVResponse, error)
 }
 
 type testClient struct {
@@ -101,10 +138,20 @@ func (c *testClient) Double(ctx context.Context, in *TestRequest, opts ...grpc.C
 	return out, nil
 }
 
+func (c *testClient) PrintKV(ctx context.Context, in *PrintKVRequest, opts ...grpc.CallOption) (*PrintKVResponse, error) {
+	out := new(PrintKVResponse)
+	err := grpc.Invoke(ctx, "/grpctest.Test/PrintKV", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Test service
 
 type TestServer interface {
 	Double(context.Context, *TestRequest) (*TestResponse, error)
+	PrintKV(context.Context, *PrintKVRequest) (*PrintKVResponse, error)
 }
 
 func RegisterTestServer(s *grpc.Server, srv TestServer) {
@@ -129,6 +176,24 @@ func _Test_Double_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Test_PrintKV_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrintKVRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServer).PrintKV(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpctest.Test/PrintKV",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServer).PrintKV(ctx, req.(*PrintKVRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Test_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "grpctest.Test",
 	HandlerType: (*TestServer)(nil),
@@ -136,6 +201,10 @@ var _Test_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Double",
 			Handler:    _Test_Double_Handler,
+		},
+		{
+			MethodName: "PrintKV",
+			Handler:    _Test_PrintKV_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -145,14 +214,18 @@ var _Test_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("test.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 140 bytes of a gzipped FileDescriptorProto
+	// 206 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2a, 0x49, 0x2d, 0x2e,
 	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x48, 0x2f, 0x2a, 0x48, 0x06, 0xf1, 0x95, 0x94,
 	0xb9, 0xb8, 0x43, 0x52, 0x8b, 0x4b, 0x82, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0x44, 0xb8,
 	0x58, 0x3d, 0xf3, 0x0a, 0x4a, 0x4b, 0x24, 0x18, 0x15, 0x18, 0x35, 0x58, 0x83, 0x20, 0x1c, 0x25,
 	0x35, 0x2e, 0x1e, 0x88, 0xa2, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x31, 0x2e, 0x36, 0xff,
-	0xd2, 0x12, 0x90, 0x32, 0x26, 0xb0, 0x32, 0x28, 0xcf, 0xc8, 0x91, 0x8b, 0x05, 0xa4, 0x4e, 0xc8,
-	0x92, 0x8b, 0xcd, 0x25, 0xbf, 0x34, 0x29, 0x27, 0x55, 0x48, 0x54, 0x0f, 0x66, 0x93, 0x1e, 0x92,
-	0x35, 0x52, 0x62, 0xe8, 0xc2, 0x10, 0x83, 0x95, 0x18, 0x92, 0xd8, 0xc0, 0x0e, 0x34, 0x06, 0x04,
-	0x00, 0x00, 0xff, 0xff, 0x59, 0x91, 0xf3, 0xf7, 0xae, 0x00, 0x00, 0x00,
+	0xd2, 0x12, 0x90, 0x32, 0x26, 0xb0, 0x32, 0x28, 0x4f, 0xc9, 0x82, 0x8b, 0x2f, 0xa0, 0x28, 0x33,
+	0xaf, 0xc4, 0x3b, 0x0c, 0x66, 0x9e, 0x00, 0x17, 0xb3, 0x77, 0x6a, 0x25, 0xd8, 0x34, 0xce, 0x20,
+	0x10, 0x13, 0x64, 0x43, 0x58, 0x62, 0x4e, 0x69, 0x2a, 0x58, 0x2b, 0x67, 0x10, 0x84, 0xa3, 0x24,
+	0xc8, 0xc5, 0x0f, 0xd7, 0x09, 0xb1, 0xc4, 0xa8, 0x99, 0x91, 0x8b, 0x05, 0x64, 0xab, 0x90, 0x25,
+	0x17, 0x9b, 0x4b, 0x7e, 0x69, 0x52, 0x4e, 0xaa, 0x90, 0xa8, 0x1e, 0xcc, 0xdd, 0x7a, 0x48, 0x8e,
+	0x96, 0x12, 0x43, 0x17, 0x86, 0x98, 0xa0, 0xc4, 0x20, 0xe4, 0xc0, 0xc5, 0x0e, 0x35, 0x56, 0x48,
+	0x02, 0xa1, 0x08, 0xd5, 0x8d, 0x52, 0x92, 0x58, 0x64, 0x60, 0x26, 0x24, 0xb1, 0x81, 0x03, 0xcc,
+	0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0x88, 0xcf, 0xec, 0x95, 0x3e, 0x01, 0x00, 0x00,
 }

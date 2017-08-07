@@ -11,11 +11,14 @@ message TestResponse {
 
 message PrintKVRequest {
     string Key = 1;
-    string Value = 2;
+    oneof Value {
+        string ValueString = 2;
+        int32 ValueInt = 3;
+    }
 }
 
 message PrintKVResponse {
-    
+
 }
 
 service Test {

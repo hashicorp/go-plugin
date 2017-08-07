@@ -219,7 +219,7 @@ func Serve(opts *ServeConfig) {
 		for {
 			<-ch
 			newCount := atomic.AddInt32(&count, 1)
-			logger.Debug("plugin received interrupt signal, ignoring", "count", newCount)
+			logger.Debug("plugin received interrupt signal, ignoring", "count", fmt.Sprintf("%d", newCount))
 		}
 	}()
 

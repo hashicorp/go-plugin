@@ -271,8 +271,11 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 
 	if config.Logger == nil {
-		config.Logger = hclog.Default()
-		config.Logger = config.Logger.ResetNamed("plugin")
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  hclog.Trace,
+			Name:   "plugin",
+		})
 	}
 
 	c = &Client{

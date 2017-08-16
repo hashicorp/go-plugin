@@ -278,8 +278,13 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(1)
 	case "stderr":
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
-		log.Println("HELLO")
-		log.Println("WORLD")
+		os.Stderr.WriteString("HELLO\n")
+		os.Stderr.WriteString("WORLD\n")
+	case "stderr-json":
+		// write values that might be JSON, but aren't KVs
+		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		os.Stderr.WriteString("[\"HELLO\"]\n")
+		os.Stderr.WriteString("12345\n")
 	case "stdin":
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
 		data := make([]byte, 5)

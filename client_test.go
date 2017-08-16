@@ -47,6 +47,23 @@ func TestClient(t *testing.T) {
 	}
 }
 
+func TestClient_isJSON(t *testing.T) {
+	shouldBeFalse := isJSON(`["data1", "data2"]`)
+	if shouldBeFalse {
+		t.Fatal("isJSON() should return false when entry is not a {} json object.")
+	}
+
+	shouldBeFalse = isJSON("some text")
+	if shouldBeFalse {
+		t.Fatal("isJson() should return false when entry is simple text.")
+	}
+
+	shouldBeTrue := isJSON(`{"key1": "data1", "key2": "data2"}`)
+	if !shouldBeTrue {
+		t.Fatal("isJSON() should return true when entry is a {} json object.")
+	}
+}
+
 // This tests a bug where Kill would start
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file

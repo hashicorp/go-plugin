@@ -516,6 +516,33 @@ func TestClient_Stderr(t *testing.T) {
 	}
 }
 
+func TestClient_StderrJSON(t *testing.T) {
+	stderr := new(bytes.Buffer)
+	process := helperProcess("stderr-json")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		Stderr:          stderr,
+		HandshakeConfig: testHandshake,
+	})
+	defer c.Kill()
+
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	for !c.Exited() {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if !strings.Contains(stderr.String(), "[\"HELLO\"]\n") {
+		t.Fatalf("bad log data: '%s'", stderr.String())
+	}
+
+	if !strings.Contains(stderr.String(), "12345\n") {
+		t.Fatalf("bad log data: '%s'", stderr.String())
+	}
+}
+
 func TestClient_Stdin(t *testing.T) {
 	// Overwrite stdin for this test with a temporary file
 	tf, err := ioutil.TempFile("", "terraform")

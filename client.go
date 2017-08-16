@@ -778,6 +778,6 @@ func (c *Client) logStderr(r io.Reader) {
 }
 
 func isJSON(str string) bool {
-	var js json.RawMessage
+	var js map[string]interface{}
 	return json.Unmarshal([]byte(str), &js) == nil
 }

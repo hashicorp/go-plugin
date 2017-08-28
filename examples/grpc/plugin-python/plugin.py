@@ -15,7 +15,7 @@ class KVServicer(kv_pb2_grpc.KVServicer):
 
     def Get(self, request, context):
         filename = "kv_"+request.key
-        with open(filename, 'r') as f:
+        with open(filename, 'r+b') as f:
             result = kv_pb2.GetResponse()
             result.value = f.read()
             return result
@@ -37,7 +37,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     kv_pb2_grpc.add_KVServicer_to_server(KVServicer(), server)
     health_pb2_grpc.add_HealthServicer_to_server(health, server)
-    server.add_insecure_port(':1234')
+    server.add_insecure_port('127.0.0.1:1234')
     server.start()
 
     # Output information

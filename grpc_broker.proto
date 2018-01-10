@@ -8,7 +8,7 @@ message ConnInfo {
 }
 
 service GRPCBroker {
-    rpc NewConn(stream ConnInfo) returns (stream ConnInfo);
+    rpc StartStream(stream ConnInfo) returns (stream ConnInfo);
 }
 
 

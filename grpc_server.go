@@ -69,6 +69,7 @@ func (s *GRPCServer) Init() error {
 		GRPCServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(s.server, healthCheck)
 
+	// Register the broker service
 	brokerServer := &gRPCBrokerServer{
 		send: make(chan *sendErr),
 		recv: make(chan *ConnInfo),
@@ -76,7 +77,7 @@ func (s *GRPCServer) Init() error {
 	}
 
 	RegisterGRPCBrokerServer(s.server, brokerServer)
-	s.broker = newGRPCBroker(brokerServer)
+	s.broker = newGRPCBroker(brokerServer, s.TLS)
 	go s.broker.Run()
 
 	// Register all our plugins onto the gRPC server.

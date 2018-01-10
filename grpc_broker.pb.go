@@ -79,7 +79,7 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for GRPCBroker service
 
 type GRPCBrokerClient interface {
-	NewConn(ctx context.Context, opts ...grpc.CallOption) (GRPCBroker_NewConnClient, error)
+	StartStream(ctx context.Context, opts ...grpc.CallOption) (GRPCBroker_StartStreamClient, error)
 }
 
 type gRPCBrokerClient struct {
@@ -90,30 +90,30 @@ func NewGRPCBrokerClient(cc *grpc.ClientConn) GRPCBrokerClient {
 	return &gRPCBrokerClient{cc}
 }
 
-func (c *gRPCBrokerClient) NewConn(ctx context.Context, opts ...grpc.CallOption) (GRPCBroker_NewConnClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_GRPCBroker_serviceDesc.Streams[0], c.cc, "/plugin.GRPCBroker/NewConn", opts...)
+func (c *gRPCBrokerClient) StartStream(ctx context.Context, opts ...grpc.CallOption) (GRPCBroker_StartStreamClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_GRPCBroker_serviceDesc.Streams[0], c.cc, "/plugin.GRPCBroker/StartStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &gRPCBrokerNewConnClient{stream}
+	x := &gRPCBrokerStartStreamClient{stream}
 	return x, nil
 }
 
-type GRPCBroker_NewConnClient interface {
+type GRPCBroker_StartStreamClient interface {
 	Send(*ConnInfo) error
 	Recv() (*ConnInfo, error)
 	grpc.ClientStream
 }
 
-type gRPCBrokerNewConnClient struct {
+type gRPCBrokerStartStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *gRPCBrokerNewConnClient) Send(m *ConnInfo) error {
+func (x *gRPCBrokerStartStreamClient) Send(m *ConnInfo) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *gRPCBrokerNewConnClient) Recv() (*ConnInfo, error) {
+func (x *gRPCBrokerStartStreamClient) Recv() (*ConnInfo, error) {
 	m := new(ConnInfo)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -124,32 +124,32 @@ func (x *gRPCBrokerNewConnClient) Recv() (*ConnInfo, error) {
 // Server API for GRPCBroker service
 
 type GRPCBrokerServer interface {
-	NewConn(GRPCBroker_NewConnServer) error
+	StartStream(GRPCBroker_StartStreamServer) error
 }
 
 func RegisterGRPCBrokerServer(s *grpc.Server, srv GRPCBrokerServer) {
 	s.RegisterService(&_GRPCBroker_serviceDesc, srv)
 }
 
-func _GRPCBroker_NewConn_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GRPCBrokerServer).NewConn(&gRPCBrokerNewConnServer{stream})
+func _GRPCBroker_StartStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GRPCBrokerServer).StartStream(&gRPCBrokerStartStreamServer{stream})
 }
 
-type GRPCBroker_NewConnServer interface {
+type GRPCBroker_StartStreamServer interface {
 	Send(*ConnInfo) error
 	Recv() (*ConnInfo, error)
 	grpc.ServerStream
 }
 
-type gRPCBrokerNewConnServer struct {
+type gRPCBrokerStartStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *gRPCBrokerNewConnServer) Send(m *ConnInfo) error {
+func (x *gRPCBrokerStartStreamServer) Send(m *ConnInfo) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *gRPCBrokerNewConnServer) Recv() (*ConnInfo, error) {
+func (x *gRPCBrokerStartStreamServer) Recv() (*ConnInfo, error) {
 	m := new(ConnInfo)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -163,8 +163,8 @@ var _GRPCBroker_serviceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "NewConn",
-			Handler:       _GRPCBroker_NewConn_Handler,
+			StreamName:    "StartStream",
+			Handler:       _GRPCBroker_StartStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
@@ -175,16 +175,16 @@ var _GRPCBroker_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("grpc_broker.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 164 bytes of a gzipped FileDescriptorProto
+	// 170 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x4c, 0x2f, 0x2a, 0x48,
 	0x8e, 0x4f, 0x2a, 0xca, 0xcf, 0x4e, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2b,
 	0xc8, 0x29, 0x4d, 0xcf, 0xcc, 0x53, 0x8a, 0xe5, 0xe2, 0x70, 0xce, 0xcf, 0xcb, 0xf3, 0xcc, 0x4b,
 	0xcb, 0x17, 0x92, 0xe5, 0xe2, 0x2a, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0x8d, 0xcf, 0x4c, 0x91,
 	0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0d, 0xe2, 0x84, 0x8a, 0x78, 0xa6, 0x08, 0x49, 0x70, 0xb1, 0xe7,
 	0xa5, 0x96, 0x94, 0xe7, 0x17, 0x65, 0x4b, 0x30, 0x29, 0x30, 0x6a, 0x70, 0x06, 0xc1, 0xb8, 0x20,
-	0x99, 0xc4, 0x94, 0x94, 0xa2, 0xd4, 0xe2, 0x62, 0x09, 0x66, 0x88, 0x0c, 0x94, 0x6b, 0x64, 0xcf,
-	0xc5, 0xe5, 0x1e, 0x14, 0xe0, 0xec, 0x04, 0xb6, 0x5a, 0xc8, 0x90, 0x8b, 0xdd, 0x2f, 0xb5, 0x1c,
-	0x64, 0x9f, 0x90, 0x80, 0x1e, 0xc4, 0x01, 0x7a, 0x30, 0xdb, 0xa5, 0x30, 0x44, 0x34, 0x18, 0x0d,
-	0x18, 0x93, 0xd8, 0xc0, 0xce, 0x35, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x30, 0xd6, 0x85,
-	0xc3, 0x00, 0x00, 0x00,
+	0x99, 0xc4, 0x94, 0x94, 0xa2, 0xd4, 0xe2, 0x62, 0x09, 0x66, 0x88, 0x0c, 0x94, 0x6b, 0xe4, 0xcc,
+	0xc5, 0xe5, 0x1e, 0x14, 0xe0, 0xec, 0x04, 0xb6, 0x5a, 0xc8, 0x94, 0x8b, 0x3b, 0xb8, 0x24, 0xb1,
+	0xa8, 0x24, 0xb8, 0xa4, 0x28, 0x35, 0x31, 0x57, 0x48, 0x40, 0x0f, 0xe2, 0x08, 0x3d, 0x98, 0x0b,
+	0xa4, 0x30, 0x44, 0x34, 0x18, 0x0d, 0x18, 0x93, 0xd8, 0xc0, 0x4e, 0x36, 0x06, 0x04, 0x00, 0x00,
+	0xff, 0xff, 0x7b, 0x5d, 0xfb, 0xe1, 0xc7, 0x00, 0x00, 0x00,
 }

@@ -59,9 +59,9 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 		quit:   make(chan struct{}),
 	}
 
-	broker := newGRPCBroker(brokerGRPCClient)
+	broker := newGRPCBroker(brokerGRPCClient, c.config.TLSConfig)
 	go broker.Run()
-	go brokerGRPCClient.NewConn()
+	go brokerGRPCClient.StartStream()
 
 	return &GRPCClient{
 		Conn:    conn,
@@ -80,6 +80,7 @@ type GRPCClient struct {
 
 // ClientProtocol impl.
 func (c *GRPCClient) Close() error {
+	c.broker.Close()
 	return c.Conn.Close()
 }
 

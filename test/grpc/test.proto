@@ -21,7 +21,27 @@ message PrintKVResponse {
 
 }
 
+message BidirectionalRequest {
+    uint32 id = 1;
+}
+
+message BidirectionalResponse {
+    uint32 id = 1;
+}
+
 service Test {
     rpc Double(TestRequest) returns (TestResponse) {}
     rpc PrintKV(PrintKVRequest) returns (PrintKVResponse) {}
+    rpc Bidirectional(BidirectionalRequest) returns (BidirectionalResponse) {}
+}
+
+message PingRequest {
+}
+
+message PongResponse {
+    string msg = 1;
+}
+
+service PingPong {
+    rpc Ping(PingRequest) returns (PongResponse) {}
 }

@@ -46,6 +46,14 @@ type gRPCBrokerServer struct {
 	o sync.Once
 }
 
+func newGRPCBrokerServer() *gRPCBrokerServer {
+	return &gRPCBrokerServer{
+		send: make(chan *sendErr),
+		recv: make(chan *ConnInfo),
+		quit: make(chan struct{}),
+	}
+}
+
 // StartStream implements the GRPCBrokerServer interface and will block until
 // the quit channel is closed or the context reports Done. The stream will pass
 // connection information to/from the client.
@@ -140,6 +148,15 @@ type gRPCBrokerClientImpl struct {
 
 	// o is used to ensure we close the quit channel only once.
 	o sync.Once
+}
+
+func newGRPCBrokerClient(conn *grpc.ClientConn) *gRPCBrokerClientImpl {
+	return &gRPCBrokerClientImpl{
+		client: NewGRPCBrokerClient(conn),
+		send:   make(chan *sendErr),
+		recv:   make(chan *ConnInfo),
+		quit:   make(chan struct{}),
+	}
 }
 
 // StartStream implements the GRPCBrokerClient interface and will block until
@@ -242,6 +259,7 @@ type GRPCBroker struct {
 	streams  map[uint32]*gRPCBrokerPending
 	tls      *tls.Config
 	doneCh   chan struct{}
+	o        sync.Once
 
 	sync.Mutex
 }
@@ -256,6 +274,7 @@ func newGRPCBroker(s streamer, tls *tls.Config) *GRPCBroker {
 		streamer: s,
 		streams:  make(map[uint32]*gRPCBrokerPending),
 		tls:      tls,
+		doneCh:   make(chan struct{}),
 	}
 }
 
@@ -308,7 +327,9 @@ func (b *GRPCBroker) AcceptAndServe(id uint32, s func([]grpc.ServerOption) *grpc
 // Close closes the stream and all servers.
 func (b *GRPCBroker) Close() error {
 	b.streamer.Close()
-	close(b.doneCh)
+	b.o.Do(func() {
+		close(b.doneCh)
+	})
 	return nil
 }
 

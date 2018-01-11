@@ -1,8 +1,6 @@
 package plugin
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestGRPCClient_App(t *testing.T) {
 	client, _ := TestPluginGRPCConn(t, map[string]Plugin{
@@ -23,6 +21,11 @@ func TestGRPCClient_App(t *testing.T) {
 	result := impl.Double(21)
 	if result != 42 {
 		t.Fatalf("bad: %#v", result)
+	}
+
+	err = impl.Bidirectional()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

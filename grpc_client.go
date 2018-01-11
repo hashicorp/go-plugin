@@ -52,13 +52,8 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 		return nil, err
 	}
 
-	brokerGRPCClient := &gRPCBrokerClientImpl{
-		client: NewGRPCBrokerClient(conn),
-		send:   make(chan *sendErr),
-		recv:   make(chan *ConnInfo),
-		quit:   make(chan struct{}),
-	}
-
+	// Start the broker.
+	brokerGRPCClient := newGRPCBrokerClient(conn)
 	broker := newGRPCBroker(brokerGRPCClient, c.config.TLSConfig)
 	go broker.Run()
 	go brokerGRPCClient.StartStream()

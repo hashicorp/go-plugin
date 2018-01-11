@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/oklog/run"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -316,12 +317,35 @@ func (b *GRPCBroker) AcceptAndServe(id uint32, s func([]grpc.ServerOption) *grpc
 	}
 
 	server := s(opts)
-	go server.Serve(listener)
 
-	// Wait for the broker to shutdown
-	<-b.doneCh
+	// Here we use a run group to close this goroutine if the server is shutdown
+	// or the broker is shutdown.
+	var g run.Group
+	{
+		// Serve on the listener, if shutting down call GracefulStop.
+		g.Add(func() error {
+			return server.Serve(listener)
+		}, func(err error) {
+			server.GracefulStop()
+		})
+	}
+	{
+		// block on the closeCh or the doneCh. If we are shutting down close the
+		// closeCh.
+		closeCh := make(chan struct{})
+		g.Add(func() error {
+			select {
+			case <-b.doneCh:
+			case <-closeCh:
+			}
+			return nil
+		}, func(err error) {
+			close(closeCh)
+		})
+	}
 
-	server.GracefulStop()
+	// Block until we are done
+	g.Run()
 }
 
 // Close closes the stream and all servers.

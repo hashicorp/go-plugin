@@ -302,7 +302,11 @@ func (b *GRPCBroker) Accept(id uint32) (net.Listener, error) {
 
 // AcceptAndServe is used to accept a specific stream ID and immediately
 // serve a gRPC server on that stream ID. This is used to easily serve
-// complex arguments.
+// complex arguments. Each AcceptAndServe call opens a new listener socket and
+// sends the connection info down the stream to the dialer. Since a new
+// connection is opened every call, these calls should be used sparingly.
+// Multiple gRPC server implementations can be registered to a single
+// AcceptAndServe call.
 func (b *GRPCBroker) AcceptAndServe(id uint32, s func([]grpc.ServerOption) *grpc.Server) {
 	listener, err := b.Accept(id)
 	if err != nil {

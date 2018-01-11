@@ -67,6 +67,8 @@ type ServeConfig struct {
 	// relies on this to implement Ping().
 	GRPCServer func([]grpc.ServerOption) *grpc.Server
 
+	// Logger is used to pass a logger into the server. If none is provided the
+	// server will create a default logger.
 	Logger hclog.Logger
 }
 

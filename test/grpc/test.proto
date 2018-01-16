@@ -33,6 +33,7 @@ service Test {
     rpc Double(TestRequest) returns (TestResponse) {}
     rpc PrintKV(PrintKVRequest) returns (PrintKVResponse) {}
     rpc Bidirectional(BidirectionalRequest) returns (BidirectionalResponse) {}
+    rpc Stream(stream TestRequest) returns (stream TestResponse) {}
 }
 
 message PingRequest {

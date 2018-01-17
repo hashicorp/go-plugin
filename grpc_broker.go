@@ -70,9 +70,9 @@ func (s *gRPCBrokerServer) StartStream(stream GRPCBroker_StartStreamServer) erro
 				return
 			case <-s.quit:
 				return
-			case s := <-s.send:
-				err := stream.Send(s.i)
-				s.ch <- err
+			case se := <-s.send:
+				err := stream.Send(se.i)
+				se.ch <- err
 			}
 		}
 	}()
@@ -181,9 +181,9 @@ func (s *gRPCBrokerClientImpl) StartStream() error {
 				return
 			case <-s.quit:
 				return
-			case s := <-s.send:
-				err := stream.Send(s.i)
-				s.ch <- err
+			case se := <-s.send:
+				err := stream.Send(se.i)
+				se.ch <- err
 			}
 		}
 	}()

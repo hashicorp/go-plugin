@@ -202,7 +202,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		t.Fatalf("err should be nil, got %s", err)
 	}
 
-	impl, ok := raw.(testInterface)
+	_, ok := raw.(testInterface)
 	if !ok {
 		t.Fatalf("bad: %#v", raw)
 	}
@@ -213,11 +213,6 @@ func TestClient_grpc_servercrash(t *testing.T) {
 	case <-c.doneCtx.Done():
 	case <-time.After(time.Second * 2):
 		t.Fatal("Context was not closed")
-	}
-
-	result := impl.Double(21)
-	if result != 0 {
-		t.Fatalf("bad: %#v", result)
 	}
 }
 

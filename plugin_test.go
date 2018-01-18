@@ -54,7 +54,7 @@ func (p *testInterfacePlugin) GRPCServer(s *grpc.Server) error {
 }
 
 func (p *testInterfacePlugin) GRPCClient(doneCtx context.Context, c *grpc.ClientConn) (interface{}, error) {
-	return &testGRPCClient{Client: grpctest.NewTestClient(c), doneCtx: doneCtx}, nil
+	return &testGRPCClient{Client: grpctest.NewTestClient(c)}, nil
 }
 
 func (p *testInterfacePlugin) impl() testInterface {
@@ -163,18 +163,14 @@ func (s *testGRPCServer) PrintKV(
 // testGRPCClient is an implementation of TestInterface that communicates
 // over gRPC.
 type testGRPCClient struct {
-	Client  grpctest.TestClient
-	doneCtx context.Context
+	Client grpctest.TestClient
 }
 
 func (c *testGRPCClient) Double(v int) int {
-	resp, err := c.Client.Double(c.doneCtx, &grpctest.TestRequest{
+	resp, err := c.Client.Double(context.Background(), &grpctest.TestRequest{
 		Input: int32(v),
 	})
 	if err != nil {
-		if c.doneCtx.Err() != nil {
-			return 0
-		}
 		panic(err)
 	}
 

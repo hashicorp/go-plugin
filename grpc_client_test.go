@@ -1,6 +1,12 @@
 package plugin
 
-import "testing"
+import (
+	"context"
+	"testing"
+
+	"github.com/hashicorp/go-plugin/test/grpc"
+	"google.golang.org/grpc"
+)
 
 func TestGRPCClient_App(t *testing.T) {
 	client, _ := TestPluginGRPCConn(t, map[string]Plugin{
@@ -26,6 +32,22 @@ func TestGRPCClient_App(t *testing.T) {
 	err = impl.Bidirectional()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGRPCConn_BidirectionalPing(t *testing.T) {
+	conn, _ := TestGRPCConn(t, func(s *grpc.Server) {
+		grpctest.RegisterPingPongServer(s, &pingPongServer{})
+	})
+	defer conn.Close()
+	pingPongClient := grpctest.NewPingPongClient(conn)
+
+	pResp, err := pingPongClient.Ping(context.Background(), &grpctest.PingRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pResp.Msg != "pong" {
+		t.Fatal("Bad PingPong")
 	}
 }
 

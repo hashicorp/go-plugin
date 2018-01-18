@@ -11,7 +11,7 @@ import (
 
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
 // to be successfully started already with a lock held.
-func newGRPCClient(c *Client) (*GRPCClient, error) {
+func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	// Build dialing options.
 	opts := make([]grpc.DialOption, 0, 5)
 
@@ -43,6 +43,7 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 	return &GRPCClient{
 		Conn:    conn,
 		Plugins: c.config.Plugins,
+		doneCtx: doneCtx,
 	}, nil
 }
 
@@ -50,6 +51,8 @@ func newGRPCClient(c *Client) (*GRPCClient, error) {
 type GRPCClient struct {
 	Conn    *grpc.ClientConn
 	Plugins map[string]Plugin
+
+	doneCtx context.Context
 }
 
 // ClientProtocol impl.
@@ -69,7 +72,7 @@ func (c *GRPCClient) Dispense(name string) (interface{}, error) {
 		return nil, fmt.Errorf("plugin %q doesn't support gRPC", name)
 	}
 
-	return p.GRPCClient(c.Conn)
+	return p.GRPCClient(c.doneCtx, c.Conn)
 }
 
 // ClientProtocol impl.

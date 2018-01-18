@@ -55,7 +55,7 @@ func (p *testInterfacePlugin) GRPCServer(b *GRPCBroker, s *grpc.Server) error {
 	return nil
 }
 
-func (p *testInterfacePlugin) GRPCClient(b *GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *testInterfacePlugin) GRPCClient(doneCtx context.Context, b *GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &testGRPCClient{broker: b, Client: grpctest.NewTestClient(c)}, nil
 }
 

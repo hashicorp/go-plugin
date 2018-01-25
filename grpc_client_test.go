@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/go-plugin/test/grpc"
@@ -9,10 +10,11 @@ import (
 )
 
 func TestGRPCClient_App(t *testing.T) {
-	client, _ := TestPluginGRPCConn(t, map[string]Plugin{
+	client, server := TestPluginGRPCConn(t, map[string]Plugin{
 		"test": new(testInterfacePlugin),
 	})
 	defer client.Close()
+	defer server.Stop()
 
 	raw, err := client.Dispense("test")
 	if err != nil {
@@ -51,11 +53,40 @@ func TestGRPCConn_BidirectionalPing(t *testing.T) {
 	}
 }
 
+func TestGRPCC_Stream(t *testing.T) {
+	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+		"test": new(testInterfacePlugin),
+	})
+	defer client.Close()
+	defer server.Stop()
+
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	impl, ok := raw.(testStreamer)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	expected := []int32{21, 22, 23, 24, 25, 26}
+	result, err := impl.Stream(21, 27)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("expected: %v\ngot: %v", expected, result)
+	}
+}
+
 func TestGRPCClient_Ping(t *testing.T) {
 	client, server := TestPluginGRPCConn(t, map[string]Plugin{
 		"test": new(testInterfacePlugin),
 	})
 	defer client.Close()
+	defer server.Stop()
 
 	// Run a couple pings
 	if err := client.Ping(); err != nil {

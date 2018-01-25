@@ -69,9 +69,9 @@ func TestClient_syncStreams(t *testing.T) {
 	stderr_w.Close()
 
 	if v := stdout_out.String(); v != "stdouttest" {
-		t.Fatalf("bad: %s", v)
+		t.Fatalf("bad: %q", v)
 	}
 	if v := stderr_out.String(); v != "stderrtest" {
-		t.Fatalf("bad: %s", v)
+		t.Fatalf("bad: %q", v)
 	}
 }

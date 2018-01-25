@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/rpc"
@@ -34,6 +35,11 @@ type testInterface interface {
 	Double(int) int
 	PrintKV(string, interface{})
 	Bidirectional() error
+}
+
+// testStreamer is used to test the grpc streaming interface
+type testStreamer interface {
+	Stream(int32, int32) ([]int32, error)
 }
 
 // testInterfacePlugin is the implementation of Plugin to create
@@ -206,6 +212,24 @@ func (p *pingPongServer) Ping(ctx context.Context, req *grpctest.PingRequest) (*
 	}, nil
 }
 
+func (s testGRPCServer) Stream(stream grpctest.Test_StreamServer) error {
+	for {
+		req, err := stream.Recv()
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			return nil
+		}
+
+		if err := stream.Send(&grpctest.TestResponse{Output: req.Input}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // testGRPCClient is an implementation of TestInterface that communicates
 // over gRPC.
 type testGRPCClient struct {
@@ -276,6 +300,36 @@ func (c *testGRPCClient) Bidirectional() error {
 		return errors.New("Bad PingPong")
 	}
 	return nil
+}
+
+// Stream sends a series of requests from [start, stop) using a bidirectional
+// streaming service, and returns the streamed responses.
+func (impl *testGRPCClient) Stream(start, stop int32) ([]int32, error) {
+	if stop <= start {
+		return nil, fmt.Errorf("invalid range [%d, %d)", start, stop)
+	}
+	streamClient, err := impl.Client.Stream(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []int32
+	for i := start; i < stop; i++ {
+		if err := streamClient.Send(&grpctest.TestRequest{i}); err != nil {
+			return resp, err
+		}
+
+		out, err := streamClient.Recv()
+		if err != nil {
+			return resp, err
+		}
+
+		resp = append(resp, out.Output)
+	}
+
+	streamClient.CloseSend()
+
+	return resp, nil
 }
 
 func helperProcess(s ...string) *exec.Cmd {

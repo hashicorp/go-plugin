@@ -11,10 +11,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-var (
-	TestPluginStdout io.ReadCloser
-	TestPluginStderr io.ReadCloser
-)
+type TestOptions struct {
+	ServerStdout io.ReadCloser
+	ServerStderr io.ReadCloser
+}
 
 // The testing file contains test helpers that you can use outside of
 // this package for making it easier to test plugins themselves.
@@ -67,17 +67,19 @@ func TestRPCConn(t testing.T) (*rpc.Client, *rpc.Server) {
 
 // TestPluginRPCConn returns a plugin RPC client and server that are connected
 // together and configured.
-func TestPluginRPCConn(t testing.T, ps map[string]Plugin) (*RPCClient, *RPCServer) {
+func TestPluginRPCConn(t testing.T, ps map[string]Plugin, opts *TestOptions) (*RPCClient, *RPCServer) {
 	// Create two net.Conns we can use to shuttle our control connection
 	clientConn, serverConn := TestConn(t)
 
 	// Start up the server
 	server := &RPCServer{Plugins: ps, Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)}
-	if TestPluginStdout != nil {
-		server.Stdout = TestPluginStdout
-	}
-	if TestPluginStderr != nil {
-		server.Stderr = TestPluginStderr
+	if opts != nil {
+		if opts.ServerStdout != nil {
+			server.Stdout = opts.ServerStdout
+		}
+		if opts.ServerStderr != nil {
+			server.Stderr = opts.ServerStderr
+		}
 	}
 	go server.ServeConn(serverConn)
 

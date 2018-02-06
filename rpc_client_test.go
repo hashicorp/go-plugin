@@ -24,7 +24,7 @@ func TestClient_App(t *testing.T) {
 
 	client, _ := TestPluginRPCConn(t, map[string]Plugin{
 		"test": &testInterfacePlugin{Impl: testPlugin},
-	})
+	}, nil)
 	defer client.Close()
 
 	raw, err := client.Dispense("test")
@@ -48,10 +48,10 @@ func TestClient_syncStreams(t *testing.T) {
 	stdout_r, stdout_w := io.Pipe()
 	stderr_r, stderr_w := io.Pipe()
 
-	TestPluginStdout = stdout_r
-	TestPluginStderr = stderr_r
-
-	client, _ := TestPluginRPCConn(t, map[string]Plugin{})
+	client, _ := TestPluginRPCConn(t, map[string]Plugin{}, &TestOptions{
+		ServerStdout: stdout_r,
+		ServerStderr: stderr_r,
+	})
 
 	// Start the data copying
 	var stdout_out, stderr_out safeBuffer

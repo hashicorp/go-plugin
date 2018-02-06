@@ -11,8 +11,15 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TestOptions allows specifying options that can affect the behavior of the
+// test functions
 type TestOptions struct {
+	//ServerStdout causes the given value to be used in place of a blank buffer
+	//for RPCServer's Stdout
 	ServerStdout io.ReadCloser
+
+	//ServerStderr causes the given value to be used in place of a blank buffer
+	//for RPCServer's Stderr
 	ServerStderr io.ReadCloser
 }
 

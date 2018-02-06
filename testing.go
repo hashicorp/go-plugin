@@ -3,11 +3,17 @@ package plugin
 import (
 	"bytes"
 	"context"
+	"io"
 	"net"
 	"net/rpc"
 
 	"github.com/mitchellh/go-testing-interface"
 	"google.golang.org/grpc"
+)
+
+var (
+	TestPluginStdout io.ReadCloser
+	TestPluginStderr io.ReadCloser
 )
 
 // The testing file contains test helpers that you can use outside of
@@ -67,6 +73,12 @@ func TestPluginRPCConn(t testing.T, ps map[string]Plugin) (*RPCClient, *RPCServe
 
 	// Start up the server
 	server := &RPCServer{Plugins: ps, Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)}
+	if TestPluginStdout != nil {
+		server.Stdout = TestPluginStdout
+	}
+	if TestPluginStderr != nil {
+		server.Stderr = TestPluginStderr
+	}
 	go server.ServeConn(serverConn)
 
 	// Connect the client to the server

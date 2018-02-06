@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -858,12 +859,14 @@ func TestClient_logger(t *testing.T) {
 
 func testClient_logger(t *testing.T, proto string) {
 	var buffer bytes.Buffer
+	mutex := new(sync.Mutex)
 	stderr := io.MultiWriter(os.Stderr, &buffer)
 	// Custom hclog.Logger
 	clientLogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "test-logger",
 		Level:  hclog.Trace,
 		Output: stderr,
+		Mutex:  mutex,
 	})
 
 	process := helperProcess("test-interface-logger-" + proto)
@@ -895,10 +898,14 @@ func testClient_logger(t *testing.T, proto string) {
 
 	{
 		// Discard everything else, and capture the output we care about
+		mutex.Lock()
 		buffer.Reset()
+		mutex.Unlock()
 		impl.PrintKV("foo", "bar")
 		time.Sleep(100 * time.Millisecond)
+		mutex.Lock()
 		line, err := buffer.ReadString('\n')
+		mutex.Unlock()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -909,10 +916,14 @@ func testClient_logger(t *testing.T, proto string) {
 
 	{
 		// Try an integer type
+		mutex.Lock()
 		buffer.Reset()
+		mutex.Unlock()
 		impl.PrintKV("foo", 12)
 		time.Sleep(100 * time.Millisecond)
+		mutex.Lock()
 		line, err := buffer.ReadString('\n')
+		mutex.Unlock()
 		if err != nil {
 			t.Fatal(err)
 		}

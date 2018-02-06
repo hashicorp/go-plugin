@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func TestClient_App(t *testing.T) {
 
 	client, _ := TestPluginRPCConn(t, map[string]Plugin{
 		"test": &testInterfacePlugin{Impl: testPlugin},
-	})
+	}, nil)
 	defer client.Close()
 
 	raw, err := client.Dispense("test")
@@ -43,18 +44,23 @@ func TestClient_App(t *testing.T) {
 }
 
 func TestClient_syncStreams(t *testing.T) {
-	client, server := TestPluginRPCConn(t, map[string]Plugin{})
-
 	// Create streams for the server that we can talk to
 	stdout_r, stdout_w := io.Pipe()
 	stderr_r, stderr_w := io.Pipe()
-	server.Stdout = stdout_r
-	server.Stderr = stderr_r
+
+	client, _ := TestPluginRPCConn(t, map[string]Plugin{}, &TestOptions{
+		ServerStdout: stdout_r,
+		ServerStderr: stderr_r,
+	})
 
 	// Start the data copying
-	var stdout_out, stderr_out bytes.Buffer
-	stdout := bytes.NewBufferString("stdouttest")
-	stderr := bytes.NewBufferString("stderrtest")
+	var stdout_out, stderr_out safeBuffer
+	stdout := &safeBuffer{
+		b: bytes.NewBufferString("stdouttest"),
+	}
+	stderr := &safeBuffer{
+		b: bytes.NewBufferString("stderrtest"),
+	}
 	go client.SyncStreams(&stdout_out, &stderr_out)
 	go io.Copy(stdout_w, stdout)
 	go io.Copy(stderr_w, stderr)
@@ -74,4 +80,36 @@ func TestClient_syncStreams(t *testing.T) {
 	if v := stderr_out.String(); v != "stderrtest" {
 		t.Fatalf("bad: %q", v)
 	}
+}
+
+type safeBuffer struct {
+	sync.Mutex
+	b *bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.b == nil {
+		s.b = new(bytes.Buffer)
+	}
+	return s.b.Write(p)
+}
+
+func (s *safeBuffer) Read(p []byte) (n int, err error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.b == nil {
+		s.b = new(bytes.Buffer)
+	}
+	return s.b.Read(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.Lock()
+	defer s.Unlock()
+	if s.b == nil {
+		s.b = new(bytes.Buffer)
+	}
+	return s.b.String()
 }

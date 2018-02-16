@@ -3,7 +3,7 @@ package shared
 import (
 	hclog "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/grpc-bidirectional/proto"
+	"github.com/hashicorp/go-plugin/examples/bidirectional/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/grpc-bidirectional/shared"
+	"github.com/hashicorp/go-plugin/examples/bidirectional/shared"
 )
 
 type addHelper struct{}

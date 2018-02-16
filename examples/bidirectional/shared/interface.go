@@ -2,10 +2,11 @@
 package shared
 
 import (
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/grpc-bidirectional/proto"
+	"github.com/hashicorp/go-plugin/examples/bidirectional/proto"
 )
 
 // Handshake is a common handshake that is shared by plugin and host.
@@ -48,7 +49,7 @@ func (p *CounterPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) er
 	return nil
 }
 
-func (p *CounterPlugin) GRPCClient(broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *CounterPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &GRPCClient{
 		client: proto.NewCounterClient(c),
 		broker: broker,

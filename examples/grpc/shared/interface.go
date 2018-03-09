@@ -2,6 +2,7 @@
 package shared
 
 import (
+	"context"
 	"net/rpc"
 
 	"google.golang.org/grpc"
@@ -45,11 +46,11 @@ func (*KVPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error)
 	return &RPCClient{client: c}, nil
 }
 
-func (p *KVPlugin) GRPCServer(s *grpc.Server) error {
+func (p *KVPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 	proto.RegisterKVServer(s, &GRPCServer{Impl: p.Impl})
 	return nil
 }
 
-func (p *KVPlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+func (p *KVPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &GRPCClient{client: proto.NewKVClient(c)}, nil
 }

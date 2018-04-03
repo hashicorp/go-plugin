@@ -13,7 +13,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -751,7 +750,6 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 
 func (c *Client) logStderr(r io.Reader) {
 	bufR := bufio.NewReader(r)
-	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 
 	for {
 		line, err := bufR.ReadString('\n')
@@ -762,22 +760,22 @@ func (c *Client) logStderr(r io.Reader) {
 			entry, err := parseJSON(line)
 			// If output is not JSON format, print directly to Debug
 			if err != nil {
-				l.Debug(line)
+				c.logger.Debug(line)
 			} else {
 				out := flattenKVPairs(entry.KVPairs)
 
 				out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
 				switch hclog.LevelFromString(entry.Level) {
 				case hclog.Trace:
-					l.Trace(entry.Message, out...)
+					c.logger.Trace(entry.Message, out...)
 				case hclog.Debug:
-					l.Debug(entry.Message, out...)
+					c.logger.Debug(entry.Message, out...)
 				case hclog.Info:
-					l.Info(entry.Message, out...)
+					c.logger.Info(entry.Message, out...)
 				case hclog.Warn:
-					l.Warn(entry.Message, out...)
+					c.logger.Warn(entry.Message, out...)
 				case hclog.Error:
-					l.Error(entry.Message, out...)
+					c.logger.Error(entry.Message, out...)
 				}
 			}
 		}

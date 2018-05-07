@@ -1,0 +1,11 @@
+version: '2'
+# install go task "go get -u -v github.com/go-task/task/cmd/task"
+# run "task example"
+
+tasks:
+  test:
+    cmds:
+      - go test ./...
+  example:
+    cmds:
+      - cd ./examples && task run

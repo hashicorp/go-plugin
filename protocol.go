@@ -46,3 +46,14 @@ type ClientProtocol interface {
 	// Reconnect attempts to recreate the connection to a new server
 	Reconnect(*Client) error
 }
+
+// ClientServer...
+type ClientServer interface {
+	Serve(io.ReadWriteCloser)
+}
+
+// ServerClient [sp]Should this be io.Closer and implement reconnect
+type ServerClient interface {
+	// Dispense dispenses a new instance of the plugin with the given name.
+	Dispense(string) (interface{}, error)
+}

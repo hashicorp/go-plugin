@@ -48,20 +48,20 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
 // to be successfully started already with a lock held.
 func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
-	conn, err := dialGRPCConn(c.config.TLSConfig, c.dialer)
+	conn, err := dialGRPCConn(c.Config.TLSConfig, c.dialer)
 	if err != nil {
 		return nil, err
 	}
 
 	// Start the broker.
 	brokerGRPCClient := newGRPCBrokerClient(conn)
-	broker := newGRPCBroker(brokerGRPCClient, c.config.TLSConfig)
+	broker := newGRPCBroker(brokerGRPCClient, c.Config.TLSConfig)
 	go broker.Run()
 	go brokerGRPCClient.StartStream()
 
 	return &GRPCClient{
 		Conn:    conn,
-		Plugins: c.config.Plugins,
+		Plugins: c.Config.Plugins,
 		doneCtx: doneCtx,
 		broker:  broker,
 	}, nil

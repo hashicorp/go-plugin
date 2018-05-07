@@ -74,12 +74,12 @@ func TestRPCConn(t testing.T) (*rpc.Client, *rpc.Server) {
 
 // TestPluginRPCConn returns a plugin RPC client and server that are connected
 // together and configured.
-func TestPluginRPCConn(t testing.T, ps map[string]Plugin, opts *TestOptions) (*RPCClient, *RPCServer) {
+func TestPluginRPCConn(t testing.T, c *ClientConfig, opts *TestOptions) (*RPCClient, *RPCServer) {
 	// Create two net.Conns we can use to shuttle our control connection
 	clientConn, serverConn := TestConn(t)
 
 	// Start up the server
-	server := &RPCServer{Plugins: ps, Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)}
+	server := &RPCServer{Plugins: c.Plugins, Stdout: new(bytes.Buffer), Stderr: new(bytes.Buffer)}
 	if opts != nil {
 		if opts.ServerStdout != nil {
 			server.Stdout = opts.ServerStdout
@@ -91,7 +91,7 @@ func TestPluginRPCConn(t testing.T, ps map[string]Plugin, opts *TestOptions) (*R
 	go server.ServeConn(serverConn)
 
 	// Connect the client to the server
-	client, err := NewRPCClient(clientConn, ps)
+	client, err := NewRPCClient(clientConn, c)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

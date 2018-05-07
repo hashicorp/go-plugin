@@ -14,7 +14,8 @@ import (
 // RPCClient connects to an RPCServer over net/rpc to dispense plugin types.
 type RPCClient struct {
 	broker     *MuxBroker
-	control    *rpc.Client
+	Control    *rpc.Client
+	Config     *ClientConfig
 	plugins    map[string]Plugin
 	Connection RPCConnection
 	// These are the streams used for the various stdout/err overrides
@@ -34,12 +35,12 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 		tcpConn.SetKeepAlive(true)
 	}
 
-	if c.config.TLSConfig != nil {
-		conn = tls.Client(conn, c.config.TLSConfig)
+	if c.Config.TLSConfig != nil {
+		conn = tls.Client(conn, c.Config.TLSConfig)
 	}
 
 	// Create the actual RPC client
-	result, err := NewRPCClient(conn, c.config.Plugins)
+	result, err := NewRPCClient(conn, c.Config)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -47,8 +48,8 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 
 	// Begin the stream syncing so that stdin, out, err work properly
 	err = result.SyncStreams(
-		c.config.SyncStdout,
-		c.config.SyncStderr)
+		c.Config.SyncStdout,
+		c.Config.SyncStderr)
 	if err != nil {
 		result.Close()
 		return nil, err
@@ -59,7 +60,7 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 
 // NewRPCClient creates a client from an already-open connection-like value.
 // Dial is typically used instead.
-func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClient, error) {
+func NewRPCClient(conn io.ReadWriteCloser, c *ClientConfig) (*RPCClient, error) {
 	// Create the yamux client so we can multiplex
 	mux, err := yamux.Client(conn, nil)
 	if err != nil {
@@ -89,13 +90,15 @@ func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClien
 	go broker.Run()
 
 	// Build the client using our broker and control channel.
-	return &RPCClient{
+	rpc := &RPCClient{
 		broker:  broker,
-		control: rpc.NewClient(control),
-		plugins: plugins,
+		Control: rpc.NewClient(control),
+		plugins: c.Plugins,
+		Config:  c,
 		stdout:  stdstream[0],
 		stderr:  stdstream[1],
-	}, nil
+	}
+	return rpc, nil
 }
 
 // SyncStreams should be called to enable syncing of stdout,
@@ -118,10 +121,10 @@ func (c *RPCClient) Close() error {
 	// errors, then we save it so that we always return an error but we
 	// want to try to close the other channels anyways.
 	var empty struct{}
-	returnErr := c.control.Call("Control.Quit", true, &empty)
+	returnErr := c.Control.Call("Control.Quit", true, &empty)
 
 	// Close the other streams we have
-	if err := c.control.Close(); err != nil {
+	if err := c.Control.Close(); err != nil {
 		return err
 	}
 	if err := c.stdout.Close(); err != nil {
@@ -148,7 +151,7 @@ func (c *RPCClient) Dispense(name string) (interface{}, error) {
 	}
 
 	var id uint32
-	if err := c.control.Call(
+	if err := c.Control.Call(
 		"Dispenser.Dispense", name, &id); err != nil {
 		return nil, err
 	}
@@ -168,7 +171,7 @@ func (c *RPCClient) Dispense(name string) (interface{}, error) {
 // that the connection to the plugin is not healthy.
 func (c *RPCClient) Ping() error {
 	var empty struct{}
-	return c.control.Call("Control.Ping", true, &empty)
+	return c.Control.Call("Control.Ping", true, &empty)
 }
 
 func (c *RPCClient) Reconnect(client *Client) error {
@@ -183,8 +186,8 @@ func (c *RPCClient) Reconnect(client *Client) error {
 		tcpConn.SetKeepAlive(true)
 	}
 
-	if client.config.TLSConfig != nil {
-		conn = tls.Client(conn, client.config.TLSConfig)
+	if client.Config.TLSConfig != nil {
+		conn = tls.Client(conn, client.Config.TLSConfig)
 	}
 	newC, err := NewRPCClient(conn, nil)
 	if err != nil {
@@ -192,13 +195,13 @@ func (c *RPCClient) Reconnect(client *Client) error {
 		return err
 	}
 	c.broker = newC.broker
-	c.control = newC.control
+	c.Control = newC.Control
 	c.stderr = newC.stderr
 	c.stdout = newC.stdout
 
 	var id uint32
 
-	if err := c.control.Call(
+	if err := c.Control.Call(
 		"Dispenser.Dispense", c.Connection.Name, &id); err != nil {
 		log.Println("Control", err)
 		return err
@@ -210,4 +213,15 @@ func (c *RPCClient) Reconnect(client *Client) error {
 		return err
 	}
 	return c.Connection.setRPC(rpc.NewClient(rpcConn))
+}
+
+func (c *RPCClient) Serve(conn io.ReadWriteCloser) {
+	// Use the control connection to build the dispenser and serve the
+	// connection.
+	server := rpc.NewServer()
+	server.RegisterName("Dispenser", &dispenseServer{
+		broker:  c.broker,
+		plugins: c.Config.ServedPlugins,
+	})
+	server.ServeConn(conn)
 }

@@ -70,7 +70,7 @@ var (
 //
 // See NewClient and ClientConfig for using a Client.
 type Client struct {
-	config      *ClientConfig
+	Config      *ClientConfig
 	exited      bool
 	doneLogging chan struct{}
 	l           sync.Mutex
@@ -161,6 +161,9 @@ type ClientConfig struct {
 	//Reconnect will instruct te Client to attempt to reconnect if the Plugin
 	//Exits
 	Reconnect bool
+
+	// ServedPlugins Represent Plugins that the Host may re-serve to Plugin
+	ServedPlugins map[string]Plugin
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -247,33 +250,33 @@ func CleanupClients() {
 // the client is a managed client (created with NewManagedClient) you
 // can just call CleanupClients at the end of your program and they will
 // be properly cleaned.
-func NewClient(config *ClientConfig) (c *Client) {
-	if config.MinPort == 0 && config.MaxPort == 0 {
-		config.MinPort = 10000
-		config.MaxPort = 25000
+func NewClient(Config *ClientConfig) (c *Client) {
+	if Config.MinPort == 0 && Config.MaxPort == 0 {
+		Config.MinPort = 10000
+		Config.MaxPort = 25000
 	}
 
-	if config.StartTimeout == 0 {
-		config.StartTimeout = 1 * time.Minute
+	if Config.StartTimeout == 0 {
+		Config.StartTimeout = 1 * time.Minute
 	}
 
-	if config.Stderr == nil {
-		config.Stderr = ioutil.Discard
+	if Config.Stderr == nil {
+		Config.Stderr = ioutil.Discard
 	}
 
-	if config.SyncStdout == nil {
-		config.SyncStdout = ioutil.Discard
+	if Config.SyncStdout == nil {
+		Config.SyncStdout = ioutil.Discard
 	}
-	if config.SyncStderr == nil {
-		config.SyncStderr = ioutil.Discard
-	}
-
-	if config.AllowedProtocols == nil {
-		config.AllowedProtocols = []Protocol{ProtocolNetRPC}
+	if Config.SyncStderr == nil {
+		Config.SyncStderr = ioutil.Discard
 	}
 
-	if config.Logger == nil {
-		config.Logger = hclog.New(&hclog.LoggerOptions{
+	if Config.AllowedProtocols == nil {
+		Config.AllowedProtocols = []Protocol{ProtocolNetRPC}
+	}
+
+	if Config.Logger == nil {
+		Config.Logger = hclog.New(&hclog.LoggerOptions{
 			Output: hclog.DefaultOutput,
 			Level:  hclog.Trace,
 			Name:   "plugin",
@@ -281,10 +284,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 
 	c = &Client{
-		config: config,
-		logger: config.Logger,
+		Config: Config,
+		logger: Config.Logger,
 	}
-	if config.Managed {
+	if Config.Managed {
 		managedClientsLock.Lock()
 		managedClients = append(managedClients, c)
 		managedClientsLock.Unlock()
@@ -413,9 +416,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	// this in a {} for scoping reasons, and hopeful that the escape
 	// analysis will pop the stock here.
 	{
-		cmdSet := c.config.Cmd != nil
-		attachSet := c.config.Reattach != nil
-		secureSet := c.config.SecureConfig != nil
+		cmdSet := c.Config.Cmd != nil
+		attachSet := c.Config.Reattach != nil
+		secureSet := c.Config.SecureConfig != nil
 		if cmdSet == attachSet {
 			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
 		}
@@ -431,9 +434,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	var ctxCancel context.CancelFunc
 	c.doneCtx, ctxCancel = context.WithCancel(context.Background())
 
-	if c.config.Reattach != nil {
+	if c.Config.Reattach != nil {
 		// Verify the process still exists. If not, then it is an error
-		p, err := os.FindProcess(c.config.Reattach.Pid)
+		p, err := os.FindProcess(c.Config.Reattach.Pid)
 		if err != nil {
 			return nil, err
 		}
@@ -441,8 +444,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Attempt to connect to the addr since on Unix systems FindProcess
 		// doesn't actually return an error if it can't find the process.
 		conn, err := net.Dial(
-			c.config.Reattach.Addr.Network(),
-			c.config.Reattach.Addr.String())
+			c.Config.Reattach.Addr.Network(),
+			c.Config.Reattach.Addr.String())
 		if err != nil {
 			p.Kill()
 			return nil, ErrProcessNotFound
@@ -470,9 +473,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}(p.Pid)
 
 		// Set the address and process
-		c.address = c.config.Reattach.Addr
+		c.address = c.Config.Reattach.Addr
 		c.process = p
-		c.protocol = c.config.Reattach.Protocol
+		c.protocol = c.Config.Reattach.Protocol
 		if c.protocol == "" {
 			// Default the protocol to net/rpc for backwards compatibility
 			c.protocol = ProtocolNetRPC
@@ -482,23 +485,23 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	env := []string{
-		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
-		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
-		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
+		fmt.Sprintf("%s=%s", c.Config.MagicCookieKey, c.Config.MagicCookieValue),
+		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.Config.MinPort),
+		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.Config.MaxPort),
 	}
 
 	stdout_r, stdout_w := io.Pipe()
 	stderr_r, stderr_w := io.Pipe()
 
-	cmd := c.config.Cmd
+	cmd := c.Config.Cmd
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, env...)
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = stderr_w
 	cmd.Stdout = stdout_w
 
-	if c.config.SecureConfig != nil {
-		if ok, err := c.config.SecureConfig.Check(cmd.Path); err != nil {
+	if c.Config.SecureConfig != nil {
+		if ok, err := c.Config.SecureConfig.Check(cmd.Path); err != nil {
 			return nil, fmt.Errorf("error verifying checksum: %s", err)
 		} else if !ok {
 			return nil, ErrChecksumsDoNotMatch
@@ -548,7 +551,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Cancel the context, marking that we exited
 		ctxCancel()
 
-		if c.config.Reconnect {
+		if c.Config.Reconnect {
 			// If reconnect=true then we will try and reconnect
 			err := c.reconnect()
 			if err != nil {
@@ -595,7 +598,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}()
 
 	// Some channels for the next step
-	timeout := time.After(c.config.StartTimeout)
+	timeout := time.After(c.Config.StartTimeout)
 
 	// Start looking for the address
 	c.logger.Debug("waiting for RPC address", "path", cmd.Path)
@@ -644,9 +647,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		// Test the API version
-		if uint(protocol) != c.config.ProtocolVersion {
+		if uint(protocol) != c.Config.ProtocolVersion {
 			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Core version: %d", parts[1], c.config.ProtocolVersion)
+				"Plugin version: %s, Core version: %d", parts[1], c.Config.ProtocolVersion)
 			return
 		}
 
@@ -667,7 +670,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		found := false
-		for _, p := range c.config.AllowedProtocols {
+		for _, p := range c.Config.AllowedProtocols {
 			if p == c.protocol {
 				found = true
 				break
@@ -675,7 +678,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 		if !found {
 			err = fmt.Errorf("Unsupported plugin protocol %q. Supported: %v",
-				c.protocol, c.config.AllowedProtocols)
+				c.protocol, c.Config.AllowedProtocols)
 			return
 		}
 
@@ -685,14 +688,14 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	return
 }
 
-// reconnect resets the client to a state where it can reconfigure and then
+// reconnect resets the client to a state where it can reConfigure and then
 // calls the underlaying client method
 func (c *Client) reconnect() error {
 	c.address = nil
-	if len(c.config.Cmd.Args) > 1 {
-		c.config.Cmd = exec.Command(c.config.Cmd.Args[0], c.config.Cmd.Args[1:]...)
+	if len(c.Config.Cmd.Args) > 1 {
+		c.Config.Cmd = exec.Command(c.Config.Cmd.Args[0], c.Config.Cmd.Args[1:]...)
 	} else {
-		c.config.Cmd = exec.Command(c.config.Cmd.Args[0])
+		c.Config.Cmd = exec.Command(c.Config.Cmd.Args[0])
 	}
 	_, err := c.Start()
 	if err != nil {
@@ -720,19 +723,19 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 		return nil
 	}
 
-	if c.config.Cmd != nil && c.config.Cmd.Process == nil {
+	if c.Config.Cmd != nil && c.Config.Cmd.Process == nil {
 		return nil
 	}
 
 	// If we connected via reattach, just return the information as-is
-	if c.config.Reattach != nil {
-		return c.config.Reattach
+	if c.Config.Reattach != nil {
+		return c.Config.Reattach
 	}
 
 	return &ReattachConfig{
 		Protocol: c.protocol,
 		Addr:     c.address,
-		Pid:      c.config.Cmd.Process.Pid,
+		Pid:      c.Config.Cmd.Process.Pid,
 	}
 }
 
@@ -748,6 +751,48 @@ func (c *Client) Protocol() Protocol {
 	}
 
 	return c.protocol
+}
+
+func (c *Client) Serve() (chan struct{}, error) {
+	cl, err := c.Client()
+	if err != nil {
+		return nil, err
+	}
+	switch c.protocol {
+	case ProtocolNetRPC:
+		if client, ok := cl.(*RPCClient); ok {
+			if s, ok := cl.(ClientServer); ok {
+				id := client.broker.NextId()
+				var resp error
+				done := make(chan struct{})
+				var err error
+				var conn net.Conn
+				go func() {
+					conn, err = client.broker.Accept(id)
+
+					close(done)
+				}()
+				if err := client.Control.Call("Control.Connect", &id, &resp); err != nil {
+					return nil, err
+				} else if resp != nil {
+					return nil, resp
+				}
+				<-done
+
+				if err != nil {
+					return nil, err
+				}
+				ch := make(chan struct{})
+				go func() {
+					s.Serve(conn)
+					close(ch)
+				}()
+				return ch, nil
+			}
+		}
+	}
+	return nil, errors.New("Status Not Implemented")
+
 }
 
 func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) {
@@ -774,10 +819,10 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 		return nil, err
 	}
 
-	// If we have a TLS config we wrap our connection. We only do this
+	// If we have a TLS Config we wrap our connection. We only do this
 	// for net/rpc since gRPC uses its own mechanism for TLS.
-	if c.protocol == ProtocolNetRPC && c.config.TLSConfig != nil {
-		conn = tls.Client(conn, c.config.TLSConfig)
+	if c.protocol == ProtocolNetRPC && c.Config.TLSConfig != nil {
+		conn = tls.Client(conn, c.Config.TLSConfig)
 	}
 
 	return conn, nil
@@ -785,12 +830,12 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 
 func (c *Client) logStderr(r io.Reader) {
 	bufR := bufio.NewReader(r)
-	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+	l := c.logger.Named(filepath.Base(c.Config.Cmd.Path))
 
 	for {
 		line, err := bufR.ReadString('\n')
 		if line != "" {
-			c.config.Stderr.Write([]byte(line))
+			c.Config.Stderr.Write([]byte(line))
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
 
 			entry, err := parseJSON(line)

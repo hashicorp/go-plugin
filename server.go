@@ -70,6 +70,9 @@ type ServeConfig struct {
 	// Logger is used to pass a logger into the server. If none is provided the
 	// server will create a default logger.
 	Logger hclog.Logger
+
+	//AcceptPlugins allows for bidirectional communication
+	AcceptPlugins map[string]Plugin
 }
 
 // Protocol returns the protocol that this server should speak.
@@ -89,6 +92,33 @@ func (c *ServeConfig) Protocol() Protocol {
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
+	_, ch, l, err := ServeAsync(opts)
+	if err != nil {
+		return
+	}
+	defer l.Close()
+	<-ch
+}
+
+func ServeAndDispense(opts *ServeConfig) (<-chan struct{}, ServerClient, error) {
+	s, ch, l, err := ServeAsync(opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	if c, ok := s.(ServerClient); ok {
+		return ch, c, nil
+	}
+
+	go func() {
+		defer l.Close()
+		s.Serve(l)
+		<-ch
+	}()
+
+	return nil, nil, errors.New("Server Does not Implement Client Protocol")
+}
+
+func ServeAsync(opts *ServeConfig) (ServerProtocol, <-chan struct{}, net.Listener, error) {
 	// Validate the handshake config
 	if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
 		fmt.Fprintf(os.Stderr,
@@ -137,13 +167,16 @@ func Serve(opts *ServeConfig) {
 	listener, err := serverListener()
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
-		return
+		listener.Close()
+		return nil, nil, nil, err
 	}
 
 	// Close the listener on return. We wrap this in a func() on purpose
 	// because the "listener" reference may change to TLS.
 	defer func() {
-		listener.Close()
+		if r := recover(); r != nil {
+			listener.Close()
+		}
 	}()
 
 	var tlsConfig *tls.Config
@@ -151,7 +184,8 @@ func Serve(opts *ServeConfig) {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
 			logger.Error("plugin tls init", "error", err)
-			return
+			listener.Close()
+			return nil, nil, nil, err
 		}
 	}
 
@@ -174,6 +208,7 @@ func Serve(opts *ServeConfig) {
 			Stdout:  stdout_r,
 			Stderr:  stderr_r,
 			DoneCh:  doneCh,
+			config:  opts,
 		}
 
 	case ProtocolGRPC:
@@ -194,7 +229,8 @@ func Serve(opts *ServeConfig) {
 	// Initialize the servers
 	if err := server.Init(); err != nil {
 		logger.Error("protocol init", "error", err)
-		return
+		listener.Close()
+		return nil, nil, nil, err
 	}
 
 	// Build the extra configuration
@@ -236,7 +272,7 @@ func Serve(opts *ServeConfig) {
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)
-	<-doneCh
+	return server, doneCh, listener, nil
 }
 
 func serverListener() (net.Listener, error) {

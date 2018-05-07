@@ -18,8 +18,10 @@ import (
 // After setting the fields below, they shouldn't be read again directly
 // from the structure which may be reading/writing them concurrently.
 type RPCServer struct {
+	*RPCClient
 	Plugins map[string]Plugin
-
+	broker  *MuxBroker
+	config  *ServeConfig
 	// Stdout, Stderr are what this server will use instead of the
 	// normal stdin/out/err. This is because due to the multi-process nature
 	// of our plugin system, we can't use the normal process values so we
@@ -93,6 +95,7 @@ func (s *RPCServer) ServeConn(conn io.ReadWriteCloser) {
 
 	// Create the broker and start it up
 	broker := newMuxBroker(mux)
+	s.broker = broker
 	go broker.Run()
 
 	// Use the control connection to build the dispenser and serve the
@@ -105,6 +108,7 @@ func (s *RPCServer) ServeConn(conn io.ReadWriteCloser) {
 		broker:  broker,
 		plugins: s.Plugins,
 	})
+
 	server.ServeConn(control)
 }
 
@@ -119,6 +123,28 @@ func (s *RPCServer) done() {
 		close(s.DoneCh)
 		s.DoneCh = nil
 	}
+}
+
+func (s *RPCServer) Dispense(name string) (interface{}, error) {
+
+	var id uint32
+	c := s.RPCClient
+	c.Connection.Name = name
+	p, ok := s.config.AcceptPlugins[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown Accept Plugin type: %s %+v", name, s.config.AcceptPlugins)
+	}
+	if err := c.Control.Call(
+		"Dispenser.Dispense", c.Connection.Name, &id); err != nil {
+		return nil, err
+	}
+	rpcConn, err := c.broker.Dial(id)
+	if err != nil {
+		return nil, err
+	}
+	c.Connection.setRPC(rpc.NewClient(rpcConn))
+	return p.Client(c.broker, &c.Connection)
+
 }
 
 // dispenseServer dispenses variousinterface implementations for Terraform.
@@ -145,6 +171,21 @@ func (c *controlServer) Quit(
 	return nil
 }
 
+func (c *controlServer) Connect(id uint32, response *error) error {
+	conn, err := c.server.broker.Dial(id)
+	if err != nil {
+		*response = err
+		return err
+	}
+	c.server.RPCClient = &RPCClient{
+		broker:  c.server.broker,
+		Control: rpc.NewClient(conn),
+		plugins: c.server.config.AcceptPlugins,
+	}
+	return nil
+
+}
+
 // dispenseServer dispenses variousinterface implementations for Terraform.
 type dispenseServer struct {
 	broker  *MuxBroker
@@ -156,7 +197,7 @@ func (d *dispenseServer) Dispense(
 	// Find the function to create this implementation
 	p, ok := d.plugins[name]
 	if !ok {
-		return fmt.Errorf("unknown plugin type: %s", name)
+		return fmt.Errorf("unknown plugin type: %s %+v", name)
 	}
 
 	// Create the implementation first so we know if there is an error.

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/rpc"
 
@@ -12,10 +13,10 @@ import (
 
 // RPCClient connects to an RPCServer over net/rpc to dispense plugin types.
 type RPCClient struct {
-	broker  *MuxBroker
-	control *rpc.Client
-	plugins map[string]Plugin
-
+	broker     *MuxBroker
+	control    *rpc.Client
+	plugins    map[string]Plugin
+	Connection RPCConnection
 	// These are the streams used for the various stdout/err overrides
 	stdout, stderr net.Conn
 }
@@ -140,6 +141,7 @@ func (c *RPCClient) Close() error {
 }
 
 func (c *RPCClient) Dispense(name string) (interface{}, error) {
+	c.Connection.Name = name
 	p, ok := c.plugins[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown plugin type: %s", name)
@@ -155,8 +157,8 @@ func (c *RPCClient) Dispense(name string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return p.Client(c.broker, rpc.NewClient(conn))
+	c.Connection.setRPC(rpc.NewClient(conn))
+	return p.Client(c.broker, &c.Connection)
 }
 
 // Ping pings the connection to ensure it is still alive.
@@ -167,4 +169,45 @@ func (c *RPCClient) Dispense(name string) (interface{}, error) {
 func (c *RPCClient) Ping() error {
 	var empty struct{}
 	return c.control.Call("Control.Ping", true, &empty)
+}
+
+func (c *RPCClient) Reconnect(client *Client) error {
+	log.Println("rpc reconnecting")
+	// Connect to the client
+	conn, err := net.Dial(client.address.Network(), client.address.String())
+	if err != nil {
+		return err
+	}
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		// Make sure to set keep alive so that the connection doesn't die
+		tcpConn.SetKeepAlive(true)
+	}
+
+	if client.config.TLSConfig != nil {
+		conn = tls.Client(conn, client.config.TLSConfig)
+	}
+	newC, err := NewRPCClient(conn, nil)
+	if err != nil {
+		log.Println("newC", err)
+		return err
+	}
+	c.broker = newC.broker
+	c.control = newC.control
+	c.stderr = newC.stderr
+	c.stdout = newC.stdout
+
+	var id uint32
+
+	if err := c.control.Call(
+		"Dispenser.Dispense", c.Connection.Name, &id); err != nil {
+		log.Println("Control", err)
+		return err
+	}
+
+	rpcConn, err := c.broker.Dial(id)
+	if err != nil {
+		log.Println("Broker", err)
+		return err
+	}
+	return c.Connection.setRPC(rpc.NewClient(rpcConn))
 }

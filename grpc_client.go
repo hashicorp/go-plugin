@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -104,4 +105,9 @@ func (c *GRPCClient) Ping() error {
 	})
 
 	return err
+}
+
+// Reconnect Not Implemented for GRPC
+func (c *GRPCClient) Reconnect(client *Client) error {
+	return errors.New("Not Implemented")
 }

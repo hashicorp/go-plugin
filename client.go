@@ -157,6 +157,10 @@ type ClientConfig struct {
 	// Logger is the logger that the client will used. If none is provided,
 	// it will default to hclog's default logger.
 	Logger hclog.Logger
+
+	//Reconnect will instruct te Client to attempt to reconnect if the Plugin
+	//Exits
+	Reconnect bool
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -544,6 +548,15 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Cancel the context, marking that we exited
 		ctxCancel()
 
+		if c.config.Reconnect {
+			// If reconnect=true then we will try and reconnect
+			err := c.reconnect()
+			if err != nil {
+				c.logger.Debug("Reconnect Failed", "Error:", err.Error())
+			} else {
+				return
+			}
+		}
 		// Set that we exited, which takes a lock
 		c.l.Lock()
 		defer c.l.Unlock()
@@ -670,6 +683,27 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	c.address = addr
 	return
+}
+
+// reconnect resets the client to a state where it can reconfigure and then
+// calls the underlaying client method
+func (c *Client) reconnect() error {
+	c.address = nil
+	if len(c.config.Cmd.Args) > 1 {
+		c.config.Cmd = exec.Command(c.config.Cmd.Args[0], c.config.Cmd.Args[1:]...)
+	} else {
+		c.config.Cmd = exec.Command(c.config.Cmd.Args[0])
+	}
+	_, err := c.Start()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.Reconnect(c)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ReattachConfig returns the information that must be provided to NewClient

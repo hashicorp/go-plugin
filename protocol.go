@@ -42,4 +42,7 @@ type ClientProtocol interface {
 
 	// Ping checks that the client connection is still healthy.
 	Ping() error
+
+	// Reconnect attempts to recreate the connection to a new server
+	Reconnect(*Client) error
 }

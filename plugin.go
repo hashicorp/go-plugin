@@ -25,7 +25,7 @@ type Plugin interface {
 
 	// Client returns an interface implementation for the plugin you're
 	// serving that communicates to the server end of the plugin.
-	Client(*MuxBroker, *rpc.Client) (interface{}, error)
+	Client(*MuxBroker, *RPCConnection) (interface{}, error)
 }
 
 // GRPCPlugin is the interface that is implemented to serve/connect to

@@ -1,7 +1,7 @@
 package client
 
 import (
-	plugin "gitlab.com/indis/libs/third_party/go-plugin"
+	plugin "github.com/sampaioletti/go-plugin/examples/go-plugin"
 )
 
 type HostServer struct {

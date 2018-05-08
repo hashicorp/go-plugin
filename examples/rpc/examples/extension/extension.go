@@ -5,9 +5,9 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"gitlab.com/indis/libs/extension/api"
-	"gitlab.com/indis/libs/extension/pkg/server"
-	plugin "gitlab.com/indis/libs/third_party/go-plugin"
+	"github.com/sampaioletti/go-plugin/examples/api"
+	plugin "github.com/sampaioletti/go-plugin/examples/go-plugin"
+	"github.com/sampaioletti/go-plugin/examples/pkg/server"
 )
 
 func main() {

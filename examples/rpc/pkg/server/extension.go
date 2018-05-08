@@ -2,7 +2,7 @@ package server
 
 import (
 	hclog "github.com/hashicorp/go-hclog"
-	"gitlab.com/indis/libs/extension/api"
+	"github.com/sampaioletti/go-plugin/examples/api"
 )
 
 var _ api.Extender = (*Extension)(nil)

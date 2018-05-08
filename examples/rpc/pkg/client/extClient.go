@@ -1,8 +1,8 @@
 package client
 
 import (
-	"gitlab.com/indis/libs/extension/api"
-	plugin "gitlab.com/indis/libs/third_party/go-plugin"
+	"github.com/sampaioletti/go-plugin/examples/api"
+	plugin "github.com/sampaioletti/go-plugin/examples/go-plugin"
 )
 
 var _ api.Extender = (*ExtClient)(nil)

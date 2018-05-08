@@ -1,6 +1,6 @@
 package api
 
-import plugin "gitlab.com/indis/libs/third_party/go-plugin"
+import plugin "github.com/sampaioletti/go-plugin/examples/go-plugin"
 
 var Handshake = plugin.HandshakeConfig{
 	ProtocolVersion:  1,

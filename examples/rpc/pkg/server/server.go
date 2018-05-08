@@ -5,16 +5,11 @@ import (
 	plugin "gitlab.com/indis/libs/third_party/go-plugin"
 )
 
-//var _ api.Plugable = (*PluginRPCServer)(nil)
-
-// func Serve(impl api.Extender) {
-
-// }
 func NewRPCServer(impl *Extension) (*RPC, error) {
 	return &RPC{Impl: impl}, nil
 }
 
-type RPC struct { //server.RPC
+type RPC struct {
 	Impl *Extension
 }
 

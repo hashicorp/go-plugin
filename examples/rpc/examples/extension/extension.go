@@ -18,6 +18,8 @@ func main() {
 	}
 	logger := hclog.L()
 	logger.Info("Started Extension")
+
+	//create config with added Accepted Plugins field, this will be the interfaces we will accept from host
 	cfg := &plugin.ServeConfig{
 		HandshakeConfig: api.Handshake,
 		Plugins: map[string]plugin.Plugin{
@@ -29,15 +31,22 @@ func main() {
 		Logger: logger,
 	}
 
+	//serveanddispense creates a non blocking server and returns a "ServerClient" interface if the protocol implements it
 	done, c, err := plugin.ServeAndDispense(cfg)
 	if err != nil {
 		logger.Debug(err.Error())
 	}
-	time.Sleep(time.Second * 5)
+	//hack to give time for connection to be established before we dispense which requires the active connections
+	time.Sleep(time.Second * 1)
+
+	//this works similarly to the client.Dispense method, except it doesn't load files and dispenses over the existing connection
+	//must currently be ran after serve and dispense or the connection doesn't exit
 	raw, err := c.Dispense("host")
 	if err != nil {
 		logger.Debug(err.Error())
 	}
+
+	//this works same as normal "dispensed" plugin
 	if host, ok := raw.(api.Host); ok {
 		go func() {
 			ch := time.NewTicker(time.Second * 5).C
@@ -52,5 +61,6 @@ func main() {
 
 		}()
 	}
+	//done blocks until the server exits
 	<-done
 }

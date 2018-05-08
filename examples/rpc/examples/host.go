@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"os/signal"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -19,6 +20,23 @@ func main() {
 	}
 	logger := hclog.L()
 	logger.Info("Host Started")
+
+	//Try and intercept ^C etc and do a cleanup
+	c := make(chan os.Signal, 1)
+	signal.Notify(c)
+	go func() {
+		for range c {
+			logger.Info("Recieved sig, cleanup")
+			plugin.CleanupClients()
+			logger.Info("Recieved sig, panic")
+			panic(1)
+		}
+	}()
+
+	//create a client adding the ServedPlugins map adn Reconnect value
+	//ServedPlugins will be made available after a call to client.Server(..)
+	//Reconnect should probably be called Resrart and could optionall be a string
+	//that parses some reconnect logic like Reconnect: "1s" or enum
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: api.Handshake,
 		Plugins: map[string]plugin.Plugin{
@@ -32,20 +50,28 @@ func main() {
 		Managed:   true,
 		Reconnect: true,
 	})
-	defer client.Kill()
-	// Connect via RPC
+
+	//Just in case
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Info("Recovered from Panic")
+		}
+		plugin.CleanupClients()
+	}()
+
+	//Normal Client
 	rpcClient, err := client.Client()
 	if err != nil {
 		logger.Debug(err.Error())
 		panic(0)
 	}
-
+	//Normal Dispense
 	raw, err := rpcClient.Dispense("extension")
 	if err != nil {
 		logger.Debug(err.Error())
 		panic(0)
 	}
-
+	//Normal Access to dispensed plugin
 	if ext, ok := raw.(api.Extender); ok {
 		go func() {
 			ch := time.NewTicker(time.Second * 5).C
@@ -60,11 +86,13 @@ func main() {
 
 		}()
 	}
-	time.Sleep(time.Second * 1)
+	//Start a Server on the existing mux
 	done, err := client.Serve()
 	if err != nil {
 		logger.Debug(err.Error())
 		panic(0)
 	}
+
+	//wait for the server to exit
 	<-done
 }

@@ -90,7 +90,13 @@ type ClientConfig struct {
 	HandshakeConfig
 
 	// Plugins are the plugins that can be consumed.
-	Plugins map[string]Plugin
+	// The implied version of this PluginSet is the Handshake.ProtocolVersion.
+	Plugins PluginSet
+
+	// VersionedPlugins is a map of PluginSets for specific protocol versions.
+	// These can be used to negotiate a compatible version between client and
+	// server. If this is set, Handshake.ProtocolVersion is not required.
+	VersionedPlugins map[int]PluginSet
 
 	// One of the following must be set, but not both.
 	//
@@ -477,10 +483,30 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		return c.address, nil
 	}
 
+	if c.config.VersionedPlugins == nil {
+		c.config.VersionedPlugins = make(map[int]PluginSet)
+	}
+
+	// handle all plugins as versioned, using the handshake config as the default.
+	version := int(c.config.ProtocolVersion)
+
+	// Make sure we're not overwriting a real version 0. If ProtocolVersion was
+	// non-zero, then we have to just assume the user made sure that
+	// VersionedPlugins doesn't conflict.
+	if _, ok := c.config.VersionedPlugins[version]; !ok && c.config.Plugins != nil {
+		c.config.VersionedPlugins[version] = c.config.Plugins
+	}
+
+	var versionStrings []string
+	for v := range c.config.VersionedPlugins {
+		versionStrings = append(versionStrings, strconv.Itoa(v))
+	}
+
 	env := []string{
 		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
 		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
 		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
+		fmt.Sprintf("PLUGIN_PROTOCOL_VERSIONS=%s", strings.Join(versionStrings, ",")),
 	}
 
 	stdout_r, stdout_w := io.Pipe()
@@ -622,18 +648,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			}
 		}
 
-		// Parse the protocol version
-		var protocol int64
-		protocol, err = strconv.ParseInt(parts[1], 10, 0)
-		if err != nil {
-			err = fmt.Errorf("Error parsing protocol version: %s", err)
-			return
-		}
-
 		// Test the API version
-		if uint(protocol) != c.config.ProtocolVersion {
-			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Core version: %d", parts[1], c.config.ProtocolVersion)
+		if err = c.checkProtoVersion(parts[1]); err != nil {
 			return
 		}
 
@@ -670,6 +686,39 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	c.address = addr
 	return
+}
+
+// checkProtoVersion verifies that the client is returning a compatible protocol
+// version, and sets the PluginSet that will be used for the negotiated
+// version.
+func (c *Client) checkProtoVersion(protoVersion string) error {
+	serverVersion, err := strconv.Atoi(protoVersion)
+	if err != nil {
+		return fmt.Errorf("Error parsing protocol version %q: %s", protoVersion, err)
+	}
+
+	// record these for the error message
+	var clientVersions []int
+
+	// all versions, including the legacy ProtocolVersion have been added to
+	// the versions set
+	for version := range c.config.VersionedPlugins {
+		clientVersions = append(clientVersions, version)
+
+		if serverVersion != version {
+			continue
+		}
+
+		// set the Plugins value to the compatible set, so the version
+		// doesn't need to be passed through to the ClientProtocol
+		// implementation.
+		c.config.Plugins = c.config.VersionedPlugins[version]
+		c.logger.Debug("using plugin", "version", version)
+		return nil
+	}
+
+	return fmt.Errorf("Incompatible API version with plugin. "+
+		"Plugin version: %d, Client versions: %d", serverVersion, clientVersions)
 }
 
 // ReattachConfig returns the information that must be provided to NewClient

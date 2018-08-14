@@ -656,9 +656,17 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		// Test the API version
-		if err = c.checkProtoVersion(parts[1]); err != nil {
-			return
+		version, pluginSet, err := c.checkProtoVersion(parts[1])
+		if err != nil {
+			return addr, err
 		}
+
+		// set the Plugins value to the compatible set, so the version
+		// doesn't need to be passed through to the ClientProtocol
+		// implementation.
+		c.config.Plugins = pluginSet
+		c.negotiatedVersion = version
+		c.logger.Debug("using plugin", "version", version)
 
 		switch parts[2] {
 		case "tcp":
@@ -686,7 +694,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if !found {
 			err = fmt.Errorf("Unsupported plugin protocol %q. Supported: %v",
 				c.protocol, c.config.AllowedProtocols)
-			return
+			return addr, err
 		}
 
 	}
@@ -695,13 +703,13 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	return
 }
 
-// checkProtoVersion verifies that the client is returning a compatible protocol
-// version, and sets the PluginSet that will be used for the negotiated
-// version.
-func (c *Client) checkProtoVersion(protoVersion string) error {
+// checkProtoVersion returns the negotiated version and PluginSet.
+// This returns an error if the server returned an incompatible protocol
+// version, or an invalid handshake response.
+func (c *Client) checkProtoVersion(protoVersion string) (int, PluginSet, error) {
 	serverVersion, err := strconv.Atoi(protoVersion)
 	if err != nil {
-		return fmt.Errorf("Error parsing protocol version %q: %s", protoVersion, err)
+		return 0, nil, fmt.Errorf("Error parsing protocol version %q: %s", protoVersion, err)
 	}
 
 	// record these for the error message
@@ -709,23 +717,16 @@ func (c *Client) checkProtoVersion(protoVersion string) error {
 
 	// all versions, including the legacy ProtocolVersion have been added to
 	// the versions set
-	for version := range c.config.VersionedPlugins {
+	for version, plugins := range c.config.VersionedPlugins {
 		clientVersions = append(clientVersions, version)
 
 		if serverVersion != version {
 			continue
 		}
-
-		// set the Plugins value to the compatible set, so the version
-		// doesn't need to be passed through to the ClientProtocol
-		// implementation.
-		c.config.Plugins = c.config.VersionedPlugins[version]
-		c.negotiatedVersion = version
-		c.logger.Debug("using plugin", "version", version)
-		return nil
+		return version, plugins, nil
 	}
 
-	return fmt.Errorf("Incompatible API version with plugin. "+
+	return 0, nil, fmt.Errorf("Incompatible API version with plugin. "+
 		"Plugin version: %d, Client versions: %d", serverVersion, clientVersions)
 }
 

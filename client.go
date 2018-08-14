@@ -70,20 +70,23 @@ var (
 //
 // See NewClient and ClientConfig for using a Client.
 type Client struct {
-	config      *ClientConfig
-	exited      bool
-	doneLogging chan struct{}
-	l           sync.Mutex
-	address     net.Addr
-	process     *os.Process
-	client      ClientProtocol
-	protocol    Protocol
-	logger      hclog.Logger
-	doneCtx     context.Context
+	config            *ClientConfig
+	exited            bool
+	doneLogging       chan struct{}
+	l                 sync.Mutex
+	address           net.Addr
+	process           *os.Process
+	client            ClientProtocol
+	protocol          Protocol
+	logger            hclog.Logger
+	doneCtx           context.Context
+	negotiatedVersion int
+}
 
-	// NegotiatedVersion is a record of the protocol version that was returned
-	// by the server.
-	NegotiatedVersion int
+// NegotiatedVersion returns the protocol version negotiated with the server.
+// This is only valid after Start() is called.
+func (c *Client) NegotiatedVersion() int {
+	return c.negotiatedVersion
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -717,7 +720,7 @@ func (c *Client) checkProtoVersion(protoVersion string) error {
 		// doesn't need to be passed through to the ClientProtocol
 		// implementation.
 		c.config.Plugins = c.config.VersionedPlugins[version]
-		c.NegotiatedVersion = version
+		c.negotiatedVersion = version
 		c.logger.Debug("using plugin", "version", version)
 		return nil
 	}

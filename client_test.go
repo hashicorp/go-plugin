@@ -19,7 +19,11 @@ import (
 
 func TestClient(t *testing.T) {
 	process := helperProcess("mock")
-	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
 	defer c.Kill()
 
 	// Test that it parses the proper address
@@ -508,6 +512,7 @@ func TestClientStart_badVersion(t *testing.T) {
 		Cmd:             helperProcess("bad-version"),
 		StartTimeout:    50 * time.Millisecond,
 		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
 	}
 
 	c := NewClient(config)
@@ -525,6 +530,7 @@ func TestClientStart_badNegotiatedVersion(t *testing.T) {
 		StartTimeout: 50 * time.Millisecond,
 		// test-versioned-plugins only has version 2
 		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
 	}
 
 	c := NewClient(config)
@@ -542,6 +548,7 @@ func TestClient_Start_Timeout(t *testing.T) {
 		Cmd:             helperProcess("start-timeout"),
 		StartTimeout:    50 * time.Millisecond,
 		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
 	}
 
 	c := NewClient(config)
@@ -560,6 +567,7 @@ func TestClient_Stderr(t *testing.T) {
 		Cmd:             process,
 		Stderr:          stderr,
 		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
 	})
 	defer c.Kill()
 
@@ -587,6 +595,7 @@ func TestClient_StderrJSON(t *testing.T) {
 		Cmd:             process,
 		Stderr:          stderr,
 		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
 	})
 	defer c.Kill()
 
@@ -633,7 +642,11 @@ func TestClient_Stdin(t *testing.T) {
 	os.Stdin = tf
 
 	process := helperProcess("stdin")
-	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
 	defer c.Kill()
 
 	_, err = c.Start()

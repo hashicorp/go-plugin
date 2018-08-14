@@ -906,6 +906,10 @@ func TestClient_legacyClient(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	if c.NegotiatedVersion != 1 {
+		t.Fatal("using incorrect version", c.NegotiatedVersion)
+	}
+
 	// Ping, should work
 	if err := client.Ping(); err == nil {
 		t.Fatal("expected error, should negotiate wrong plugin")
@@ -930,6 +934,10 @@ func TestClient_legacyServer(t *testing.T) {
 	client, err := c.Client()
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+
+	if c.NegotiatedVersion != 2 {
+		t.Fatal("using incorrect version", c.NegotiatedVersion)
 	}
 
 	// Ping, should work
@@ -962,6 +970,10 @@ func TestClient_versionedClient(t *testing.T) {
 	client, err := c.Client()
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	if c.NegotiatedVersion != 2 {
+		t.Fatal("using incorrect version", c.NegotiatedVersion)
 	}
 
 	// Grab the impl

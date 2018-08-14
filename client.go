@@ -80,6 +80,10 @@ type Client struct {
 	protocol    Protocol
 	logger      hclog.Logger
 	doneCtx     context.Context
+
+	// NegotiatedVersion is a record of the protocol version that was returned
+	// by the server.
+	NegotiatedVersion int
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -713,6 +717,7 @@ func (c *Client) checkProtoVersion(protoVersion string) error {
 		// doesn't need to be passed through to the ClientProtocol
 		// implementation.
 		c.config.Plugins = c.config.VersionedPlugins[version]
+		c.NegotiatedVersion = version
 		c.logger.Debug("using plugin", "version", version)
 		return nil
 	}

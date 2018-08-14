@@ -153,6 +153,12 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 		}
 	}
 
+	// Return the lowest version as the fallback.
+	// Since we iterated over all the versions in reverse order above, these
+	// values are from the lowest version number plugins (which may be from
+	// a combination of the Handshake.ProtocolVersion and ServeConfig.Plugins
+	// fields). This allows serving the oldest version of our plugins to a
+	// legacy client that did not send a PLUGIN_PROTOCOL_VERSIONS list.
 	return protoVersion, protoType, pluginSet
 }
 

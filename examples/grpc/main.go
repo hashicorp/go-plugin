@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv")
+	raw, err := rpcClient.Dispense("kv_grpc")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)
@@ -61,7 +61,8 @@ func main() {
 		}
 
 	default:
-		fmt.Println("Please only use 'get' or 'put'")
+		fmt.Printf("Please only use 'get' or 'put', given: %q", os.Args[0])
 		os.Exit(1)
 	}
+	os.Exit(0)
 }

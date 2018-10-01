@@ -42,3 +42,33 @@ func TestRmListener(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 }
+
+func TestProtocolSelection_no_server(t *testing.T) {
+	conf := &ServeConfig{
+		HandshakeConfig: testVersionedHandshake,
+		VersionedPlugins: map[int]PluginSet{
+			2: testGRPCPluginMap,
+		},
+		GRPCServer:  DefaultGRPCServer,
+		TLSProvider: helperTLSProvider,
+	}
+
+	_, protocol, _ := protocolVersion(conf)
+	if protocol != ProtocolGRPC {
+		t.Fatalf("bad protocol %s", protocol)
+	}
+
+	conf = &ServeConfig{
+		HandshakeConfig: testVersionedHandshake,
+		VersionedPlugins: map[int]PluginSet{
+			2: testGRPCPluginMap,
+		},
+		TLSProvider: helperTLSProvider,
+	}
+
+	_, protocol, _ = protocolVersion(conf)
+	if protocol != ProtocolNetRPC {
+		t.Fatalf("bad protocol %s", protocol)
+	}
+
+}

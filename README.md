@@ -109,7 +109,7 @@ high-level steps that must be done. Examples are available in the
   1. Choose the interface(s) you want to expose for plugins.
 
   2. For each interface, implement an implementation of that interface
-     that communicates over a `net/rpc` connection or other a
+     that communicates over a `net/rpc` connection or over a
      [gRPC](http://www.grpc.io) connection or both. You'll have to implement
      both a client and server implementation.
 

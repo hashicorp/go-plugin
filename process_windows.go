@@ -1,4 +1,4 @@
-package plugin
+package go_plugin
 
 import (
 	"syscall"

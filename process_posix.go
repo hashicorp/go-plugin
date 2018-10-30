@@ -1,6 +1,6 @@
 // +build !windows
 
-package plugin
+package go_plugin
 
 import (
 	"os"

@@ -6,7 +6,7 @@
 //
 // plugin.Serve fully manages listeners to expose an RPC server from a binary
 // that plugin.Client can connect to.
-package plugin
+package go_plugin
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package plugin
+package go_plugin
 
 // This is a type that wraps error types so that they can be messaged
 // across RPC channels. Since "error" is an interface, we can't always

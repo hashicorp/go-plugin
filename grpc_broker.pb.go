@@ -10,7 +10,7 @@ It is generated from these files:
 It has these top-level messages:
 	ConnInfo
 */
-package plugin
+package go_plugin
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

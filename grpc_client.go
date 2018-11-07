@@ -19,8 +19,11 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 	// We use a custom dialer so that we can connect over unix domain sockets
 	opts = append(opts, grpc.WithDialer(dialer))
 
+	// FIXME: grpc considers authentication failure to be temporary, so with
+	// this blocking we never complete a call to get the error.
+	//
 	// go-plugin expects to block the connection
-	opts = append(opts, grpc.WithBlock())
+	//opts = append(opts, grpc.WithBlock())
 
 	// Fail right away
 	opts = append(opts, grpc.FailOnNonTempDialError(true))

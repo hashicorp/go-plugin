@@ -351,7 +351,7 @@ func (impl *testGRPCClient) Stream(start, stop int32) ([]int32, error) {
 
 	var resp []int32
 	for i := start; i < stop; i++ {
-		if err := streamClient.Send(&grpctest.TestRequest{i}); err != nil {
+		if err := streamClient.Send(&grpctest.TestRequest{Input: i}); err != nil {
 			return resp, err
 		}
 

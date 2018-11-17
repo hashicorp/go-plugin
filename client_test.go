@@ -1009,6 +1009,108 @@ func TestClient_versionedClient(t *testing.T) {
 	}
 }
 
+func TestClient_mtlsClient(t *testing.T) {
+	process := helperProcess("test-mtls")
+	c := NewClient(&ClientConfig{
+		AutoMTLS:        true,
+		Cmd:             process,
+		HandshakeConfig: testVersionedHandshake,
+		VersionedPlugins: map[int]PluginSet{
+			2: testGRPCPluginMap,
+		},
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+	})
+	defer c.Kill()
+
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if v := c.Protocol(); v != ProtocolGRPC {
+		t.Fatalf("bad: %s", v)
+	}
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	if c.NegotiatedVersion() != 2 {
+		t.Fatal("using incorrect version", c.NegotiatedVersion())
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	tester, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	n := tester.Double(3)
+	if n != 6 {
+		t.Fatal("invalid response", n)
+	}
+
+	c.process.Kill()
+
+	select {
+	case <-c.doneCtx.Done():
+	case <-time.After(time.Second * 2):
+		t.Fatal("Context was not closed")
+	}
+}
+
+func TestClient_mtlsNetRPCClient(t *testing.T) {
+	process := helperProcess("test-interface-mtls")
+	c := NewClient(&ClientConfig{
+		AutoMTLS:         true,
+		Cmd:              process,
+		HandshakeConfig:  testVersionedHandshake,
+		Plugins:          testPluginMap,
+		AllowedProtocols: []Protocol{ProtocolNetRPC},
+	})
+	defer c.Kill()
+
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	tester, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	n := tester.Double(3)
+	if n != 6 {
+		t.Fatal("invalid response", n)
+	}
+
+	c.process.Kill()
+
+	select {
+	case <-c.doneCtx.Done():
+	case <-time.After(time.Second * 2):
+		t.Fatal("Context was not closed")
+	}
+}
+
 func TestClient_logger(t *testing.T) {
 	t.Run("net/rpc", func(t *testing.T) { testClient_logger(t, "netrpc") })
 	t.Run("grpc", func(t *testing.T) { testClient_logger(t, "grpc") })

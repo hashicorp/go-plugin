@@ -548,6 +548,17 @@ func TestHelperProcess(*testing.T) {
 
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
+
+	case "test-interface-mtls":
+		// Serve!
+		Serve(&ServeConfig{
+			HandshakeConfig: testVersionedHandshake,
+			Plugins:         testPluginMap,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+
 	case "test-versioned-plugins":
 		// Serve!
 		Serve(&ServeConfig{
@@ -588,6 +599,20 @@ func TestHelperProcess(*testing.T) {
 			Plugins:     testGRPCPluginMap,
 			GRPCServer:  DefaultGRPCServer,
 			TLSProvider: helperTLSProvider,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-mtls":
+		// Serve 2 plugins over different protocols
+		Serve(&ServeConfig{
+			HandshakeConfig: HandshakeConfig{
+				ProtocolVersion:  2,
+				MagicCookieKey:   "TEST_MAGIC_COOKIE",
+				MagicCookieValue: "test",
+			},
+			Plugins:    testGRPCPluginMap,
+			GRPCServer: DefaultGRPCServer,
 		})
 
 		// Shouldn't reach here but make sure we exit anyways

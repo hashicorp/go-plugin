@@ -400,11 +400,9 @@ func (c *Client) Kill() {
 	if graceful {
 		select {
 		case <-doneCh:
-			// FIXME: this is never reached under normal circumstances, because
-			// the plugin process is never signaled to exit. We can reach this
-			// if the child process exited abnormally before the Kill call.
+			c.logger.Debug("plugin exited")
 			return
-		case <-time.After(250 * time.Millisecond):
+		case <-time.After(1500 * time.Millisecond):
 			c.logger.Warn("plugin failed to exit gracefully")
 		}
 	}

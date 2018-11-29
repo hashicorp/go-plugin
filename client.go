@@ -907,43 +907,40 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 }
 
 func (c *Client) logStderr(r io.Reader) {
-	bufR := bufio.NewReader(r)
+	defer close(c.doneLogging)
+
+	scanner := bufio.NewScanner(r)
 	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 
-	for {
-		line, err := bufR.ReadString('\n')
-		if line != "" {
-			c.config.Stderr.Write([]byte(line))
-			line = strings.TrimRightFunc(line, unicode.IsSpace)
+	for scanner.Scan() {
+		line := scanner.Text()
+		c.config.Stderr.Write([]byte(line + "\n"))
+		line = strings.TrimRightFunc(line, unicode.IsSpace)
 
-			entry, err := parseJSON(line)
-			// If output is not JSON format, print directly to Debug
-			if err != nil {
-				l.Debug(line)
-			} else {
-				out := flattenKVPairs(entry.KVPairs)
+		entry, err := parseJSON(line)
+		// If output is not JSON format, print directly to Debug
+		if err != nil {
+			l.Debug(line)
+		} else {
+			out := flattenKVPairs(entry.KVPairs)
 
-				out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
-				switch hclog.LevelFromString(entry.Level) {
-				case hclog.Trace:
-					l.Trace(entry.Message, out...)
-				case hclog.Debug:
-					l.Debug(entry.Message, out...)
-				case hclog.Info:
-					l.Info(entry.Message, out...)
-				case hclog.Warn:
-					l.Warn(entry.Message, out...)
-				case hclog.Error:
-					l.Error(entry.Message, out...)
-				}
+			out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+			switch hclog.LevelFromString(entry.Level) {
+			case hclog.Trace:
+				l.Trace(entry.Message, out...)
+			case hclog.Debug:
+				l.Debug(entry.Message, out...)
+			case hclog.Info:
+				l.Info(entry.Message, out...)
+			case hclog.Warn:
+				l.Warn(entry.Message, out...)
+			case hclog.Error:
+				l.Error(entry.Message, out...)
 			}
-		}
-
-		if err == io.EOF {
-			break
 		}
 	}
 
-	// Flag that we've completed logging for others
-	close(c.doneLogging)
+	if err := scanner.Err(); err != nil {
+		l.Error("reading plugin stderr", "error", err)
+	}
 }

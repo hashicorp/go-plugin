@@ -43,10 +43,9 @@ func TestClient(t *testing.T) {
 	// Test that it exits properly if killed
 	c.Kill()
 
-	if process.ProcessState == nil {
-		t.Fatal("should have process state")
-	}
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -88,14 +87,12 @@ func TestClient_killStart(t *testing.T) {
 
 	// Test that Kill does nothing really
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
-	}
-
-	if process.ProcessState == nil {
-		t.Fatal("should have no process state")
 	}
 
 	// Verify our path doesn't exist
@@ -171,7 +168,9 @@ func TestClient_testInterface(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -264,7 +263,9 @@ func TestClient_grpc(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -349,7 +350,9 @@ func TestClient_reattach(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -406,7 +409,9 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -464,7 +469,9 @@ func TestClient_reattachGRPC(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -574,7 +581,9 @@ func TestClient_Stderr(t *testing.T) {
 	if _, err := c.Start(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	for !c.Exited() {
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -602,7 +611,9 @@ func TestClient_StderrJSON(t *testing.T) {
 	if _, err := c.Start(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	for !c.Exited() {
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -709,6 +720,7 @@ func TestClient_SecureConfig(t *testing.T) {
 		Hash:     sha256.New(),
 	}
 
+	process = helperProcess("test-interface")
 	c = NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
@@ -787,7 +799,9 @@ func TestClient_TLS(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -835,7 +849,9 @@ func TestClient_TLS_grpc(t *testing.T) {
 
 	// Kill it
 	c.Kill()
-
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
@@ -1092,6 +1108,9 @@ func testClient_logger(t *testing.T, proto string) {
 	// Kill it
 	c.Kill()
 
+	// the process may not have exited yet
+	// FIXME: do we need this?
+	time.Sleep(100 * time.Millisecond)
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")

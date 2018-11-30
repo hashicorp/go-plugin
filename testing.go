@@ -140,6 +140,7 @@ func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCSe
 	// Start up the server
 	server := &GRPCServer{
 		Plugins: ps,
+		DoneCh:  make(chan struct{}),
 		Server:  DefaultGRPCServer,
 		Stdout:  new(bytes.Buffer),
 		Stderr:  new(bytes.Buffer),
@@ -165,10 +166,11 @@ func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCSe
 
 	// Create the client
 	client := &GRPCClient{
-		Conn:    conn,
-		Plugins: ps,
-		broker:  broker,
-		doneCtx: context.Background(),
+		Conn:       conn,
+		Plugins:    ps,
+		broker:     broker,
+		doneCtx:    context.Background(),
+		controller: NewGRPCControllerClient(conn),
 	}
 
 	return client, server

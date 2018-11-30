@@ -530,7 +530,6 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	cmd.Env = append(cmd.Env, env...)
 	cmd.Stdin = os.Stdin
 
-	// these cannot return errors at this point
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err

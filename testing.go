@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/proto"
 	"github.com/mitchellh/go-testing-interface"
 	"google.golang.org/grpc"
@@ -145,6 +146,7 @@ func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCSe
 		Server:  DefaultGRPCServer,
 		Stdout:  new(bytes.Buffer),
 		Stderr:  new(bytes.Buffer),
+		logger:  hclog.Default(),
 	}
 	if err := server.Init(); err != nil {
 		t.Fatalf("err: %s", err)

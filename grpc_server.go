@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -54,6 +54,8 @@ type GRPCServer struct {
 	config GRPCServerConfig
 	server *grpc.Server
 	broker *GRPCBroker
+
+	logger hclog.Logger
 }
 
 // ServerProtocol impl.
@@ -128,7 +130,7 @@ func (s *GRPCServer) Serve(lis net.Listener) {
 	defer close(s.DoneCh)
 	err := s.server.Serve(lis)
 	if err != nil {
-		log.Println("[ERROR] grpc server returned:", err)
+		s.logger.Error("grpc server", "error", err)
 	}
 }
 

@@ -1,3 +1,5 @@
+//go:generate protoc -I ./ ./grpc_broker.proto --go_out=plugins=grpc:.
+
 package plugin
 
 import (

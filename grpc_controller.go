@@ -1,8 +1,9 @@
-//go:generate protoc -I ./ ./grpc_controller.proto --go_out=plugins=grpc:.
 package plugin
 
 import (
 	"context"
+
+	"github.com/hashicorp/go-plugin/internal/proto"
 )
 
 // GRPCControllerServer handles shutdown calls to terminate the server when the
@@ -13,8 +14,8 @@ type grpcControllerServer struct {
 
 // Shutdown stops the grpc server. It first will attempt a graceful stop, then a
 // full stop on the server.
-func (s *grpcControllerServer) Shutdown(ctx context.Context, _ *Empty) (*Empty, error) {
-	resp := &Empty{}
+func (s *grpcControllerServer) Shutdown(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
+	resp := &proto.Empty{}
 
 	// TODO: figure out why GracefullStop doesn't work.
 	s.server.Stop()

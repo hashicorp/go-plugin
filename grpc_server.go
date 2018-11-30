@@ -76,6 +76,12 @@ func (s *GRPCServer) Init() error {
 	s.broker = newGRPCBroker(brokerServer, s.TLS)
 	go s.broker.Run()
 
+	// Register the controller
+	controllerServer := &grpcControllerServer{
+		server: s,
+	}
+	RegisterGRPCControllerServer(s.server, controllerServer)
+
 	// Register all our plugins onto the gRPC server.
 	for k, raw := range s.Plugins {
 		p, ok := raw.(GRPCPlugin)

@@ -16,11 +16,8 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 	// Build dialing options.
 	opts := make([]grpc.DialOption, 0, 5)
 
-	// We use a custom dialer so that we can connect over unix domain sockets
+	// We use a custom dialer so that we can connect over unix domain sockets.
 	opts = append(opts, grpc.WithDialer(dialer))
-
-	// go-plugin expects to block the connection
-	opts = append(opts, grpc.WithBlock())
 
 	// Fail right away
 	opts = append(opts, grpc.FailOnNonTempDialError(true))

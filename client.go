@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/subtle"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash"
@@ -170,6 +172,29 @@ type ClientConfig struct {
 	// Logger is the logger that the client will used. If none is provided,
 	// it will default to hclog's default logger.
 	Logger hclog.Logger
+
+	// AutoMTLS has the client and server automatically negotiate mTLS for
+	// transport authentication. This ensures that only the original client will
+	// be allowed to connect to the server, and all other connections will be
+	// rejected. The client will also refuse to connect to any server that isn't
+	// the original instance started by the client.
+	//
+	// In this mode of operation, the client generates a one-time use tls
+	// certificate, sends the public x.509 certificate to the new server, and
+	// the server generates a one-time use tls certificate, and sends the public
+	// x.509 certificate back to the client. These are used to authenticate all
+	// rpc connections between the client and server.
+	//
+	// Setting AutoMTLS to true implies that the server must support the
+	// protocol, and correctly negotiate the tls certificates, or a connection
+	// failure will result.
+	//
+	// The client should not set TLSConfig, nor should the server set a
+	// TLSProvider, because AutoMTLS implies that a new certificate and tls
+	// configuration will be generated at startup.
+	//
+	// You cannot Reattach to a server with this option enabled.
+	AutoMTLS bool
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -545,6 +570,29 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
+	// Setup a temporary certificate for client/server mtls, and send the public
+	// certificate to the plugin.
+	if c.config.AutoMTLS {
+		c.logger.Info("configuring client automatic mTLS")
+		certPEM, keyPEM, err := generateCert()
+		if err != nil {
+			c.logger.Error("failed to generate client certificate", "error", err)
+			return nil, err
+		}
+		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		if err != nil {
+			c.logger.Error("failed to parse client certificate", "error", err)
+			return nil, err
+		}
+
+		cmd.Env = append(cmd.Env, fmt.Sprintf("PLUGIN_CLIENT_CERT=%s", certPEM))
+
+		c.config.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ServerName:   "localhost",
+		}
+	}
+
 	c.logger.Debug("starting plugin", "path", cmd.Path, "args", cmd.Args)
 	err = cmd.Start()
 	if err != nil {
@@ -718,10 +766,40 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			return addr, err
 		}
 
+		// See if we have a TLS certificate from the server.
+		// Checking if the length is > 50 rules out catching the unused "extra"
+		// data returned from some older implementations.
+		if len(parts) >= 6 && len(parts[5]) > 50 {
+			err := c.loadServerCert(parts[5])
+			if err != nil {
+				return nil, fmt.Errorf("error parsing server cert: %s", err)
+			}
+		}
 	}
 
 	c.address = addr
 	return
+}
+
+// loadServerCert is used by AutoMTLS to read an x.509 cert returned by the
+// server, and load it as the RootCA for the client TLSConfig.
+func (c *Client) loadServerCert(cert string) error {
+	certPool := x509.NewCertPool()
+
+	asn1, err := base64.RawStdEncoding.DecodeString(cert)
+	if err != nil {
+		return err
+	}
+
+	x509Cert, err := x509.ParseCertificate([]byte(asn1))
+	if err != nil {
+		return err
+	}
+
+	certPool.AddCert(x509Cert)
+
+	c.config.TLSConfig.RootCAs = certPool
+	return nil
 }
 
 // checkProtoVersion returns the negotiated version and PluginSet.

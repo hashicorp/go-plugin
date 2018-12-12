@@ -308,6 +308,7 @@ func Serve(opts *ServeConfig) {
 			Stdout:  stdout_r,
 			Stderr:  stderr_r,
 			DoneCh:  doneCh,
+			logger:  logger,
 		}
 
 	default:

@@ -43,13 +43,14 @@ func TestClient(t *testing.T) {
 	// Test that it exits properly if killed
 	c.Kill()
 
-	if process.ProcessState == nil {
-		t.Fatal("should have process state")
-	}
-
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	// this test isn't expected to get a client
+	if !c.killed() {
+		t.Fatal("Client should have failed")
 	}
 }
 
@@ -94,8 +95,8 @@ func TestClient_killStart(t *testing.T) {
 		t.Fatal("should say client has exited")
 	}
 
-	if process.ProcessState == nil {
-		t.Fatal("should have no process state")
+	if !c.killed() {
+		t.Fatal("process should have failed")
 	}
 
 	// Verify our path doesn't exist
@@ -175,6 +176,10 @@ func TestClient_testInterface(t *testing.T) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }
 
@@ -269,6 +274,10 @@ func TestClient_grpc(t *testing.T) {
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
 	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
 }
 
 func TestClient_grpcNotAllowed(t *testing.T) {
@@ -354,6 +363,10 @@ func TestClient_reattach(t *testing.T) {
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
 	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
 }
 
 func TestClient_reattachNoProtocol(t *testing.T) {
@@ -410,6 +423,10 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }
 
@@ -468,6 +485,10 @@ func TestClient_reattachGRPC(t *testing.T) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }
 
@@ -579,6 +600,10 @@ func TestClient_Stderr(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
+
 	if !strings.Contains(stderr.String(), "HELLO\n") {
 		t.Fatalf("bad log data: '%s'", stderr.String())
 	}
@@ -605,6 +630,10 @@ func TestClient_StderrJSON(t *testing.T) {
 
 	for !c.Exited() {
 		time.Sleep(10 * time.Millisecond)
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 
 	if !strings.Contains(stderr.String(), "[\"HELLO\"]\n") {
@@ -709,6 +738,7 @@ func TestClient_SecureConfig(t *testing.T) {
 		Hash:     sha256.New(),
 	}
 
+	process = helperProcess("test-interface")
 	c = NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
@@ -792,6 +822,10 @@ func TestClient_TLS(t *testing.T) {
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
 	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
 }
 
 func TestClient_TLS_grpc(t *testing.T) {
@@ -836,9 +870,12 @@ func TestClient_TLS_grpc(t *testing.T) {
 	// Kill it
 	c.Kill()
 
-	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }
 
@@ -1197,5 +1234,9 @@ func testClient_logger(t *testing.T, proto string) {
 	// Test that it knows it is exited
 	if !c.Exited() {
 		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }

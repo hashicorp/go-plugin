@@ -331,8 +331,17 @@ func Serve(opts *ServeConfig) {
 		serverCert)
 	os.Stdout.Sync()
 
-	// Ignore interrupts
-	signal.Ignore(os.Interrupt)
+	// Eat the interrupts
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		count := 0
+		for {
+			<-ch
+			count++
+			logger.Trace("plugin received interrupt signal, ignoring", "count", count)
+		}
+	}()
 
 	// Set our new out, err
 	os.Stdout = stdout_w

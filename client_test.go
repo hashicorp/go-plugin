@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -1238,5 +1239,39 @@ func testClient_logger(t *testing.T, proto string) {
 
 	if c.killed() {
 		t.Fatal("process failed to exit gracefully")
+	}
+}
+
+// Test that we continue to consume stderr over long lines.
+func TestClient_logStderr(t *testing.T) {
+	orig := stdErrBufferSize
+	stdErrBufferSize = 32
+	defer func() {
+		stdErrBufferSize = orig
+	}()
+
+	stderr := bytes.Buffer{}
+	c := NewClient(&ClientConfig{
+		Stderr: &stderr,
+		Cmd: &exec.Cmd{
+			Path: "test",
+		},
+	})
+	c.clientWaitGroup.Add(1)
+
+	msg := `
+this line is more than 32 bytes long
+and this line is more than 32 bytes long
+{"a": "b", "@level": "debug"}
+this line is short
+`
+
+	reader := strings.NewReader(msg)
+
+	c.logStderr(reader)
+	read := stderr.String()
+
+	if read != msg {
+		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
 	}
 }

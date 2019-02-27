@@ -23,6 +23,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/yamux"
 )
 
 // If this is 1, then we've called CleanupClients. This can be used
@@ -202,6 +203,26 @@ type ClientConfig struct {
 	//
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
+
+	// Specify some properties of the underlying connection, including keepalive.
+	ConnectionConfig *ConnectionConfig
+}
+
+// ConnectionConfig allows providing properties of an underlying connection
+// via the ClientConfig.ConnectionConfig field.
+type ConnectionConfig struct {
+	// EnableKeepalive is used to do a period keep alive
+	// messages using a ping.
+	EnableKeepAlive bool
+
+	// KeepAliveInterval is how often to perform the keep alive
+	KeepAliveInterval time.Duration
+
+	// ConnectionWriteTimeout is meant to be a "safety valve" timeout after
+	// we which will suspect a problem with the underlying connection and
+	// close it. This is only applied to writes, where's there's generally
+	// an expectation that things will move along quickly.
+	ConnectionWriteTimeout time.Duration
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -279,6 +300,15 @@ func CleanupClients() {
 	managedClientsLock.Unlock()
 
 	wg.Wait()
+}
+
+func DefaultConnectionConfig() (connectionConfig *ConnectionConfig) {
+	defaultYamuxConfig := yamux.DefaultConfig()
+	return &ConnectionConfig{
+		ConnectionWriteTimeout: defaultYamuxConfig.ConnectionWriteTimeout,
+		EnableKeepAlive:        defaultYamuxConfig.EnableKeepAlive,
+		KeepAliveInterval:      defaultYamuxConfig.KeepAliveInterval,
+	}
 }
 
 // Creates a new plugin client which manages the lifecycle of an external

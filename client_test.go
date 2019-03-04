@@ -185,14 +185,14 @@ func TestClient_testInterface(t *testing.T) {
 	}
 }
 
-func TestClient_grpc_keepAliveEnabled(t *testing.T) {
-	process := helperProcess("test-grpc")
+func TestClient_keepAliveEnabled(t *testing.T) {
+	process := helperProcess("test-interface")
 	c := NewClient(&ClientConfig{
 		Cmd:              process,
 		HandshakeConfig:  testHandshake,
 		Plugins:          testPluginMap,
-		AllowedProtocols: []Protocol{ProtocolGRPC},
-		ConnectionConfig: &ConnectionConfig{
+		AllowedProtocols: []Protocol{ProtocolNetRPC},
+		NetRPCConfig: &NetRPCConfig{
 			EnableKeepAlive:        true,
 			KeepAliveInterval:      1 * time.Millisecond,
 			ConnectionWriteTimeout: 100 * time.Millisecond,
@@ -217,6 +217,7 @@ func TestClient_grpc_keepAliveEnabled(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
+	defer c.process.Signal(syscall.SIGCONT)
 	c.process.Signal(syscall.SIGSTOP)
 
 	select {
@@ -224,6 +225,54 @@ func TestClient_grpc_keepAliveEnabled(t *testing.T) {
 	case <-time.After(time.Second * 2):
 		t.Fatal("Context was not closed")
 	}
+
+	c.process.Signal(syscall.SIGCONT)
+	c.Kill()
+}
+
+func TestClient_keepAliveDisabled(t *testing.T) {
+	process := helperProcess("test-interface")
+	c := NewClient(&ClientConfig{
+		Cmd:              process,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testPluginMap,
+		AllowedProtocols: []Protocol{ProtocolNetRPC},
+		NetRPCConfig: &NetRPCConfig{
+			EnableKeepAlive:        false,
+			KeepAliveInterval:      1 * time.Millisecond,
+			ConnectionWriteTimeout: 100 * time.Millisecond,
+		},
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	_, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	defer c.process.Signal(syscall.SIGCONT)
+	c.process.Signal(syscall.SIGSTOP)
+
+	select {
+	case <-c.doneCtx.Done():
+		t.Fatal("Context was closed")
+	case <-time.After(time.Second * 2):
+	}
+
+	c.process.Signal(syscall.SIGCONT)
+	c.Kill()
 }
 
 func TestClient_grpc_servercrash(t *testing.T) {

@@ -204,13 +204,14 @@ type ClientConfig struct {
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
 
-	// Specify some properties of the underlying connection, including keepalive.
-	ConnectionConfig *ConnectionConfig
+	// NetRpcConfig allows configuring some properties of the connection
+	// if the protocol is ProtocolNetRPC.
+	NetRPCConfig *NetRPCConfig
 }
 
-// ConnectionConfig allows providing properties of an underlying connection
-// via the ClientConfig.ConnectionConfig field.
-type ConnectionConfig struct {
+// NetRPCConfig allows providing properties of an underlying connection
+// via the ClientConfig.NetRPCConfig field.
+type NetRPCConfig struct {
 	// EnableKeepalive is used to do a period keep alive
 	// messages using a ping.
 	EnableKeepAlive bool
@@ -302,9 +303,9 @@ func CleanupClients() {
 	wg.Wait()
 }
 
-func DefaultConnectionConfig() (connectionConfig *ConnectionConfig) {
+func DefaultNetRPCConfig() (netRPCConfig *NetRPCConfig) {
 	defaultYamuxConfig := yamux.DefaultConfig()
-	return &ConnectionConfig{
+	return &NetRPCConfig{
 		ConnectionWriteTimeout: defaultYamuxConfig.ConnectionWriteTimeout,
 		EnableKeepAlive:        defaultYamuxConfig.EnableKeepAlive,
 		KeepAliveInterval:      defaultYamuxConfig.KeepAliveInterval,

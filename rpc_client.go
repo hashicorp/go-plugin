@@ -28,6 +28,8 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	conn = NewConnWithCancel(conn, c.ctxCancel)
+
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		// Make sure to set keep alive so that the connection doesn't die
 		tcpConn.SetKeepAlive(true)
@@ -38,11 +40,11 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	}
 
 	yamuxConfig := yamux.DefaultConfig()
-	connectionConfig := c.config.ConnectionConfig
-	if connectionConfig != nil {
-		yamuxConfig.EnableKeepAlive = connectionConfig.EnableKeepAlive
-		yamuxConfig.KeepAliveInterval = connectionConfig.KeepAliveInterval
-		yamuxConfig.ConnectionWriteTimeout = connectionConfig.ConnectionWriteTimeout
+	netRPCConfig := c.config.NetRPCConfig
+	if netRPCConfig != nil {
+		yamuxConfig.EnableKeepAlive = netRPCConfig.EnableKeepAlive
+		yamuxConfig.KeepAliveInterval = netRPCConfig.KeepAliveInterval
+		yamuxConfig.ConnectionWriteTimeout = netRPCConfig.ConnectionWriteTimeout
 	}
 
 	// Create the actual RPC client

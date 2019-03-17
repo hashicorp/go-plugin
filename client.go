@@ -202,6 +202,11 @@ type ClientConfig struct {
 	//
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
+
+	// SkipHostEnvironmentVariablesPopulation - if set to true, the plugin will
+	// be populated with the host environment variables
+	// default is false
+	SkipHostEnvironmentVariablesPopulation bool
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -520,7 +525,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	cmd := c.config.Cmd
-	cmd.Env = append(cmd.Env, os.Environ()...)
+	if !c.config.SkipHostEnvironmentVariablesPopulation {
+		cmd.Env = append(cmd.Env, os.Environ()...)
+	}
 	cmd.Env = append(cmd.Env, env...)
 	cmd.Stdin = os.Stdin
 

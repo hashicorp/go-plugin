@@ -989,6 +989,11 @@ func (c *Client) logStderr(r io.Reader) {
 				l.Warn(entry.Message, out...)
 			case hclog.Error:
 				l.Error(entry.Message, out...)
+			default:
+				// if there was no log level, it's likely this is unexpected
+				// json from something other than hclog, and we should output
+				// it verbatim.
+				l.Debug(string(line))
 			}
 		}
 	}

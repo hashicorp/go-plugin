@@ -15,7 +15,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin/test/grpc"
+	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -455,6 +455,7 @@ func TestHelperProcess(*testing.T) {
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
 		os.Stderr.WriteString("[\"HELLO\"]\n")
 		os.Stderr.WriteString("12345\n")
+		os.Stderr.WriteString("{\"a\":1}\n")
 	case "stdin":
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
 		data := make([]byte, 5)

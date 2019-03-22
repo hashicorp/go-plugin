@@ -973,7 +973,22 @@ func (c *Client) logStderr(r io.Reader) {
 		entry, err := parseJSON(line)
 		// If output is not JSON format, print directly to Debug
 		if err != nil {
-			l.Debug(string(line))
+			// Attempt to infer the desired log level from the commonly used
+			// string prefixes
+			switch line := string(line); {
+			case strings.HasPrefix("[TRACE]", line):
+				l.Trace(line)
+			case strings.HasPrefix("[DEBUG]", line):
+				l.Debug(line)
+			case strings.HasPrefix("[INFO]", line):
+				l.Info(line)
+			case strings.HasPrefix("[WARN]", line):
+				l.Warn(line)
+			case strings.HasPrefix("[ERROR]", line):
+				l.Error(line)
+			default:
+				l.Debug(line)
+			}
 		} else {
 			out := flattenKVPairs(entry.KVPairs)
 

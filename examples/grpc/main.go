@@ -23,7 +23,11 @@ func main() {
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
 	})
-	defer client.Kill()
+	// defer client.Kill()
+	// The program exits immediately when calling "os.Exit" which
+	// means no deferred functions will be called. To shutdown the
+	// subprocess correctly, you need to call client.Kill() explicitly
+	// before os.Exit.
 
 	// Connect via RPC
 	rpcClient, err := client.Client()
@@ -64,5 +68,7 @@ func main() {
 		fmt.Printf("Please only use 'get' or 'put', given: %q", os.Args[0])
 		os.Exit(1)
 	}
+
+	client.Kill()
 	os.Exit(0)
 }

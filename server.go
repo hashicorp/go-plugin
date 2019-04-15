@@ -365,12 +365,12 @@ func serverListener() (net.Listener, error) {
 func serverListener_tcp() (net.Listener, error) {
 	minPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MIN_PORT"), 10, 32)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("Couldn't get value from PLUGIN_MIN_PORT variable: %s", err.Error()))
 	}
 
 	maxPort, err := strconv.ParseInt(os.Getenv("PLUGIN_MAX_PORT"), 10, 32)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("Couldn't get value from PLUGIN_MAX_PORT variable: %s", err.Error()))
 	}
 
 	for port := minPort; port <= maxPort; port++ {

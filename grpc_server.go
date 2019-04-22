@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -8,7 +9,7 @@ import (
 	"io"
 	"net"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -51,6 +52,9 @@ type GRPCServer struct {
 	Stdout io.Reader
 	Stderr io.Reader
 
+	stdoutChannel chan []byte
+	stderrChannel chan []byte
+
 	config GRPCServerConfig
 	server *grpc.Server
 	broker *GRPCBroker
@@ -84,6 +88,14 @@ func (s *GRPCServer) Init() error {
 		server: s,
 	}
 	plugin.RegisterGRPCControllerServer(s.server, controllerServer)
+
+	// Wire up the stdio service
+	plugin.RegisterGRPCStdioServer(s.server, &stdioServer{server: s})
+	// Avoid getting into a state where we start dropping writes because we're out of "space"
+	s.stderrChannel = make(chan []byte, 1000)
+	s.stdoutChannel = make(chan []byte, 1000)
+	go copyChan(s.Stderr, s.stderrChannel)
+	go copyChan(s.Stdout, s.stdoutChannel)
 
 	// Register all our plugins onto the gRPC server.
 	for k, raw := range s.Plugins {
@@ -139,4 +151,63 @@ func (s *GRPCServer) Serve(lis net.Listener) {
 type GRPCServerConfig struct {
 	StdoutAddr string `json:"stdout_addr"`
 	StderrAddr string `json:"stderr_addr"`
+}
+
+// Something to consider: How do we deal with I/O that potentially never completes because someone does not write
+// a new line?
+func splitLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i + 1], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data.
+	return 0, nil, nil
+}
+
+func copyChan(src io.Reader, dst chan []byte) {
+	scanner := bufio.NewScanner(src)
+
+	// Set the split function for the scanning operation.
+	scanner.Split(splitLines)
+	for scanner.Scan() {
+		bytes := scanner.Bytes()
+		dst <- bytes
+	}
+	err := scanner.Err()
+	if err != nil {
+		panic(err)
+	}
+}
+
+type stdioServer struct {
+	server *GRPCServer
+}
+
+func (s *stdioServer) ReadStdio(req *plugin.StdioRequest, server plugin.GRPCStdio_ReadStdioServer) error {
+	var reader chan []byte
+	switch req.Channel {
+	case plugin.StdioRequest_stdout:
+		reader = s.server.stdoutChannel
+	case plugin.StdioRequest_stderr:
+		reader = s.server.stderrChannel
+	}
+	for {
+		select {
+		case data := <-reader:
+			err := server.Send(&plugin.StdioResponse{Data: data})
+			if err != nil {
+				return err
+			}
+		case <-server.Context().Done():
+			return nil
+		}
+	}
 }

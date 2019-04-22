@@ -1,0 +1,24 @@
+syntax = "proto3";
+package plugin;
+option go_package = "plugin";
+
+// We use two separate request paths for stderr, and stdout. This does not give an ordering guarantee between
+// the two streams, which is a weaker API than if we were to combine them.
+message StdioRequest {
+    enum Channel {
+        stdout = 0;
+        stderr = 1;
+    }
+
+    Channel channel = 1;
+}
+
+message StdioResponse {
+    bytes data = 1;
+}
+
+service GRPCStdio {
+    rpc ReadStdio(StdioRequest) returns (stream StdioResponse);
+}
+
+

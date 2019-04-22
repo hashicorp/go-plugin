@@ -2,7 +2,7 @@ module github.com/hashicorp/go-plugin
 
 require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/protobuf v1.2.0
+	github.com/golang/protobuf v1.3.1
 	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
 	github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77

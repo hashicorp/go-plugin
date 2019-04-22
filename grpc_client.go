@@ -3,8 +3,14 @@ package plugin
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/hashicorp/go-plugin/internal/plugin"
 	"golang.org/x/net/context"
@@ -54,7 +60,8 @@ func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	brokerGRPCClient := newGRPCBrokerClient(conn)
 	broker := newGRPCBroker(brokerGRPCClient, c.config.TLSConfig)
 	go broker.Run()
-	go brokerGRPCClient.StartStream()
+	go grpcCopyStreams(doneCtx, c.logger, conn, plugin.StdioRequest_stdout, os.Stdout)
+	go grpcCopyStreams(doneCtx, c.logger, conn, plugin.StdioRequest_stderr, os.Stderr)
 
 	cl := &GRPCClient{
 		Conn:       conn,
@@ -65,6 +72,32 @@ func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	}
 
 	return cl, nil
+}
+
+func grpcCopyStreams(ctx context.Context, logger hclog.Logger, conn *grpc.ClientConn, channel plugin.StdioRequest_Channel, writer io.Writer) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stdioClient := plugin.NewGRPCStdioClient(conn)
+
+	stream, e := stdioClient.ReadStdio(ctx, &plugin.StdioRequest{Channel: channel})
+	if e != nil {
+		if code := status.Code(e); code != codes.Unimplemented {
+			logger.Error("Unable to setup grpc stream copier", "error", e)
+		}
+		return
+	}
+	for {
+		response, e := stream.Recv()
+		switch e {
+		case nil:
+		case io.EOF, context.Canceled:
+			return
+		default:
+			logger.Error("Experienced issue in gRPC copier", "error", e)
+			return
+		}
+		writer.Write(response.Data)
+	}
 }
 
 // GRPCClient connects to a GRPCServer over gRPC to dispense plugin types.

@@ -456,6 +456,10 @@ func TestHelperProcess(*testing.T) {
 		os.Stderr.WriteString("[\"HELLO\"]\n")
 		os.Stderr.WriteString("12345\n")
 		os.Stderr.WriteString("{\"a\":1}\n")
+	case "level-warn-text":
+		// write values that might be JSON, but aren't KVs
+		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		os.Stderr.WriteString("[WARN] test line 98765\n")
 	case "stdin":
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
 		data := make([]byte, 5)

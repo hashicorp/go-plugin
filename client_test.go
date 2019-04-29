@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -661,6 +662,48 @@ func TestClient_StderrJSON(t *testing.T) {
 
 	if !strings.Contains(logOut, "{\"a\":1}") {
 		t.Fatalf("missing json object: '%s'", logOut)
+	}
+}
+
+func TestClient_textLogLevel(t *testing.T) {
+	stderr := new(bytes.Buffer)
+	process := helperProcess("level-warn-text")
+
+	var logBuf bytes.Buffer
+	mutex := new(sync.Mutex)
+	// Custom hclog.Logger
+	testLogger := hclog.New(&hclog.LoggerOptions{
+		Name:   "test-logger",
+		Level:  hclog.Warn,
+		Output: &logBuf,
+		Mutex:  mutex,
+	})
+
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		Stderr:          stderr,
+		HandshakeConfig: testHandshake,
+		Logger:          testLogger,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	if _, err := c.Start(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	for !c.Exited() {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
+
+	logOut := logBuf.String()
+
+	if !strings.Contains(logOut, "test line 98765") {
+		log.Fatalf("test string not found in log: %q\n", logOut)
 	}
 }
 

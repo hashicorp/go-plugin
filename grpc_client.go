@@ -13,6 +13,11 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+const (
+	maxSendSize = 64 << 20
+	maxRecvSize = 64 << 20
+	)
+
 func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error)) (*grpc.ClientConn, error) {
 	// Build dialing options.
 	opts := make([]grpc.DialOption, 0, 5)
@@ -31,6 +36,11 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 		opts = append(opts, grpc.WithTransportCredentials(
 			credentials.NewTLS(tls)))
 	}
+
+	opts = append(opts,
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvSize)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(maxSendSize)))
+
 
 	// Connect. Note the first parameter is unused because we use a custom
 	// dialer that has the state to see the address.

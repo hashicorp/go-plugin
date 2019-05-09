@@ -61,3 +61,16 @@ Where:
     is omitted (older versions), this is "netrpc" for Go net/rpc. This can
     also be "grpc". This is the protocol that the plugin wants to speak to
     the host process with.
+
+## Environment Variables
+
+When serving a plugin over TCP, the following environment variables can be
+specified to restrict the port that will be assigned to be from within a
+specific range. If not values are provided, the port will be randomly assigned
+by the operating system.
+
+ * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to
+ * the listener.
+ 
+ * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to
+ * the listener.

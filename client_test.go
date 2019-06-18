@@ -1329,6 +1329,7 @@ this line is short
 
 	reader := strings.NewReader(msg)
 
+	c.stderrWaitGroup.Add(1)
 	c.logStderr(reader)
 	read := stderr.String()
 

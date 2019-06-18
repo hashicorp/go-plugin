@@ -3,6 +3,7 @@ package plugin
 import (
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -12,11 +13,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
-
-const (
-	maxSendSize = 64 << 20
-	maxRecvSize = 64 << 20
-	)
 
 func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error)) (*grpc.ClientConn, error) {
 	// Build dialing options.
@@ -38,8 +34,8 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 	}
 
 	opts = append(opts,
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvSize)),
-		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(maxSendSize)))
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(math.MaxInt32)))
 
 
 	// Connect. Note the first parameter is unused because we use a custom

@@ -166,13 +166,11 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 	return protoVersion, protoType, pluginSet
 }
 
-// Serve serves the plugins given by ServeConfig.
+// ServeAsync serves the plugins given by ServeConfig.
 //
-// Serve doesn't return until the plugin is done being executed. Any
+// ServeAsync expects the caller to call wait(). Any
 // errors will be outputted to os.Stderr.
-//
-// This is the method that plugins should call in their main() functions.
-func Serve(opts *ServeConfig) {
+func ServeAsync(opts *ServeConfig) (ServerProtocol, func()) {
 	// Validate the handshake config
 	if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
 		fmt.Fprintf(os.Stderr,
@@ -225,21 +223,22 @@ func Serve(opts *ServeConfig) {
 	listener, err := serverListener()
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
-		return
+		return nil, func() {}
 	}
 
-	// Close the listener on return. We wrap this in a func() on purpose
-	// because the "listener" reference may change to TLS.
-	defer func() {
+	// Create the channel to tell us when we're done
+	doneCh := make(chan struct{})
+	wait := func() {
+		<-doneCh
 		listener.Close()
-	}()
+	}
 
 	var tlsConfig *tls.Config
 	if opts.TLSProvider != nil {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
 			logger.Error("plugin tls init", "error", err)
-			return
+			return nil, wait
 		}
 	}
 
@@ -278,9 +277,6 @@ func Serve(opts *ServeConfig) {
 		serverCert = base64.RawStdEncoding.EncodeToString(cert.Certificate[0])
 	}
 
-	// Create the channel to tell us when we're done
-	doneCh := make(chan struct{})
-
 	// Build the server type
 	var server ServerProtocol
 	switch protoType {
@@ -318,7 +314,7 @@ func Serve(opts *ServeConfig) {
 	// Initialize the servers
 	if err := server.Init(); err != nil {
 		logger.Error("protocol init", "error", err)
-		return
+		return server, wait
 	}
 
 	logger.Debug("plugin address", "network", listener.Addr().Network(), "address", listener.Addr().String())
@@ -351,7 +347,18 @@ func Serve(opts *ServeConfig) {
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)
-	<-doneCh
+	return server, wait
+}
+
+// Serve serves the plugins given by ServeConfig.
+//
+// Serve doesn't return until the plugin is done being executed. Any
+// errors will be outputted to os.Stderr.
+//
+// This is the method that plugins should call in their main() functions.
+func Serve(opts *ServeConfig) {
+	_, wait := ServeAsync(opts)
+	wait()
 }
 
 func serverListener() (net.Listener, error) {

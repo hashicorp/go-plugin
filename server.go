@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -166,13 +167,14 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 	return protoVersion, protoType, pluginSet
 }
 
-// Serve serves the plugins given by ServeConfig.
+// ServeWithContext serves the plugins given by ServeConfig, the passed in
+// context can be used for stopping a GRPCServer.
 //
-// Serve doesn't return until the plugin is done being executed. Any
-// errors will be outputted to os.Stderr.
-//
-// This is the method that plugins should call in their main() functions.
-func Serve(opts *ServeConfig) {
+// In the case of a GRPCServer, when the received context is cancelled,
+// it will call server.Stop(). The passed context is not set as the server's
+// root context, it is only used to signal stopping.
+// ServeWithContext will block until the server has completely closed.
+func ServeWithContext(ctx context.Context, opts *ServeConfig) {
 	// Validate the handshake config
 	if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
 		fmt.Fprintf(os.Stderr,
@@ -351,7 +353,34 @@ func Serve(opts *ServeConfig) {
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)
-	<-doneCh
+
+	ctxDoneCh := ctx.Done()
+	for {
+		select {
+		// received manual cancellation signal
+		case <-ctxDoneCh:
+			// if the protocol was GRPC, stop the server to trigger context
+			// cancellation for inprogress requests
+			if protoType == ProtocolGRPC {
+				server.(*GRPCServer).Stop()
+			}
+			// nil the channel so it can no longer receive
+			ctxDoneCh = nil
+		// always wait until server exits
+		case <-doneCh:
+			return
+		}
+	}
+}
+
+// Serve serves the plugins given by ServeConfig.
+//
+// Serve doesn't return until the plugin is done being executed. Any
+// errors will be outputted to os.Stderr.
+//
+// This is the method that plugins should call in their main() functions.
+func Serve(opts *ServeConfig) {
+	ServeWithContext(context.Background(), opts)
 }
 
 func serverListener() (net.Listener, error) {

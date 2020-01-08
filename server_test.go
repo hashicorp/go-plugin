@@ -4,8 +4,47 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 )
+
+func TestServer_GRPCCancel(t *testing.T) {
+	// Create a temporary dir to store the result file
+	td, err := ioutil.TempDir("", "plugin")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.RemoveAll(td)
+
+	// Create a path that the helper process will write on cleanup
+	path := filepath.Join(td, "output")
+
+	// Test the self timeout/cancel
+	process := helperProcess("test-grpc-cancel", path)
+	c := NewClient(&ClientConfig{
+		Cmd:              process,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testGRPCPluginMap,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+	})
+
+	// Grab the client so the process starts
+	if _, err := c.Client(); err != nil {
+		c.Kill()
+		t.Fatalf("err: %s", err)
+	}
+
+	// Wait for the server to cancel itself
+	for !c.Exited() {
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Test for the file
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
 
 func TestRmListener_impl(t *testing.T) {
 	var _ net.Listener = new(rmListener)

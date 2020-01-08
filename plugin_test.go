@@ -511,6 +511,27 @@ func TestHelperProcess(*testing.T) {
 
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
+	case "test-grpc-cancel":
+		// Create a defer to write the file. This tests that the server exited
+		// after the passed context is cancelled
+		path := args[0]
+		defer func() {
+			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			if err != nil {
+				panic(err)
+			}
+		}()
+		// this timeout should emulate a cancel triggered while
+		// the plugin is serving and processing requests
+		ctx, _ := context.WithTimeout(context.Background(), time.Second*2)
+		ServeWithContext(ctx, &ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testGRPCPluginMap,
+			GRPCServer:      DefaultGRPCServer,
+		})
+
+		// Exit
+		return
 	case "test-interface":
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,

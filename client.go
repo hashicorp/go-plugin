@@ -159,11 +159,8 @@ type ClientConfig struct {
 
 	// SyncStdout, SyncStderr can be set to override the
 	// respective os.Std* values in the plugin. Care should be taken to
-	// avoid races here. If these are nil, then this will automatically be
-	// hooked up to os.Stdin, Stdout, and Stderr, respectively.
-	//
-	// If the default values (nil) are used, then this package will not
-	// sync any of these streams.
+	// avoid races here. If these are nil, then this will be set to
+	// ioutil.Discard.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
 

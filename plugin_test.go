@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	hclog "github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"golang.org/x/net/context"
@@ -39,6 +40,7 @@ type testInterface interface {
 	Double(int) int
 	PrintKV(string, interface{})
 	Bidirectional() error
+	PrintStdio(stdout, stderr []byte)
 }
 
 // testStreamer is used to test the grpc streaming interface
@@ -125,6 +127,18 @@ func (i *testInterfaceImpl) Bidirectional() error {
 	return nil
 }
 
+func (i *testInterfaceImpl) PrintStdio(stdout, stderr []byte) {
+	if len(stdout) > 0 {
+		fmt.Fprint(os.Stdout, string(stdout))
+		os.Stdout.Sync()
+	}
+
+	if len(stderr) > 0 {
+		fmt.Fprint(os.Stderr, string(stderr))
+		os.Stderr.Sync()
+	}
+}
+
 // testInterfaceClient implements testInterface to communicate over RPC
 type testInterfaceClient struct {
 	Client *rpc.Client
@@ -152,6 +166,14 @@ func (impl *testInterfaceClient) PrintKV(key string, value interface{}) {
 
 func (impl *testInterfaceClient) Bidirectional() error {
 	return nil
+}
+
+func (impl *testInterfaceClient) PrintStdio(stdout, stderr []byte) {
+	// We don't implement this because we test stream syncing another
+	// way (see rpc_client_test.go). We probably should test this way
+	// but very few people use the net/rpc protocol nowadays so we didn'
+	// put in the effort.
+	return
 }
 
 // testInterfaceServer is the RPC server for testInterfaceClient
@@ -238,6 +260,14 @@ func (s *testGRPCServer) Bidirectional(ctx context.Context, req *grpctest.Bidire
 	return &grpctest.BidirectionalResponse{
 		Id: nextID,
 	}, nil
+}
+
+func (s *testGRPCServer) PrintStdio(
+	ctx context.Context,
+	req *grpctest.PrintStdioRequest,
+) (*empty.Empty, error) {
+	s.Impl.PrintStdio(req.Stdout, req.Stderr)
+	return &empty.Empty{}, nil
 }
 
 type pingPongServer struct{}
@@ -366,6 +396,16 @@ func (impl *testGRPCClient) Stream(start, stop int32) ([]int32, error) {
 	streamClient.CloseSend()
 
 	return resp, nil
+}
+
+func (c *testGRPCClient) PrintStdio(stdout, stderr []byte) {
+	_, err := c.Client.PrintStdio(context.Background(), &grpctest.PrintStdioRequest{
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func helperProcess(s ...string) *exec.Cmd {

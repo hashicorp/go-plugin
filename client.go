@@ -690,14 +690,13 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Check the core protocol. Wrapped in a {} for scoping.
 		{
-			var coreProtocol int64
-			coreProtocol, err = strconv.ParseInt(parts[0], 10, 0)
+			coreProtocol, err := strconv.Atoi(parts[0])
 			if err != nil {
 				err = fmt.Errorf("Error parsing core protocol version: %s", err)
 				return
 			}
 
-			if int(coreProtocol) != CoreProtocolVersion {
+			if coreProtocol != CoreProtocolVersion {
 				err = fmt.Errorf("Incompatible core API version with plugin. "+
 					"Plugin version: %s, Core version: %d\n\n"+
 					"To fix this, the plugin usually only needs to be recompiled.\n"+

@@ -20,8 +20,9 @@ service GRPCStdio {
 // from GRPCStdio.
 message StdioData {
   enum Channel {
-    STDOUT = 0;
-    STDERR = 1;
+    INVALID = 0;
+    STDOUT = 1;
+    STDERR = 2;
   }
 
   Channel channel = 1;

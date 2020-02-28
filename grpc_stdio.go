@@ -180,21 +180,20 @@ func copyChan(log hclog.Logger, dst chan<- []byte, src io.Reader) {
 		// Read the data, this will block until data is available
 		n, err := bufsrc.Read(data[:])
 
-		// If we hit EOF we're done copying
-		if err == io.EOF {
-			log.Debug("stdio EOF, exiting copy loop")
-			return
-		}
-
-		// We have to check if we have data BEFORE err != nil check because
-		// the docs only guarantee n == 0 on EOF, but make no guarantee
-		// otherwise.
+		// We have to check if we have data BEFORE err != nil. The bufio
+		// docs guarantee n == 0 on EOF but its better to be safe here.
 		if n > 0 {
 			// We have data! Send it on the channel. This will block if there
 			// is no reader on the other side. We expect that go-plugin will
 			// connect immediately to the stdio server to drain this so we want
 			// this block to happen for backpressure.
 			dst <- data[:n]
+		}
+
+		// If we hit EOF we're done copying
+		if err == io.EOF {
+			log.Debug("stdio EOF, exiting copy loop")
+			return
 		}
 
 		// Any other error we just exit the loop. We don't expect there to

@@ -101,7 +101,7 @@ func newGRPCStdioClient(
 	// Connect immediately to the endpoint
 	stdioClient, err := client.StreamStdio(ctx, &empty.Empty{})
 
-	// If we get an Unavaiable error, this means that the plugin isn't
+	// If we get an Unavailable error, this means that the plugin isn't
 	// updated and linking to the latest version of go-plugin that supports
 	// this. We fall back to the previous behavior of just not syncing anything.
 	if status.Code(err) == codes.Unavailable {

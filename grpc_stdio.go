@@ -185,6 +185,17 @@ func copyChan(log hclog.Logger, dst chan<- []byte, src io.Reader) {
 			return
 		}
 
+		// We have to check if we have data BEFORE err != nil check because
+		// the docs only guarantee n == 0 on EOF, but make no guarantee
+		// otherwise.
+		if n > 0 {
+			// We have data! Send it on the channel. This will block if there
+			// is no reader on the other side. We expect that go-plugin will
+			// connect immediately to the stdio server to drain this so we want
+			// this block to happen for backpressure.
+			dst <- data[:n]
+		}
+
 		// Any other error we just exit the loop. We don't expect there to
 		// be errors since our use case for this is reading/writing from
 		// a in-process pipe (os.Pipe).
@@ -192,16 +203,5 @@ func copyChan(log hclog.Logger, dst chan<- []byte, src io.Reader) {
 			log.Warn("error copying stdio data, stopping copy", "err", err)
 			return
 		}
-
-		// If our len is zero then we have no data, just continue
-		if n == 0 {
-			continue
-		}
-
-		// We have data! Send it on the channel. This will block if there
-		// is no reader on the other side. We expect that go-plugin will
-		// connect immediately to the stdio server to drain this so we want
-		// this block to happen for backpressure.
-		dst <- data[:n]
 	}
 }

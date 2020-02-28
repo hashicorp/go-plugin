@@ -134,6 +134,7 @@ func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 		if err != nil {
 			if err == io.EOF ||
 				status.Code(err) == codes.Unavailable ||
+				status.Code(err) == codes.Canceled ||
 				err == context.Canceled {
 				c.log.Warn("received EOF, stopping recv loop", "err", err)
 				return

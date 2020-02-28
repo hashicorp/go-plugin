@@ -3,12 +3,14 @@
 
 package grpctest
 
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+import empty "github.com/golang/protobuf/ptypes/empty"
+
 import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
 	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -33,17 +35,16 @@ func (m *TestRequest) Reset()         { *m = TestRequest{} }
 func (m *TestRequest) String() string { return proto.CompactTextString(m) }
 func (*TestRequest) ProtoMessage()    {}
 func (*TestRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{0}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{0}
 }
-
 func (m *TestRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TestRequest.Unmarshal(m, b)
 }
 func (m *TestRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TestRequest.Marshal(b, m, deterministic)
 }
-func (m *TestRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TestRequest.Merge(m, src)
+func (dst *TestRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TestRequest.Merge(dst, src)
 }
 func (m *TestRequest) XXX_Size() int {
 	return xxx_messageInfo_TestRequest.Size(m)
@@ -72,17 +73,16 @@ func (m *TestResponse) Reset()         { *m = TestResponse{} }
 func (m *TestResponse) String() string { return proto.CompactTextString(m) }
 func (*TestResponse) ProtoMessage()    {}
 func (*TestResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{1}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{1}
 }
-
 func (m *TestResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TestResponse.Unmarshal(m, b)
 }
 func (m *TestResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TestResponse.Marshal(b, m, deterministic)
 }
-func (m *TestResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TestResponse.Merge(m, src)
+func (dst *TestResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TestResponse.Merge(dst, src)
 }
 func (m *TestResponse) XXX_Size() int {
 	return xxx_messageInfo_TestResponse.Size(m)
@@ -115,17 +115,16 @@ func (m *PrintKVRequest) Reset()         { *m = PrintKVRequest{} }
 func (m *PrintKVRequest) String() string { return proto.CompactTextString(m) }
 func (*PrintKVRequest) ProtoMessage()    {}
 func (*PrintKVRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{2}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{2}
 }
-
 func (m *PrintKVRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PrintKVRequest.Unmarshal(m, b)
 }
 func (m *PrintKVRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PrintKVRequest.Marshal(b, m, deterministic)
 }
-func (m *PrintKVRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PrintKVRequest.Merge(m, src)
+func (dst *PrintKVRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PrintKVRequest.Merge(dst, src)
 }
 func (m *PrintKVRequest) XXX_Size() int {
 	return xxx_messageInfo_PrintKVRequest.Size(m)
@@ -255,17 +254,16 @@ func (m *PrintKVResponse) Reset()         { *m = PrintKVResponse{} }
 func (m *PrintKVResponse) String() string { return proto.CompactTextString(m) }
 func (*PrintKVResponse) ProtoMessage()    {}
 func (*PrintKVResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{3}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{3}
 }
-
 func (m *PrintKVResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PrintKVResponse.Unmarshal(m, b)
 }
 func (m *PrintKVResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PrintKVResponse.Marshal(b, m, deterministic)
 }
-func (m *PrintKVResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PrintKVResponse.Merge(m, src)
+func (dst *PrintKVResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PrintKVResponse.Merge(dst, src)
 }
 func (m *PrintKVResponse) XXX_Size() int {
 	return xxx_messageInfo_PrintKVResponse.Size(m)
@@ -287,17 +285,16 @@ func (m *BidirectionalRequest) Reset()         { *m = BidirectionalRequest{} }
 func (m *BidirectionalRequest) String() string { return proto.CompactTextString(m) }
 func (*BidirectionalRequest) ProtoMessage()    {}
 func (*BidirectionalRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{4}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{4}
 }
-
 func (m *BidirectionalRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BidirectionalRequest.Unmarshal(m, b)
 }
 func (m *BidirectionalRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BidirectionalRequest.Marshal(b, m, deterministic)
 }
-func (m *BidirectionalRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BidirectionalRequest.Merge(m, src)
+func (dst *BidirectionalRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BidirectionalRequest.Merge(dst, src)
 }
 func (m *BidirectionalRequest) XXX_Size() int {
 	return xxx_messageInfo_BidirectionalRequest.Size(m)
@@ -326,17 +323,16 @@ func (m *BidirectionalResponse) Reset()         { *m = BidirectionalResponse{} }
 func (m *BidirectionalResponse) String() string { return proto.CompactTextString(m) }
 func (*BidirectionalResponse) ProtoMessage()    {}
 func (*BidirectionalResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{5}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{5}
 }
-
 func (m *BidirectionalResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BidirectionalResponse.Unmarshal(m, b)
 }
 func (m *BidirectionalResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BidirectionalResponse.Marshal(b, m, deterministic)
 }
-func (m *BidirectionalResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BidirectionalResponse.Merge(m, src)
+func (dst *BidirectionalResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BidirectionalResponse.Merge(dst, src)
 }
 func (m *BidirectionalResponse) XXX_Size() int {
 	return xxx_messageInfo_BidirectionalResponse.Size(m)
@@ -354,6 +350,52 @@ func (m *BidirectionalResponse) GetId() uint32 {
 	return 0
 }
 
+type PrintStdioRequest struct {
+	Stdout               []byte   `protobuf:"bytes,1,opt,name=stdout,proto3" json:"stdout,omitempty"`
+	Stderr               []byte   `protobuf:"bytes,2,opt,name=stderr,proto3" json:"stderr,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PrintStdioRequest) Reset()         { *m = PrintStdioRequest{} }
+func (m *PrintStdioRequest) String() string { return proto.CompactTextString(m) }
+func (*PrintStdioRequest) ProtoMessage()    {}
+func (*PrintStdioRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_test_ed149f2304c9fa82, []int{6}
+}
+func (m *PrintStdioRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PrintStdioRequest.Unmarshal(m, b)
+}
+func (m *PrintStdioRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PrintStdioRequest.Marshal(b, m, deterministic)
+}
+func (dst *PrintStdioRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PrintStdioRequest.Merge(dst, src)
+}
+func (m *PrintStdioRequest) XXX_Size() int {
+	return xxx_messageInfo_PrintStdioRequest.Size(m)
+}
+func (m *PrintStdioRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PrintStdioRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PrintStdioRequest proto.InternalMessageInfo
+
+func (m *PrintStdioRequest) GetStdout() []byte {
+	if m != nil {
+		return m.Stdout
+	}
+	return nil
+}
+
+func (m *PrintStdioRequest) GetStderr() []byte {
+	if m != nil {
+		return m.Stderr
+	}
+	return nil
+}
+
 type PingRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -364,17 +406,16 @@ func (m *PingRequest) Reset()         { *m = PingRequest{} }
 func (m *PingRequest) String() string { return proto.CompactTextString(m) }
 func (*PingRequest) ProtoMessage()    {}
 func (*PingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{6}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{7}
 }
-
 func (m *PingRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PingRequest.Unmarshal(m, b)
 }
 func (m *PingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PingRequest.Marshal(b, m, deterministic)
 }
-func (m *PingRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PingRequest.Merge(m, src)
+func (dst *PingRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PingRequest.Merge(dst, src)
 }
 func (m *PingRequest) XXX_Size() int {
 	return xxx_messageInfo_PingRequest.Size(m)
@@ -396,17 +437,16 @@ func (m *PongResponse) Reset()         { *m = PongResponse{} }
 func (m *PongResponse) String() string { return proto.CompactTextString(m) }
 func (*PongResponse) ProtoMessage()    {}
 func (*PongResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c161fcfdc0c3ff1e, []int{7}
+	return fileDescriptor_test_ed149f2304c9fa82, []int{8}
 }
-
 func (m *PongResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PongResponse.Unmarshal(m, b)
 }
 func (m *PongResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PongResponse.Marshal(b, m, deterministic)
 }
-func (m *PongResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PongResponse.Merge(m, src)
+func (dst *PongResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PongResponse.Merge(dst, src)
 }
 func (m *PongResponse) XXX_Size() int {
 	return xxx_messageInfo_PongResponse.Size(m)
@@ -431,37 +471,9 @@ func init() {
 	proto.RegisterType((*PrintKVResponse)(nil), "grpctest.PrintKVResponse")
 	proto.RegisterType((*BidirectionalRequest)(nil), "grpctest.BidirectionalRequest")
 	proto.RegisterType((*BidirectionalResponse)(nil), "grpctest.BidirectionalResponse")
+	proto.RegisterType((*PrintStdioRequest)(nil), "grpctest.PrintStdioRequest")
 	proto.RegisterType((*PingRequest)(nil), "grpctest.PingRequest")
 	proto.RegisterType((*PongResponse)(nil), "grpctest.PongResponse")
-}
-
-func init() { proto.RegisterFile("test.proto", fileDescriptor_c161fcfdc0c3ff1e) }
-
-var fileDescriptor_c161fcfdc0c3ff1e = []byte{
-	// 355 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x92, 0xcd, 0x4e, 0xc2, 0x40,
-	0x14, 0x85, 0xdb, 0x02, 0x05, 0x2e, 0x3f, 0xe2, 0x04, 0x08, 0x12, 0xa3, 0x64, 0x4c, 0x90, 0x15,
-	0x31, 0xb8, 0x30, 0x2e, 0x4c, 0x0c, 0xba, 0x80, 0xb0, 0x90, 0x0c, 0x86, 0x3d, 0x3f, 0x93, 0x66,
-	0x12, 0x3a, 0xad, 0x9d, 0xe9, 0xc2, 0x17, 0xf1, 0x79, 0xcd, 0x0c, 0x6d, 0x19, 0x08, 0x2e, 0xdc,
-	0xdd, 0x73, 0x7b, 0x72, 0xe6, 0x9e, 0x2f, 0x05, 0x90, 0x54, 0xc8, 0x61, 0x18, 0x05, 0x32, 0x40,
-	0x25, 0x2f, 0x0a, 0x37, 0x4a, 0xe3, 0x3b, 0xa8, 0x7c, 0x52, 0x21, 0x09, 0xfd, 0x8a, 0xa9, 0x90,
-	0xa8, 0x09, 0x85, 0x29, 0x0f, 0x63, 0xd9, 0xb1, 0x7b, 0xf6, 0xa0, 0x40, 0xf6, 0x02, 0xf7, 0xa1,
-	0xba, 0x37, 0x89, 0x30, 0xe0, 0x82, 0xa2, 0x36, 0xb8, 0x1f, 0xb1, 0x54, 0x36, 0x47, 0xdb, 0x12,
-	0x85, 0x7d, 0xa8, 0xcf, 0x23, 0xc6, 0xe5, 0x6c, 0x99, 0xe6, 0x35, 0x20, 0x37, 0xa3, 0xdf, 0x3a,
-	0xad, 0x4c, 0xd4, 0x88, 0x30, 0x54, 0x96, 0xab, 0x5d, 0x4c, 0x17, 0x32, 0x62, 0xdc, 0xd3, 0x01,
-	0xe5, 0x89, 0x45, 0xcc, 0x25, 0xba, 0x86, 0x92, 0x96, 0x53, 0x2e, 0x3b, 0x39, 0xf5, 0xc2, 0xc4,
-	0x22, 0xd9, 0x66, 0x5c, 0x84, 0x82, 0x9e, 0xf1, 0x25, 0x5c, 0x64, 0xcf, 0xed, 0x2f, 0xc3, 0x7d,
-	0x68, 0x8e, 0xd9, 0x96, 0x45, 0x74, 0x23, 0x59, 0xc0, 0x57, 0xbb, 0xf4, 0x8e, 0x3a, 0x38, 0x6c,
-	0xab, 0xcf, 0xa8, 0x11, 0x87, 0x6d, 0xf1, 0x3d, 0xb4, 0x4e, 0x7c, 0x49, 0xb5, 0x53, 0x63, 0x0d,
-	0x2a, 0x73, 0xc6, 0xbd, 0x24, 0x07, 0xf7, 0xa0, 0x3a, 0x0f, 0x94, 0x4c, 0xec, 0x0d, 0xc8, 0xf9,
-	0xc2, 0x4b, 0xfb, 0xf9, 0xc2, 0x1b, 0xfd, 0x38, 0x90, 0x57, 0xb0, 0xd0, 0x33, 0xb8, 0xef, 0x41,
-	0xbc, 0xde, 0x51, 0xd4, 0x1a, 0xa6, 0xb8, 0x87, 0x06, 0xeb, 0x6e, 0xfb, 0x74, 0x9d, 0x74, 0xb0,
-	0xd0, 0x2b, 0x14, 0x93, 0x62, 0xa8, 0x73, 0x30, 0x1d, 0xa3, 0xed, 0x5e, 0x9d, 0xf9, 0x92, 0x25,
-	0x10, 0xa8, 0x1d, 0xf5, 0x43, 0x37, 0x07, 0xf7, 0x39, 0x40, 0xdd, 0xdb, 0x3f, 0xbf, 0x67, 0x99,
-	0x2f, 0xe0, 0x2e, 0x64, 0x44, 0x57, 0xfe, 0xbf, 0x0b, 0x0d, 0xec, 0x07, 0x7b, 0xf4, 0x06, 0x25,
-	0x45, 0x52, 0xe1, 0x43, 0x4f, 0x90, 0x57, 0xb3, 0x19, 0x64, 0x50, 0x36, 0x83, 0x4c, 0xda, 0xd8,
-	0x5a, 0xbb, 0xfa, 0xff, 0x7d, 0xfc, 0x0d, 0x00, 0x00, 0xff, 0xff, 0xf0, 0x59, 0x20, 0xc7, 0xcd,
-	0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -480,6 +492,7 @@ type TestClient interface {
 	PrintKV(ctx context.Context, in *PrintKVRequest, opts ...grpc.CallOption) (*PrintKVResponse, error)
 	Bidirectional(ctx context.Context, in *BidirectionalRequest, opts ...grpc.CallOption) (*BidirectionalResponse, error)
 	Stream(ctx context.Context, opts ...grpc.CallOption) (Test_StreamClient, error)
+	PrintStdio(ctx context.Context, in *PrintStdioRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type testClient struct {
@@ -548,12 +561,22 @@ func (x *testStreamClient) Recv() (*TestResponse, error) {
 	return m, nil
 }
 
+func (c *testClient) PrintStdio(ctx context.Context, in *PrintStdioRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/grpctest.Test/PrintStdio", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestServer is the server API for Test service.
 type TestServer interface {
 	Double(context.Context, *TestRequest) (*TestResponse, error)
 	PrintKV(context.Context, *PrintKVRequest) (*PrintKVResponse, error)
 	Bidirectional(context.Context, *BidirectionalRequest) (*BidirectionalResponse, error)
 	Stream(Test_StreamServer) error
+	PrintStdio(context.Context, *PrintStdioRequest) (*empty.Empty, error)
 }
 
 func RegisterTestServer(s *grpc.Server, srv TestServer) {
@@ -640,6 +663,24 @@ func (x *testStreamServer) Recv() (*TestRequest, error) {
 	return m, nil
 }
 
+func _Test_PrintStdio_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrintStdioRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServer).PrintStdio(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpctest.Test/PrintStdio",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServer).PrintStdio(ctx, req.(*PrintStdioRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Test_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "grpctest.Test",
 	HandlerType: (*TestServer)(nil),
@@ -655,6 +696,10 @@ var _Test_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Bidirectional",
 			Handler:    _Test_Bidirectional_Handler,
+		},
+		{
+			MethodName: "PrintStdio",
+			Handler:    _Test_PrintStdio_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -730,4 +775,37 @@ var _PingPong_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "test.proto",
+}
+
+func init() { proto.RegisterFile("test.proto", fileDescriptor_test_ed149f2304c9fa82) }
+
+var fileDescriptor_test_ed149f2304c9fa82 = []byte{
+	// 431 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x52, 0x41, 0x6f, 0xda, 0x30,
+	0x18, 0x4d, 0x42, 0x49, 0xe9, 0x07, 0x74, 0xad, 0xd5, 0x22, 0x96, 0x4e, 0x5b, 0xe5, 0x49, 0x5d,
+	0x4f, 0xe9, 0xd4, 0x1d, 0xa6, 0x1d, 0x26, 0x4d, 0xb0, 0x49, 0x20, 0x0e, 0x43, 0x66, 0xe2, 0x0e,
+	0xc4, 0x8b, 0x2c, 0x25, 0x71, 0x66, 0x3b, 0x07, 0x7e, 0xeb, 0xfe, 0xcc, 0x64, 0xc7, 0x09, 0x21,
+	0x62, 0x87, 0xde, 0xfc, 0xbd, 0xbc, 0xbc, 0xef, 0xf9, 0x3d, 0x03, 0x28, 0x2a, 0x55, 0x98, 0x0b,
+	0xae, 0x38, 0xea, 0xc5, 0x22, 0xdf, 0xe9, 0x39, 0xb8, 0x8b, 0x39, 0x8f, 0x13, 0xfa, 0x64, 0xf0,
+	0x6d, 0xf1, 0xfb, 0x89, 0xa6, 0xb9, 0xda, 0x97, 0x34, 0xfc, 0x1e, 0xfa, 0xbf, 0xa8, 0x54, 0x84,
+	0xfe, 0x29, 0xa8, 0x54, 0xe8, 0x06, 0xba, 0xf3, 0x2c, 0x2f, 0xd4, 0xd8, 0xbd, 0x77, 0x1f, 0xbb,
+	0xa4, 0x1c, 0xf0, 0x03, 0x0c, 0x4a, 0x92, 0xcc, 0x79, 0x26, 0x29, 0x1a, 0x81, 0xff, 0xb3, 0x50,
+	0x9a, 0xe6, 0x19, 0x9a, 0x9d, 0x70, 0x0a, 0x97, 0x4b, 0xc1, 0x32, 0xb5, 0x58, 0x57, 0x7a, 0x57,
+	0xd0, 0x59, 0xd0, 0xbd, 0x51, 0xbb, 0x20, 0xfa, 0x88, 0x30, 0xf4, 0xd7, 0x9b, 0xa4, 0xa0, 0x2b,
+	0x25, 0x58, 0x16, 0x1b, 0x81, 0x8b, 0x99, 0x43, 0x9a, 0x20, 0x7a, 0x03, 0x3d, 0x33, 0xce, 0x33,
+	0x35, 0xee, 0xe8, 0x0d, 0x33, 0x87, 0xd4, 0xc8, 0xe4, 0x1c, 0xba, 0xe6, 0x8c, 0xaf, 0xe1, 0x55,
+	0xbd, 0xae, 0x74, 0x86, 0x1f, 0xe0, 0x66, 0xc2, 0x22, 0x26, 0xe8, 0x4e, 0x31, 0x9e, 0x6d, 0x92,
+	0xca, 0xc7, 0x25, 0x78, 0x2c, 0x32, 0x36, 0x86, 0xc4, 0x63, 0x11, 0xfe, 0x00, 0xb7, 0x2d, 0x9e,
+	0xbd, 0x5a, 0x9b, 0x38, 0x85, 0x6b, 0xb3, 0x63, 0xa5, 0x22, 0xc6, 0x2b, 0xb5, 0x11, 0xf8, 0x52,
+	0x45, 0xdc, 0xc6, 0x34, 0x20, 0x76, 0xb2, 0x38, 0x15, 0xc2, 0x5c, 0xab, 0xc4, 0xa9, 0x10, 0x78,
+	0x08, 0xfd, 0x25, 0xcb, 0x62, 0xfb, 0x3b, 0xbe, 0x87, 0xc1, 0x92, 0xeb, 0xd1, 0xee, 0xbc, 0x82,
+	0x4e, 0x2a, 0xe3, 0x2a, 0xa4, 0x54, 0xc6, 0xcf, 0x7f, 0x3d, 0x38, 0xd3, 0x89, 0xa3, 0x2f, 0xe0,
+	0x7f, 0xe7, 0xc5, 0x36, 0xa1, 0xe8, 0x36, 0xac, 0x0a, 0x0d, 0x1b, 0x85, 0x05, 0xa3, 0x36, 0x6c,
+	0x83, 0x70, 0xd0, 0x37, 0x38, 0xb7, 0xe9, 0xa0, 0xf1, 0x81, 0x74, 0xdc, 0x4f, 0xf0, 0xfa, 0xc4,
+	0x97, 0x5a, 0x81, 0xc0, 0xf0, 0x28, 0x24, 0xf4, 0xf6, 0xc0, 0x3e, 0x95, 0x72, 0xf0, 0xee, 0xbf,
+	0xdf, 0x6b, 0xcd, 0xaf, 0xe0, 0xaf, 0x94, 0xa0, 0x9b, 0xf4, 0xc5, 0x17, 0x7a, 0x74, 0x3f, 0xba,
+	0x68, 0x0a, 0x70, 0xa8, 0x03, 0xdd, 0xb5, 0xdc, 0x37, 0x4b, 0xd2, 0x42, 0xe6, 0xdd, 0x87, 0xd5,
+	0xbb, 0x0f, 0x7f, 0xe8, 0x77, 0x8f, 0x9d, 0xe7, 0x29, 0xf4, 0x74, 0x1d, 0xba, 0x03, 0xf4, 0x19,
+	0xce, 0xf4, 0xb9, 0xe9, 0xa6, 0x51, 0x55, 0xd3, 0x4d, 0xb3, 0x32, 0xec, 0x6c, 0x7d, 0x23, 0xfb,
+	0xe9, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x11, 0x4b, 0x8c, 0x40, 0x74, 0x03, 0x00, 0x00,
 }

@@ -687,7 +687,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Check the core protocol. Wrapped in a {} for scoping.
 		{
-			coreProtocol, err := strconv.Atoi(parts[0])
+			var coreProtocol int
+			coreProtocol, err = strconv.Atoi(parts[0])
 			if err != nil {
 				err = fmt.Errorf("Error parsing core protocol version: %s", err)
 				return

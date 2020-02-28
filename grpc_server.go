@@ -85,7 +85,7 @@ func (s *GRPCServer) Init() error {
 	plugin.RegisterGRPCControllerServer(s.server, controllerServer)
 
 	// Register the stdio service
-	s.stdioServer = newGRPCStdioServer(s.Stdout, s.Stderr)
+	s.stdioServer = newGRPCStdioServer(s.logger, s.Stdout, s.Stderr)
 	plugin.RegisterGRPCStdioServer(s.server, s.stdioServer)
 
 	// Register all our plugins onto the gRPC server.

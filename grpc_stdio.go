@@ -30,13 +30,13 @@ type grpcStdioServer struct {
 // copying for the given out and err readers.
 //
 // This must only be called ONCE per srcOut, srcErr.
-func newGRPCStdioServer(srcOut, srcErr io.Reader) *grpcStdioServer {
+func newGRPCStdioServer(log hclog.Logger, srcOut, srcErr io.Reader) *grpcStdioServer {
 	stdoutCh := make(chan []byte)
 	stderrCh := make(chan []byte)
 
 	// Begin copying the streams
-	go copyChan(stdoutCh, srcOut)
-	go copyChan(stderrCh, srcErr)
+	go copyChan(log, stdoutCh, srcOut)
+	go copyChan(log, stderrCh, srcErr)
 
 	// Construct our server
 	return &grpcStdioServer{
@@ -158,7 +158,9 @@ func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 		}
 
 		// Write! In the event of an error we just continue.
-		c.log.Trace("received data", "channel", data.Channel.String(), "len", len(data.Data))
+		if c.log.IsTrace() {
+			c.log.Trace("received data", "channel", data.Channel.String(), "len", len(data.Data))
+		}
 		if _, err := io.Copy(w, bytes.NewReader(data.Data)); err != nil {
 			c.log.Error("failed to copy all bytes", "err", err)
 		}
@@ -166,7 +168,7 @@ func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 }
 
 // copyChan copies an io.Reader into a channel.
-func copyChan(dst chan<- []byte, src io.Reader) {
+func copyChan(log hclog.Logger, dst chan<- []byte, src io.Reader) {
 	bufsrc := bufio.NewReader(src)
 
 	for {
@@ -179,6 +181,15 @@ func copyChan(dst chan<- []byte, src io.Reader) {
 
 		// If we hit EOF we're done copying
 		if err == io.EOF {
+			log.Debug("stdio EOF, exiting copy loop")
+			return
+		}
+
+		// Any other error we just exit the loop. We don't expect there to
+		// be errors since our use case for this is reading/writing from
+		// a in-process pipe (os.Pipe).
+		if err != nil {
+			log.Warn("error copying stdio data, stopping copy", "err", err)
 			return
 		}
 

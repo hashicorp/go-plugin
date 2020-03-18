@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/go-plugin/test/grpc"
+	grpctest "github.com/hashicorp/go-plugin/test/grpc"
+	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
+	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
 func TestGRPCClient_App(t *testing.T) {
@@ -102,5 +104,46 @@ func TestGRPCClient_Ping(t *testing.T) {
 	// Test ping fails
 	if err := client.Ping(); err == nil {
 		t.Fatal("should error")
+	}
+}
+
+func TestGRPCClient_Reflection(t *testing.T) {
+	ctx := context.Background()
+
+	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+		"test": new(testGRPCInterfacePlugin),
+	})
+	defer client.Close()
+	defer server.Stop()
+
+	refClient := grpcreflect.NewClient(ctx, reflectpb.NewServerReflectionClient(client.Conn))
+
+	svcs, err := refClient.ListServices()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// TODO: maybe only assert some specific services here to make test more resilient
+	expectedSvcs := []string{"grpc.health.v1.Health", "grpc.reflection.v1alpha.ServerReflection", "grpctest.Test", "plugin.GRPCBroker", "plugin.GRPCController", "plugin.GRPCStdio"}
+
+	if !reflect.DeepEqual(svcs, expectedSvcs) {
+		t.Fatalf("expected: %v\ngot: %v", expectedSvcs, svcs)
+	}
+
+	healthDesc, err := refClient.ResolveService("grpc.health.v1.Health")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	methods := healthDesc.GetMethods()
+	var methodNames []string
+	for _, m := range methods {
+		methodNames = append(methodNames, m.GetName())
+	}
+
+	expectedMethodNames := []string{"Check", "Watch"}
+
+	if !reflect.DeepEqual(methodNames, expectedMethodNames) {
+		t.Fatalf("expected: %v\ngot: %v", expectedMethodNames, methodNames)
 	}
 }

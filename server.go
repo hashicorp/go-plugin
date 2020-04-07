@@ -182,7 +182,9 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 // Serve serves the plugins given by ServeConfig.
 //
 // Serve doesn't return until the plugin is done being executed. Any
-// errors will be outputted to os.Stderr.
+// fixable errors will be output to os.Stderr and the process will 
+// exit with a status code of 1. Serve will panic for unexpected 
+// conditions where a user's fix is unknown.
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {

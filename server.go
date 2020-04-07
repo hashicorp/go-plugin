@@ -94,7 +94,9 @@ type ServeConfig struct {
 	// TLSProvider to nil but be aware that the client side will need to be
 	// manually made aware of the certificate used.
 	//
-	// It is the callers responsibility to close this listener.
+	// Serve will take ownership of this listener and close it when it is
+	// complete. The caller should NOT close this listener once `Serve` is
+	// called.
 	Listener net.Listener
 }
 
@@ -184,13 +186,28 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
+	// We use this to trigger an `os.Exit` so that we can execute our other
+	// deferred functions.
+	exitCode := -1
+	defer func() {
+		if exitCode >= 0 {
+			os.Exit(exitCode)
+		}
+	}()
+
+	// If our listener is not nil, then we want to close that on exit.
+	if opts.Listener != nil {
+		defer opts.Listener.Close()
+	}
+
 	// Validate the handshake config
 	if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
 		fmt.Fprintf(os.Stderr,
 			"Misconfigured ServeConfig given to serve this plugin: no magic cookie\n"+
 				"key or value was set. Please notify the plugin author and report\n"+
 				"this as a bug.\n")
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 
 	// First check the cookie
@@ -199,7 +216,8 @@ func Serve(opts *ServeConfig) {
 			"This binary is a plugin. These are not meant to be executed directly.\n"+
 				"Please execute the program that consumes these plugins, which will\n"+
 				"load any plugins automatically\n")
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 
 	// negotiate the version and plugins

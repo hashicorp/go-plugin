@@ -83,6 +83,19 @@ type ServeConfig struct {
 	// Logger is used to pass a logger into the server. If none is provided the
 	// server will create a default logger.
 	Logger hclog.Logger
+
+	// Listener is the listener that the plugin server will listen for
+	// plugin connections. THIS DOES NOT NORMALLY NEED TO BE SET. If this
+	// isn't set, the plugin chooses a listener. This is exposed in case you
+	// want to carefully control how a plugin is served.
+	//
+	// If TLSProvider is set, this listener will be wrapped with a TLS
+	// listener. If you want to manually control TLS you should set
+	// TLSProvider to nil but be aware that the client side will need to be
+	// manually made aware of the certificate used.
+	//
+	// It is the callers responsibility to close this listener.
+	Listener net.Listener
 }
 
 // protocolVersion determines the protocol version and plugin set to be used by
@@ -219,18 +232,21 @@ func Serve(opts *ServeConfig) {
 		os.Exit(1)
 	}
 
-	// Register a listener so we can accept a connection
-	listener, err := serverListener()
-	if err != nil {
-		logger.Error("plugin init error", "error", err)
-		return
-	}
+	listener := opts.Listener
+	if listener == nil {
+		// Register a listener so we can accept a connection
+		listener, err = serverListener()
+		if err != nil {
+			logger.Error("plugin init error", "error", err)
+			return
+		}
 
-	// Close the listener on return. We wrap this in a func() on purpose
-	// because the "listener" reference may change to TLS.
-	defer func() {
-		listener.Close()
-	}()
+		// Close the listener on return. We wrap this in a func() on purpose
+		// because the "listener" reference may change to TLS.
+		defer func() {
+			listener.Close()
+		}()
+	}
 
 	var tlsConfig *tls.Config
 	if opts.TLSProvider != nil {

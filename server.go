@@ -383,6 +383,11 @@ func Serve(opts *ServeConfig) {
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)
+
+	// Note that given the documentation of Serve we should probably be
+	// setting exitCode = 0 and using os.Exit here. That's how it used to
+	// work before extracting this library. However, for years we've done
+	// this so we'll keep this functionality.
 	<-doneCh
 }
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -547,6 +548,22 @@ func TestHelperProcess(*testing.T) {
 			Plugins:         testGRPCPluginMap,
 			GRPCServer:      DefaultGRPCServer,
 			TLSProvider:     helperTLSProvider,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-grpc-manual-listener":
+		ln, err := net.Listen("tcp", "127.0.0.1:1234")
+		if err != nil {
+			panic(err)
+		}
+		defer ln.Close()
+
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testGRPCPluginMap,
+			GRPCServer:      DefaultGRPCServer,
+			Listener:        ln,
 		})
 
 		// Shouldn't reach here but make sure we exit anyways

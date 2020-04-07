@@ -388,7 +388,7 @@ func serverListener_tcp() (net.Listener, error) {
 	}
 
 	if minPort > maxPort {
-		return nil, fmt.Errorf("ENV_MIN_PORT value of %d is greater than PLUGIN_MAX_PORT value of %d", minPort, maxPort)
+		return nil, fmt.Errorf("PLUGIN_MIN_PORT value of %d is greater than PLUGIN_MAX_PORT value of %d", minPort, maxPort)
 	}
 
 	for port := minPort; port <= maxPort; port++ {

@@ -104,7 +104,7 @@ func newGRPCStdioClient(
 	// updated and linking to the latest version of go-plugin that supports
 	// this. We fall back to the previous behavior of just not syncing anything.
 	if status.Code(err) == codes.Unavailable || status.Code(err) == codes.Unimplemented {
-		log.Warn("stdio service not available, stdout/stderr syncing unavailable")
+		log.Trace("stdio service not available/implemented, stdout/stderr syncing unavailable")
 		stdioClient = nil
 		err = nil
 	}
@@ -123,7 +123,7 @@ func newGRPCStdioClient(
 func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 	// This will be nil if stdio is not supported by the plugin
 	if c.stdioClient == nil {
-		c.log.Warn("stdio service unavailable, run will do nothing")
+		c.log.Debug("stdio service unavailable, run will do nothing")
 		return
 	}
 
@@ -131,10 +131,13 @@ func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 		c.log.Trace("waiting for stdio data")
 		data, err := c.stdioClient.Recv()
 		if err != nil {
+			if status.Code(err) == codes.Unimplemented {
+				c.log.Trace("stdio not implemented, stopping recv loop", "err", err)
+				return
+			}
 			if err == io.EOF ||
 				status.Code(err) == codes.Unavailable ||
 				status.Code(err) == codes.Canceled ||
-				status.Code(err) == codes.Unimplemented ||
 				err == context.Canceled {
 				c.log.Warn("received EOF, stopping recv loop", "err", err)
 				return

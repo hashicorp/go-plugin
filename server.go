@@ -98,6 +98,8 @@ type ServeConfig struct {
 	// complete. The caller should NOT close this listener once `Serve` is
 	// called.
 	Listener net.Listener
+
+	DisableStdoutSync bool
 }
 
 // protocolVersion determines the protocol version and plugin set to be used by
@@ -182,8 +184,8 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 // Serve serves the plugins given by ServeConfig.
 //
 // Serve doesn't return until the plugin is done being executed. Any
-// fixable errors will be output to os.Stderr and the process will 
-// exit with a status code of 1. Serve will panic for unexpected 
+// fixable errors will be output to os.Stderr and the process will
+// exit with a status code of 1. Serve will panic for unexpected
 // conditions where a user's fix is unknown.
 //
 // This is the method that plugins should call in their main() functions.
@@ -241,15 +243,22 @@ func Serve(opts *ServeConfig) {
 
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
-	stdout_r, stdout_w, err := os.Pipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
-		os.Exit(1)
-	}
-	stderr_r, stderr_w, err := os.Pipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
-		os.Exit(1)
+	var stdout_r, stderr_r, stdout_w, stderr_w *os.File
+	var err error
+	if !opts.DisableStdoutSync {
+		stdout_r, stdout_w, err = os.Pipe()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
+			os.Exit(1)
+		}
+		stderr_r, stderr_w, err = os.Pipe()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
+			os.Exit(1)
+		}
+	} else {
+		stdout_w = os.Stdout
+		stderr_w = os.Stderr
 	}
 
 	listener := opts.Listener

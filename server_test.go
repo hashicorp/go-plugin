@@ -1,11 +1,76 @@
 package plugin
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
 	"testing"
+	"time"
 )
+
+func TestServer_testMode(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := make(chan *ReattachConfig, 1)
+	closeCh := make(chan struct{})
+	go Serve(&ServeConfig{
+		HandshakeConfig: testHandshake,
+		Plugins:         testGRPCPluginMap,
+		GRPCServer:      DefaultGRPCServer,
+		Test: &ServeTestConfig{
+			Context:          ctx,
+			ReattachConfigCh: ch,
+			CloseCh:          closeCh,
+		},
+	})
+
+	// We should get a config
+	var config *ReattachConfig
+	select {
+	case config = <-ch:
+	case <-time.After(2000 * time.Millisecond):
+		t.Fatal("should've received reattach")
+	}
+	if config == nil {
+		t.Fatal("config should not be nil")
+	}
+
+	// Connect!
+	c := NewClient(&ClientConfig{
+		Cmd:              nil,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testGRPCPluginMap,
+		Reattach:         config,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+	})
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Pinging should work
+	if err := client.Ping(); err != nil {
+		t.Fatalf("should not err: %s", err)
+	}
+
+	// Kill which should do nothing
+	c.Kill()
+	if err := client.Ping(); err != nil {
+		t.Fatalf("should not err: %s", err)
+	}
+
+	// Canceling should cause an exit
+	cancel()
+	<-closeCh
+	if err := client.Ping(); err == nil {
+		t.Fatal("should error")
+	}
+
+	// Try logging, this should show out in tests. We have to manually verify.
+	t.Logf("HELLO")
+}
 
 func TestRmListener_impl(t *testing.T) {
 	var _ net.Listener = new(rmListener)

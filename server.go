@@ -123,6 +123,13 @@ type ServeTestConfig struct {
 	// may be a period of time between canceling the context and the plugin
 	// server being shut down.
 	CloseCh chan<- struct{}
+
+	// SyncStdio, if true, will enable the client side "SyncStdout/Stderr"
+	// functionality to work. This defaults to false because the implementation
+	// of making this work within test environments is particularly messy
+	// and SyncStdio functionality is fairly rare, so we default to the simple
+	// scenario.
+	SyncStdio bool
 }
 
 // protocolVersion determines the protocol version and plugin set to be used by
@@ -435,22 +442,25 @@ func Serve(opts *ServeConfig) {
 	}
 
 	// Set our stdout, stderr to the stdio stream that clients can retrieve
-	// using ClientConfig.SyncStdout/err.
+	// using ClientConfig.SyncStdout/err. We only do this for non-test mode
+	// or if the test mode explicitly requests it.
 	//
 	// In test mode, we use a multiwriter so that the data continues going
 	// to the normal stdout/stderr so output can show up in test logs. We
 	// also send to the stdio stream so that clients can continue working
 	// if they depend on that.
-	if opts.Test != nil {
-		// In test mode we need to maintain the original values so we can
-		// reset it.
-		defer func(out, err *os.File) {
-			os.Stdout = out
-			os.Stderr = err
-		}(os.Stdout, os.Stderr)
+	if opts.Test == nil || opts.Test.SyncStdio {
+		if opts.Test != nil {
+			// In test mode we need to maintain the original values so we can
+			// reset it.
+			defer func(out, err *os.File) {
+				os.Stdout = out
+				os.Stderr = err
+			}(os.Stdout, os.Stderr)
+		}
+		os.Stdout = stdout_w
+		os.Stderr = stderr_w
 	}
-	os.Stdout = stdout_w
-	os.Stderr = stderr_w
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)

@@ -61,11 +61,44 @@ func TestServer_testMode(t *testing.T) {
 		t.Fatalf("should not err: %s", err)
 	}
 
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	defer cancel2()
+
+	ch2 := make(chan *ReattachConfig, 1)
+	closeCh2 := make(chan struct{})
+	go Serve(&ServeConfig{
+		HandshakeConfig: testHandshake,
+		Plugins:         testGRPCPluginMap,
+		GRPCServer:      DefaultGRPCServer,
+		Test: &ServeTestConfig{
+			Context:          ctx2,
+			ReattachConfigCh: ch2,
+			CloseCh:          closeCh2,
+		},
+	})
+
+	var config2 *ReattachConfig
+	select {
+	case config2 = <-ch2:
+	case <-time.After(2000 * time.Millisecond):
+		t.Fatal("should've received reattach")
+	}
+	if config2 == nil {
+		t.Fatal("config should not be nil")
+	}
+
 	// Canceling should cause an exit
 	cancel()
 	<-closeCh
 	if err := client.Ping(); err == nil {
 		t.Fatal("should error")
+	}
+
+	cancel2()
+	<-closeCh2
+
+	if os.Stdout.Name() != "/dev/stdout" {
+		t.Fatalf("Stdout didn't get reset; is %q", os.Stdout.Name())
 	}
 
 	// Try logging, this should show out in tests. We have to manually verify.

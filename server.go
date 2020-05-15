@@ -442,10 +442,12 @@ func Serve(opts *ServeConfig) {
 		// In test mode we need to maintain the original values so we can
 		// reset it.
 		defer func(out, err *os.File) {
+			log.Printf("Resetting os.Stdout to %s", out.Name())
 			os.Stdout = out
 			os.Stderr = err
 		}(os.Stdout, os.Stderr)
 	}
+	log.Printf("Setting os.Stdout to %s", stdout_w.Name())
 	os.Stdout = stdout_w
 	os.Stderr = stderr_w
 

@@ -419,17 +419,20 @@ func Serve(opts *ServeConfig) {
 		}
 	}
 
-	// Eat the interrupts
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	go func() {
-		count := 0
-		for {
-			<-ch
-			count++
-			logger.Trace("plugin received interrupt signal, ignoring", "count", count)
-		}
-	}()
+	// Eat the interrupts. In test mode we disable this so that go test
+	// can be cancelled properly.
+	if opts.Test == nil {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, os.Interrupt)
+		go func() {
+			count := 0
+			for {
+				<-ch
+				count++
+				logger.Trace("plugin received interrupt signal, ignoring", "count", count)
+			}
+		}()
+	}
 
 	// Set our stdout, stderr to the stdio stream that clients can retrieve
 	// using ClientConfig.SyncStdout/err.

@@ -56,39 +56,6 @@ func TestClient(t *testing.T) {
 	}
 }
 
-func TestClient_manualListener(t *testing.T) {
-	process := helperProcess("test-grpc-manual-listener")
-	c := NewClient(&ClientConfig{
-		Cmd:              process,
-		HandshakeConfig:  testHandshake,
-		Plugins:          testGRPCPluginMap,
-		AllowedProtocols: []Protocol{ProtocolGRPC},
-	})
-	defer c.Kill()
-
-	// Test that it parses the proper address
-	addr, err := c.Start()
-	if err != nil {
-		t.Fatalf("err should be nil, got %s", err)
-	}
-
-	if addr.Network() != "tcp" {
-		t.Fatalf("bad: %#v", addr)
-	}
-
-	if addr.String() != "127.0.0.1:1234" {
-		t.Fatalf("bad: %#v", addr)
-	}
-
-	// Test that it exits properly if killed
-	c.Kill()
-
-	// Test that it knows it is exited
-	if !c.Exited() {
-		t.Fatal("should say client has exited")
-	}
-}
-
 // This tests a bug where Kill would start
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file

@@ -2,25 +2,21 @@
 
 If you don't know what go-plugin is, don't worry, here is a small introduction on the subject matter:
 
-Back in the old days when Go didn't have the `plugin` package, HashiCorp was desperately looking for a way to use plugins.
+Back in the old days when Go didn't have the `plugin` package, HashiCorp was looking for a way to use plugins.
 
-In the old days, Lua plus Go wasn't really a thing yet, and to be honest, nobody wants to write Lua ( joking!).
+Mitchell had this brilliant idea of using RPC over the local network to serve a local interface as something that could easily be implemented with any other language that supported RPC. This sounds convoluted but has many benefits! For example, your code will never crash because of a plugin and the ability to use any language to implement a plugin. Not just Go.
 
-And thus Mitchell had this brilliant idea of using RPC over the local network to serve a local interface as something that could easily be implemented with any other language that supported RPC. This sounds convoluted but has many benefits! For example, your code will never crash because of a plugin and the ability to use any language to implement a plugin. Not just Go.
+It has been a battle-hardened solution for years now and is being actively used by Terraform, Vault, Consul, and especially Packer. All using go-plugin in order to provide a much needed flexibility. Writing a plugin is easy. Or so they say.
 
-It has been a battle-hardened solution for years now and is being actively used by Terraform, Vault, Consule, and especially Packer. All using go-plugin in order to provide a much needed flexibility. Writing a plugin is easy. Or so they say.
-
-It can get complicated quickly, for example, if you are trying to use GRPC. You can lose sight of what exactly you'll need to implement, where and why; or utilizing various languages or using go-plugins in your own project and extending your CLI with pluggable components.
+It can get complicated quickly, for example, if you are trying to use GRPC. You can lose sight of what exactly you'll need to implement, where and why; or utilizing various languages; or using go-plugins in your own project and extending your CLI with pluggable components.
 
 These are all nothing to sneeze at. Suddenly you'll find yourself with hundreds of lines of code pasted from various examples and yet nothing works. Or worse, it DOES work but you have no idea how. Then you find yourself needing to extend it with a new capability, or you find an elusive bug and can't trace its origins.
 
-Fear not. I'll try to demystify things and draw a clear picture about how it works and how the pieces fit together.
-
-Let's start at the beginning.
+Let's try to demystify things and draw a clearer picture about how it works and how the pieces fit together.
 
 # Basic plugin
 
-Let's start by writing a simple Go GRPC plugin. In fact, we can go through the basic example in the go-plugin’s repository which can be quite confusing when first starting out. We'll go step-by-step, and the switch to GRPC will be much easier!
+Start by writing a simple Go GRPC plugin. In fact, we can go through the basic example in the go-plugin’s repository. We'll go step-by-step, and the switch to GRPC will be much easier!
 
 ## Basic concepts
 
@@ -38,13 +34,13 @@ The Client calls the server in order to execute the desired behaviour. The under
 
 #### Logger
 
-The plugins defined here use stdout in a special way. If you aren't writing a Go based plugin, you will have to do that yourself by outputting something like this: 
+The plugins defined here use stdout in a special way. If you aren't writing a Go based plugin, you will have to do that yourself by outputting something like this:
 
 ~~~
 1|1|tcp|127.0.0.1:1234|grpc
 ~~~
 
-We'll come back to this later. Suffice to say the framework will pick this up and will connect to the plugin based on the output. In order to get some output back, we must define a special logger: 
+We'll come back to this later. Suffice to say the framework will pick this up and will connect to the plugin based on the output. In order to get some output back, we must define a special logger:
 
 ~~~go
 	// Create an hclog.Logger
@@ -84,11 +80,11 @@ var handshakeConfig = plugin.HandshakeConfig{
 }
 ~~~
 
-The `ProtocolVersion` here is used in order to maintain compatibility with your current plugin versions. It's basically like an API version. If you increase this, you will have two options. Don't accept lower protocol versions nor switch to the version number and use a different client implementation for a lower version than for a higher version. This way you will maintain backwards compatibility.
+The `ProtocolVersion` here is used in order to maintain compatibility with your current plugin versions. It's basically like an API version. If you increase this, you will have two options. Don't accept lower protocol versions or switch to the version number and use a different client implementation for a lower version than for a higher version. This way you will maintain backwards compatibility.
 
 The `MagicCookieKey` and `MagicCookieValue` are used for a basic handshake which the comment is talking about. You have to set this **ONCE** for your application. Never change it again, for if you do, your plugins will no longer work. For uniqueness sake, I suggest using UUID.
 
-`Cmd` is one of the most important parts about a plugin. Basically how plugins work is that they boil down to a compiled binary which is executed and starts an RPC server. This is where you will have to define the binary which will be executed and does all this. Since this is all happening locally, (please keep in mind that Go-plugins only support localhost, and for a good reason), these binaries will most likely sit next to your application's binary or in a pre-configured global location. Something like:  `~/.config/my-app/plugins`. This is individual for each plugin of course. The plugins can be autoloaded via a discovery function given a path and a glob.
+`Cmd` is one of the most important parts about a plugin. Basically how plugins work is that they boil down to a compiled binary which starts an RPC server. This is where you will have to define the binary which will be executed and does all this. Since this is all happening locally, (please keep in mind that Go-plugins only support localhost, and for a good reason), these binaries will most likely sit next to your application's binary or in a pre-configured global location. Something like:  `~/.config/my-app/plugins`. This is individual for each plugin of course. The plugins can be autoloaded via a discovery function given a path and a glob.
 
 And last but not least is the `Plugins` map. This map is used in order to identify a plugin called `Dispense`. This map is globally available and must stay consistent in order for all the plugins to work:
 
@@ -112,7 +108,7 @@ We then proceed to create an RPC client:
 
 Nothing fancy about this one...
 
-Now comes the interesting part:
+The interesting part is this:
 
 ~~~go
 	// Request the plugin
@@ -122,11 +118,11 @@ Now comes the interesting part:
 	}
 ~~~
 
-What's happening here? Dispense will look in the above created map and search for the plugin. If it cannot find it, it will throw an error at us. If it does find it, it will cast this plugin to an RPC or a GRPC type plugin. Then proceed to create an RPC or a GRPC client out of it.
+Dispense will look in the above created map and search for the plugin. If it cannot find it, it will throw an error. If it does find it, it will cast this plugin to an RPC or a GRPC type plugin. Then proceed to create an RPC or a GRPC client out of it.
 
 There is no call yet. This is just creating a client and parsing it to a respective representation.
 
-Now comes the magic:
+Now, the magic:
 
 ~~~go
 	// We should have a Greeter now! This feels like a normal interface
@@ -135,7 +131,7 @@ Now comes the magic:
 	fmt.Println(greeter.Greet())
 ~~~
 
-Here we are type asserting our raw GRPC client into our own plugin type. This is so we can call the respective function on the plugin! Once that's done we will have a {client,struct,implementation} that can be called like a simple function.
+Here, we are type asserting our raw GRPC client into our own plugin type. This is so we can call the respective function on the plugin! Once that's done we will have a {client,struct,implementation} that can be called like a simple function.
 
 The implementation right now comes from greeter_impl.go, but that will change once protoc makes an appearance.
 
@@ -156,7 +152,7 @@ type Greeter interface {
 }
 ~~~
 
-This is pretty simple. It defines a function which will return a string typed value.
+This defines a function which will return a string typed value.
 
 Now, we will need a couple of things for this to work. Firstly we need something which defines the RPC workings. go-plugin is working with `net/http` inside. It also uses something called Yamux for connection multiplexing, but we needn’t worry about this detail.
 
@@ -181,9 +177,9 @@ func (g *GreeterRPC) Greet() string {
 }
 ~~~
 
-Here the GreeterRPC struct is an RPC specific implementation that will handle communication over RPC. This is Client in this setup.
+Here the GreeterRPC struct is an RPC specific implementation that will handle communication over RPC. This is the Client in this setup.
 
-In case of gRPC, this would look something like this:
+In case of gRPC, it would look like this:
 
 ~~~go
 // GRPCClient is an implementation of KV that talks over RPC.
@@ -195,7 +191,7 @@ func (m *GreeterGRPC) Greet() (string, error) {
 }
 ~~~
 
-What is happening here? What's Proto and what is GreeterClient? GRPC uses Google's protoc library to serialize and unserialize data. `proto.GreeterClient` is generated Go code by protoc. This code is a skeleton for which implementation detail will be replaced on run time. Well, the actual result will be used and not replaced as such.
+What's Proto and what is GreeterClient? GRPC uses Google's protoc library to serialize and unserialize data. `proto.GreeterClient` is generated Go code by protoc. This code is a skeleton for which implementation detail will be replaced on run time. Well, the actual result will be used and not replaced as such.
 
 Back to our previous example. The RPC client calls a specific Plugin function called Greet for which the implementation will be provided by a Server that will be streamed back over the RPC protocol.
 
@@ -210,7 +206,7 @@ type GreeterRPCServer struct {
 }
 ~~~
 
-Impl is the concrete implementation that will be called in the Server's implementation of the Greet plugin. Now we must define Greet on the RPCServer in order for it to be able to call the remote code. This looks like this:
+Impl is the concrete implementation that will be called in the Server's implementation of the Greet plugin. Now we must define Greet on the RPCServer in order for it to be able to call the remote code. This looks like as follows:
 
 ~~~go
 func (s *GreeterRPCServer) Greet(args interface{}, resp *string) error {
@@ -219,7 +215,7 @@ func (s *GreeterRPCServer) Greet(args interface{}, resp *string) error {
 }
 ~~~
 
-This is all still boilerplate for the RPC works. Now comes plugin. For this, the comment is actually quite good too:
+This is all still boilerplate for the RPC works. Now comes the plugin. For this, the comment is actually quite good:
 
 ~~~go
 // This is the implementation of plugin.Plugin so we can serve/consume this
@@ -246,15 +242,13 @@ func (GreeterPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, er
 }
 ~~~
 
-What does this mean? So, remember: `GreeterRPCServer` is the one calling the actual implementation while Client is receiving the result of that call. The `GreeterPlugin` has the `Greeter` interface embedded just like the `RPCServer`. We will use the `GreeterPlugin` as a struct in the plugin map. This is the plugin that we will actually use.
+So, remember: `GreeterRPCServer` is the one calling the actual implementation while Client is receiving the result of that call. The `GreeterPlugin` has the `Greeter` interface embedded just like the `RPCServer`. We will use the `GreeterPlugin` as a struct in the plugin map. This is the plugin that we will actually use.
 
-This is all still common stuff. These things will need to be visible for both. The plugin's implementation will use the interface to see what it needs to implement. The Client will use it see what to call and what API is available. Like, `Greet`.
-
-How does the implementation look like?
+This is all still common stuff. These things will need to be visible for both. The plugin's implementation will use the interface to see what it needs to implement. The Client will use it to see what to call and what APIs are available. Like, `Greet`.
 
 ### The Implementation
 
-In a completely separate package, but which still has access to the interface definition, this plugin could be something like this:
+In a completely separate package, but which still has access to the interface definition, this plugin could be like this:
 
 ~~~go
 // Here is a real implementation of Greeter
@@ -297,7 +291,7 @@ plugin.Serve(&plugin.ServeConfig{
 
 Notice two things that we need. One is the `handshakeConfig`. You can either define it here, with the same cookie details as you defined in the client code, or you can extract the handshake information into the SDK. This is up to you.
 
-Then the next interesting thing is the `plugin.Serve` method. This is where the magic happens. The plugins open up a RPC communication socket and over a hijacked `stdout`, broadcasts its availability to the calling Client in this format:
+Then the next interesting thing is the `plugin.Serve` method. The plugins open up a RPC communication socket and over a hijacked `stdout`, broadcasts its availability to the calling Client in this format:
 
 ~~~bash
 CORE-PROTOCOL-VERSION | APP-PROTOCOL-VERSION | NETWORK-TYPE | NETWORK-ADDR | PROTOCOL
@@ -350,9 +344,9 @@ To read more about protoc, visit this page: [Google Protocol Buffer](https://dev
 
 Now, with the protoc definition in hand, we need to generate the stubs that the local client implementation can call. That client call will then, through the remote procedure call, call the right function on the server which will have the concrete implementation at the ready. Run it and return the result in the specified format. Because the stub needs to be available by both parties, (the client AND the server), this needs to live in a shared location.
 
-Why? Because the client is calling the stub and the server is implementing the stub. Both need it in order to know what to call/implement.
+The client is calling the stub and the server is implementing the stub. Both need it in order to know what to call/implement.
 
-To generate the code, run this command:
+To generate the code, run the following command:
 
 ~~~bash
 protoc -I proto/ proto/greeter.proto --go_out=plugins=grpc:proto
@@ -510,7 +504,7 @@ The `NewClient` now defines `AllowedProtocols` to be `ProtocolGRPC`. The rest is
 
 # Conclusion
 
-This is it. We made it! Now our plugin works over GRPC with a defined API by protoc. The plugin's implementation can live where ever we want it to, but it needs some shared data. These are:
+This is it. We made it! Now our plugin works over GRPC with a defined API by protoc. The plugin's implementation can live where ever we want it, but it needs some shared data. These are:
 
 * The generated code by `protoc`
 * The defined plugin interface
@@ -519,9 +513,9 @@ This is it. We made it! Now our plugin works over GRPC with a defined API by pro
 These need to be visible by both the Client and the Server. The Server here is the plugin. If you are planning on making people be able to extend your application with go-plugin, you should make these available as a separate SDK. So people won't have to include your whole project just to implement an interface and use protoc. In fact, you could also extract the `protoc` definition into a separate repository so that your SDK can also pull it in.
 
 You will have three repositories:
-* Your application;
-* The SDK providing the interface and the GRPC Server and Client implementation;
-* The protoc definition file and generated skeleton ( for Go based plugins).
+* Your application
+* The SDK providing the interface and the GRPC Server and Client implementation
+* The protoc definition file and generated skeleton ( for Go based plugins ).
 
 Other languages will have to generate their own protoc code, and includ it into the plugin; like the Python implementation example located here: [Go-plugin Python Example](https://github.com/hashicorp/go-plugin/tree/master/examples/grpc/plugin-python). Also, read this documentation carefully: [non-go go-plugin](https://github.com/hashicorp/go-plugin/blob/master/docs/guide-plugin-write-non-go.md). This document will also clarify what `1|1|tcp|127.0.0.1:1234|grpc` means and will dissipate the confusion around how plugins work.
 
@@ -529,10 +523,4 @@ Lastly, if you would like to have an in-depth explanation about how go-plugin ca
 
 [go-plugin explanation video](https://www.youtube.com/watch?v=SRvm3zQQc1Q).
 
-I must warn you though- it's an hour long. But worth the watch!
-
 That's it. I hope this has helped to clear the confusion around how to use go-plugin.
-
-Happy plugging!
-
-Gergely.

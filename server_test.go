@@ -1,12 +1,17 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
+
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 func TestServer_testMode(t *testing.T) {
@@ -136,4 +141,63 @@ func TestProtocolSelection_no_server(t *testing.T) {
 		t.Fatalf("bad protocol %s", protocol)
 	}
 
+}
+
+func TestServer_testStdLogger(t *testing.T) {
+	closeCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var logOut bytes.Buffer
+
+	hclogger := hclog.New(&hclog.LoggerOptions{
+		Name:       "test",
+		Level:      hclog.Trace,
+		Output:     &logOut,
+		JSONFormat: true,
+	})
+
+	// Wrap the hclog.Logger to use it from the default std library logger
+	// (and restore the original logger)
+	defer func() {
+		log.SetOutput(os.Stderr)
+		log.SetFlags(log.LstdFlags)
+		log.SetPrefix(log.Prefix())
+	}()
+	log.SetOutput(hclogger.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true}))
+	log.SetFlags(0)
+	log.SetPrefix("")
+
+	// make a server, but we don't need to attach to it
+	ch := make(chan *ReattachConfig, 1)
+	go Serve(&ServeConfig{
+		HandshakeConfig: testHandshake,
+		Plugins:         testGRPCPluginMap,
+		GRPCServer:      DefaultGRPCServer,
+		Logger:          hclog.NewNullLogger(),
+		Test: &ServeTestConfig{
+			Context:          ctx,
+			CloseCh:          closeCh,
+			ReattachConfigCh: ch,
+		},
+	})
+
+	// Wait for the server
+	select {
+	case cfg := <-ch:
+		if cfg == nil {
+			t.Fatal("attach config should not be nil")
+		}
+	case <-time.After(2000 * time.Millisecond):
+		t.Fatal("should've received reattach")
+	}
+
+	log.Println("[DEBUG] test log")
+	// shut down the server so there's no race on the buffer
+	cancel()
+	<-closeCh
+
+	if !strings.Contains(logOut.String(), "test log") {
+		t.Fatalf("expected: %q\ngot: %q", "test log", logOut.String())
+	}
 }

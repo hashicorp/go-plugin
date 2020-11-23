@@ -758,6 +758,37 @@ func TestClient_Stdin(t *testing.T) {
 	}
 }
 
+func TestClient_OverrideEnvironmentVars(t *testing.T) {
+	// Change the PATH env var and make sure it is used by the plugin
+
+	process := helperProcess("env-vars")
+	p := os.Getenv("PATH") + string(os.PathListSeparator) + "/go-plugins-path-override"
+	process.Env = append(process.Env, "PATH="+p)
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	_, err := c.Start()
+	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+
+	for {
+		if c.Exited() {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if !process.ProcessState.Success() {
+		t.Fatal("process didn't exit cleanly")
+	}
+}
+
 func TestClient_SecureConfig(t *testing.T) {
 	// Test failure case
 	secureConfig := &SecureConfig{

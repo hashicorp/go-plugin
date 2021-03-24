@@ -209,9 +209,10 @@ type ClientConfig struct {
 // already-running plugin process. You can retrieve this information by
 // calling ReattachConfig on Client.
 type ReattachConfig struct {
-	Protocol Protocol
-	Addr     net.Addr
-	Pid      int
+	Protocol        Protocol
+	ProtocolVersion int
+	Addr            net.Addr
+	Pid             int
 
 	// Test is set to true if this is reattaching to to a plugin in "test mode"
 	// (see ServeConfig.Test). In this mode, client.Kill will NOT kill the
@@ -838,6 +839,7 @@ func (c *Client) reattach() (net.Addr, error) {
 		// Default the protocol to net/rpc for backwards compatibility
 		c.protocol = ProtocolNetRPC
 	}
+	c.negotiatedVersion = c.config.Reattach.ProtocolVersion
 
 	// If we're in test mode, we do NOT set the process. This avoids the
 	// process being killed (the only purpose we have for c.process), since

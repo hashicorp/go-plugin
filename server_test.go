@@ -42,6 +42,11 @@ func TestServer_testMode(t *testing.T) {
 		t.Fatal("config should not be nil")
 	}
 
+	// Check that the reattach config includes the negotiated protocol version
+	if config.ProtocolVersion != int(testHandshake.ProtocolVersion) {
+		t.Fatalf("wrong protocol version in reattach config. got %d, expected %d", config.ProtocolVersion, testHandshake.ProtocolVersion)
+	}
+
 	// Connect!
 	c := NewClient(&ClientConfig{
 		Cmd:              nil,

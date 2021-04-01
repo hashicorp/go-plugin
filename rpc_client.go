@@ -28,6 +28,8 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	conn = NewConnWithCancel(conn, c.ctxCancel)
+
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		// Make sure to set keep alive so that the connection doesn't die
 		tcpConn.SetKeepAlive(true)
@@ -37,8 +39,16 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 		conn = tls.Client(conn, c.config.TLSConfig)
 	}
 
+	yamuxConfig := yamux.DefaultConfig()
+	netRPCConfig := c.config.NetRPCConfig
+	if netRPCConfig != nil {
+		yamuxConfig.EnableKeepAlive = netRPCConfig.EnableKeepAlive
+		yamuxConfig.KeepAliveInterval = netRPCConfig.KeepAliveInterval
+		yamuxConfig.ConnectionWriteTimeout = netRPCConfig.ConnectionWriteTimeout
+	}
+
 	// Create the actual RPC client
-	result, err := NewRPCClient(conn, c.config.Plugins)
+	result, err := newRpcClientWithConfig(yamuxConfig, conn, c.config.Plugins)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -56,11 +66,9 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	return result, nil
 }
 
-// NewRPCClient creates a client from an already-open connection-like value.
-// Dial is typically used instead.
-func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClient, error) {
+func newRpcClientWithConfig(yamuxConfig *yamux.Config, conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClient, error) {
 	// Create the yamux client so we can multiplex
-	mux, err := yamux.Client(conn, nil)
+	mux, err := yamux.Client(conn, yamuxConfig)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -95,6 +103,12 @@ func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClien
 		stdout:  stdstream[0],
 		stderr:  stdstream[1],
 	}, nil
+}
+
+// NewRPCClient creates a client from an already-open connection-like value.
+// Dial is typically used instead.
+func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClient, error) {
+	return newRpcClientWithConfig(nil, conn, plugins)
 }
 
 // SyncStreams should be called to enable syncing of stdout,

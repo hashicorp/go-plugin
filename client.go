@@ -203,6 +203,9 @@ type ClientConfig struct {
 	//
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
+
+	// Client Protocol configuration.
+	ClientProtocolConfig map[Protocol]interface{}
 }
 
 // ReattachConfig is used to configure a client to reattach to an

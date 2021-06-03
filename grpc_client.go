@@ -37,6 +37,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32)),
 		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(math.MaxInt32)))
 
+	// Add our custom options if we have any
 	opts = append(opts, dialOpts...)
 
 	// Connect. Note the first parameter is unused because we use a custom
@@ -52,7 +53,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
 // to be successfully started already with a lock held.
 func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
-	conn, err := dialGRPCConn(c.config.TLSConfig, c.dialer, c.config.DialOptions...)
+	conn, err := dialGRPCConn(c.config.TLSConfig, c.dialer, c.config.GRPCDialOptions...)
 	if err != nil {
 		return nil, err
 	}

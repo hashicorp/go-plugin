@@ -205,9 +205,10 @@ type ClientConfig struct {
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
 
-	// DialOptions allows plugin users to pass custom grpc.DialOption
-	// to create connections
-	DialOptions []grpc.DialOption
+	// GRPCDialOptions allows plugin users to pass custom grpc.DialOption
+	// to create gRPC connections. This only affects plugins using the gRPC
+	// protocol.
+	GRPCDialOptions []grpc.DialOption
 }
 
 // ReattachConfig is used to configure a client to reattach to an

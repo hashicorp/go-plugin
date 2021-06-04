@@ -11,6 +11,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -509,6 +510,14 @@ func TestHelperProcess(*testing.T) {
 		}
 
 		if string(data) == "hello" {
+			os.Exit(0)
+		}
+
+		os.Exit(1)
+	case "env-vars":
+		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		p := os.Getenv("PATH")
+		if strings.Contains(p, "/go-plugins-path-override") {
 			os.Exit(0)
 		}
 

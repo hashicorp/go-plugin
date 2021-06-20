@@ -73,13 +73,6 @@ func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	go broker.Run()
 	go brokerGRPCClient.StartStream()
 
-	// Start the stdio client
-	stdioClient, err := newGRPCStdioClient(doneCtx, c.logger.Named("stdio"), conn)
-	if err != nil {
-		return nil, err
-	}
-	go stdioClient.Run(c.config.SyncStdout, c.config.SyncStderr)
-
 	cl := &GRPCClient{
 		Conn:       conn,
 		Plugins:    c.config.Plugins,

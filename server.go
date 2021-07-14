@@ -318,7 +318,9 @@ func Serve(opts *ServeConfig) {
 			Certificates: []tls.Certificate{cert},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    clientCertPool,
+			RootCAs:      clientCertPool,
 			MinVersion:   tls.VersionTLS12,
+			ServerName:   "localhost",
 		}
 
 		// We send back the raw leaf cert data for the client rather than the

@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	raw, err := rpcClient.Dispense("kv")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)

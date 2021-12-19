@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/grpc/shared"
@@ -32,8 +33,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	pluginBuildPath := strings.Split(os.Getenv("KV_PLUGIN"), "/")
+	pluginBuild := pluginBuildPath[len(pluginBuildPath)-1]
+
+	dispenser := ""
+	switch pluginBuild {
+	case "kv-go-grpc":
+		dispenser = "kv_grpc"
+	case "kv-go-rpc":
+		dispenser = "kv"
+	default:
+		log.Printf("unknown plugin :%v, using default", pluginBuild)
+		dispenser = "kv_grpc"
+	}
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	raw, err := rpcClient.Dispense(dispenser)
+
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)

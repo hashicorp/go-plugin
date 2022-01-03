@@ -3,7 +3,6 @@ package plugin
 import (
 	"crypto/tls"
 	"fmt"
-	"math"
 	"net"
 	"time"
 
@@ -13,6 +12,11 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
+
+// maxInt is defined here to allow 64-bit architectures to set message size
+// limits greater than 2^31-1. This is used rather than [math.MaxInt] to support
+// go versions < 1.17.
+const maxInt = int(^uint(0) >> 1)
 
 func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error), dialOpts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	// Build dialing options.
@@ -34,8 +38,8 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 	}
 
 	opts = append(opts,
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32)),
-		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(math.MaxInt32)))
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxInt)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(maxInt)))
 
 	// Add our custom options if we have any
 	opts = append(opts, dialOpts...)

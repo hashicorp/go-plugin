@@ -352,10 +352,13 @@ func NewClient(config *ClientConfig) (c *Client) {
 //
 // Subsequent calls to this will return the same client.
 func (c *Client) Client() (ClientProtocol, error) {
+	c.logger.Info("Starting protocol client")
 	_, err := c.Start()
+
 	if err != nil {
 		return nil, err
 	}
+	c.logger.Info("Acq lock for protocol client")
 
 	c.l.Lock()
 	defer c.l.Unlock()
@@ -366,9 +369,11 @@ func (c *Client) Client() (ClientProtocol, error) {
 
 	switch c.protocol {
 	case ProtocolNetRPC:
+		c.logger.Info("Creating new RPC client")
 		c.client, err = newRPCClient(c)
 
 	case ProtocolGRPC:
+		c.logger.Info("Creating new GRPC client")
 		c.client, err = newGRPCClient(c.doneCtx, c)
 
 	default:
@@ -688,6 +693,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	case line := <-linesCh:
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
+		c.logger.Info("Got linesCh info", "line", line)
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -219,6 +220,8 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
+	hclog.Default().Info("plugin server: just got here whattup")
+
 	exitCode := -1
 	// We use this to trigger an `os.Exit` so that we can execute our other
 	// deferred functions. In test mode, we just output the err to stderr
@@ -233,6 +236,7 @@ func Serve(opts *ServeConfig) {
 		}
 	}()
 
+	fmt.Fprintf(os.Stderr, "Validate handshake configs for plugin server")
 	if opts.Test == nil {
 		// Validate the handshake config
 		if opts.MagicCookieKey == "" || opts.MagicCookieValue == "" {
@@ -255,9 +259,12 @@ func Serve(opts *ServeConfig) {
 		}
 	}
 
+	hclog.Default().Info("plugin server: get protocol version")
 	// negotiate the version and plugins
 	// start with default version in the handshake config
 	protoVersion, protoType, pluginSet := protocolVersion(opts)
+
+	log.Print("plugin server: setup logger")
 
 	logger := opts.Logger
 	if logger == nil {
@@ -268,7 +275,7 @@ func Serve(opts *ServeConfig) {
 			JSONFormat: true,
 		})
 	}
-
+	log.Print("plugin server: get listener")
 	// Register a listener so we can accept a connection
 	listener, err := serverListener()
 	if err != nil {

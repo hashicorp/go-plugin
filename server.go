@@ -275,7 +275,7 @@ func Serve(opts *ServeConfig) {
 			JSONFormat: true,
 		})
 	}
-	log.Print("plugin server: get listener")
+	logger.Debug("plugin server: get listener")
 	// Register a listener so we can accept a connection
 	listener, err := serverListener()
 	if err != nil {
@@ -288,6 +288,7 @@ func Serve(opts *ServeConfig) {
 	defer func() {
 		listener.Close()
 	}()
+	logger.Debug("plugin server: get tls provider")
 
 	var tlsConfig *tls.Config
 	if opts.TLSProvider != nil {
@@ -300,6 +301,8 @@ func Serve(opts *ServeConfig) {
 
 	var serverCert string
 	clientCert := os.Getenv("PLUGIN_CLIENT_CERT")
+	logger.Debug("plugin server: generate tls thingies")
+
 	// If the client is configured using AutoMTLS, the certificate will be here,
 	// and we need to generate our own in response.
 	if tlsConfig == nil && clientCert != "" {
@@ -335,6 +338,7 @@ func Serve(opts *ServeConfig) {
 
 	// Create the channel to tell us when we're done
 	doneCh := make(chan struct{})
+	logger.Debug("plugin server: generate stdout/err pipes")
 
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
@@ -362,6 +366,7 @@ func Serve(opts *ServeConfig) {
 		stdout_r = io.TeeReader(stdout_r, os.Stdout)
 		stderr_r = io.TeeReader(stderr_r, os.Stderr)
 	}
+	logger.Debug("plugin server: setup server struct")
 
 	// Build the server type
 	var server ServerProtocol

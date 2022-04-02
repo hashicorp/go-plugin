@@ -622,6 +622,15 @@ func TestClientStart_badNegotiatedVersion(t *testing.T) {
 		t.Fatal("err should not be nil")
 	}
 	fmt.Println(err)
+
+	versionErr, ok := err.(*ProtocolVersionError)
+	if !ok {
+		t.Fatal("err should be a ProtocolVersionError")
+	}
+
+	if versionErr.ServerVersion != 2 {
+		t.Fatalf("expected server version 2, got: %d", versionErr.ServerVersion)
+	}
 }
 
 func TestClient_Start_Timeout(t *testing.T) {

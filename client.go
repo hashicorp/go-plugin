@@ -883,8 +883,20 @@ func (c *Client) checkProtoVersion(protoVersion string) (int, PluginSet, error) 
 		return version, plugins, nil
 	}
 
-	return 0, nil, fmt.Errorf("Incompatible API version with plugin. "+
-		"Plugin version: %d, Client versions: %d", serverVersion, clientVersions)
+	return 0, nil, &ProtocolVersionError{
+		ClientVersions: clientVersions,
+		ServerVersion:  serverVersion,
+	}
+}
+
+type ProtocolVersionError struct {
+	ClientVersions []int
+	ServerVersion  int
+}
+
+func (e *ProtocolVersionError) Error() string {
+	return fmt.Sprintf("Incompatible API version with plugin. "+
+		"Plugin version: %d, Client versions: %d", e.ServerVersion, e.ClientVersions)
 }
 
 // ReattachConfig returns the information that must be provided to NewClient

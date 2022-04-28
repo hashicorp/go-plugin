@@ -29,10 +29,6 @@ func generateCert() (cert []byte, privateKey []byte, err error) {
 	host := "localhost"
 
 	template := &x509.Certificate{
-		Issuer: pkix.Name{
-			CommonName:   host,
-			Organization: []string{"HashiCorp"},
-		},
 		Subject: pkix.Name{
 			CommonName:   host,
 			Organization: []string{"HashiCorp"},

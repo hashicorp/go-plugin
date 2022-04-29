@@ -304,13 +304,13 @@ func Serve(opts *ServeConfig) {
 
 		certPEM, keyPEM, err := generateCert()
 		if err != nil {
-			logger.Error("failed to generate client certificate", "error", err)
+			logger.Error("failed to generate server certificate", "error", err)
 			panic(err)
 		}
 
 		cert, err := tls.X509KeyPair(certPEM, keyPEM)
 		if err != nil {
-			logger.Error("failed to parse client certificate", "error", err)
+			logger.Error("failed to parse server certificate", "error", err)
 			panic(err)
 		}
 

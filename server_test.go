@@ -117,6 +117,11 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Pinging should work
+	if err := client.Ping(); err != nil {
+		t.Fatalf("should not err: %s", err)
+	}
+
 	// Grab the impl
 	raw, err := client.Dispense("test")
 	if err != nil {
@@ -138,11 +143,6 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 	err = tester.Bidirectional()
 	if err != nil {
 		t.Fatal("invalid response", err)
-	}
-
-	// Pinging should work
-	if err := client.Ping(); err != nil {
-		t.Fatalf("should not err: %s", err)
 	}
 
 	c.Kill()

@@ -629,17 +629,19 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Wait for the command to end.
 		err := cmd.Wait()
 
-		debugMsgArgs := []interface{}{
+		msgArgs := []interface{}{
 			"path", path,
 			"pid", pid,
 		}
 		if err != nil {
-			debugMsgArgs = append(debugMsgArgs,
+			msgArgs = append(msgArgs,
 				[]interface{}{"error", err.Error()}...)
+			c.logger.Error("plugin process exited", msgArgs...)
+		} else {
+			// Log and make sure to flush the logs right away
+			c.logger.Info("plugin process exited", msgArgs...)
 		}
 
-		// Log and make sure to flush the logs write away
-		c.logger.Debug("plugin process exited", debugMsgArgs...)
 		os.Stderr.Sync()
 
 		// Set that we exited, which takes a lock

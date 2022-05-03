@@ -638,7 +638,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 				[]interface{}{"error", err.Error()}...)
 			c.logger.Error("plugin process exited", msgArgs...)
 		} else {
-			// Log and make sure to flush the logs write away
+			// Log and make sure to flush the logs right away
 			c.logger.Info("plugin process exited", msgArgs...)
 		}
 

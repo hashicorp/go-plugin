@@ -129,9 +129,6 @@ directory as well as throughout our various open source projects.
 
 For complete API documentation, see [GoDoc](https://godoc.org/github.com/hashicorp/go-plugin).
 
-For an extensive tutorial on how to set up go-plugin and how it works, check
-out [Extensive go-plugin tutorial](docs/extensive-go-plugin-tutorial.md).
-
 ## Roadmap
 
 Our plugin system is constantly evolving. As we use the plugin system for

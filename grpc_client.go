@@ -3,24 +3,23 @@ package plugin
 import (
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
+	"github.com/hashicorp/go-plugin/internal/plugin"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error)) (*grpc.ClientConn, error) {
+func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error), dialOpts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	// Build dialing options.
-	opts := make([]grpc.DialOption, 0, 5)
+	opts := make([]grpc.DialOption, 0)
 
-	// We use a custom dialer so that we can connect over unix domain sockets
+	// We use a custom dialer so that we can connect over unix domain sockets.
 	opts = append(opts, grpc.WithDialer(dialer))
-
-	// go-plugin expects to block the connection
-	opts = append(opts, grpc.WithBlock())
 
 	// Fail right away
 	opts = append(opts, grpc.FailOnNonTempDialError(true))
@@ -33,6 +32,13 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 		opts = append(opts, grpc.WithTransportCredentials(
 			credentials.NewTLS(tls)))
 	}
+
+	opts = append(opts,
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(math.MaxInt32)))
+
+	// Add our custom options if we have any
+	opts = append(opts, dialOpts...)
 
 	// Connect. Note the first parameter is unused because we use a custom
 	// dialer that has the state to see the address.
@@ -47,7 +53,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn,
 // newGRPCClient creates a new GRPCClient. The Client argument is expected
 // to be successfully started already with a lock held.
 func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
-	conn, err := dialGRPCConn(c.config.TLSConfig, c.dialer)
+	conn, err := dialGRPCConn(c.config.TLSConfig, c.dialer, c.config.GRPCDialOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +64,22 @@ func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	go broker.Run()
 	go brokerGRPCClient.StartStream()
 
-	return &GRPCClient{
-		Conn:    conn,
-		Plugins: c.config.Plugins,
-		doneCtx: doneCtx,
-		broker:  broker,
-	}, nil
+	// Start the stdio client
+	stdioClient, err := newGRPCStdioClient(doneCtx, c.logger.Named("stdio"), conn)
+	if err != nil {
+		return nil, err
+	}
+	go stdioClient.Run(c.config.SyncStdout, c.config.SyncStderr)
+
+	cl := &GRPCClient{
+		Conn:       conn,
+		Plugins:    c.config.Plugins,
+		doneCtx:    doneCtx,
+		broker:     broker,
+		controller: plugin.NewGRPCControllerClient(conn),
+	}
+
+	return cl, nil
 }
 
 // GRPCClient connects to a GRPCServer over gRPC to dispense plugin types.
@@ -73,11 +89,14 @@ type GRPCClient struct {
 
 	doneCtx context.Context
 	broker  *GRPCBroker
+
+	controller plugin.GRPCControllerClient
 }
 
 // ClientProtocol impl.
 func (c *GRPCClient) Close() error {
 	c.broker.Close()
+	c.controller.Shutdown(c.doneCtx, &plugin.Empty{})
 	return c.Conn.Close()
 }
 

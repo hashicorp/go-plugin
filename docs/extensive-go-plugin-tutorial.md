@@ -90,8 +90,7 @@ And last but not least is the `Plugins` map. This map is used in order to identi
 
 ~~~go
 // pluginMap is the map of plugins we can dispense.
-var pluginMap = map[string]plugin.Pluglin	"greeter": &example.GreeterPlugin{},
-}
+var pluginMap = map[string]plugin.Plugin{"greeter": &example.GreeterPlugin{}}
 ~~~
 
 You can see that the key is the name of the plugin and the value is the plugin.

@@ -16,7 +16,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 
+	"github.com/creack/pty"
 	hclog "github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
 )
@@ -84,6 +86,11 @@ type ServeConfig struct {
 	// Logger is used to pass a logger into the server. If none is provided the
 	// server will create a default logger.
 	Logger hclog.Logger
+
+	// SpawnPseudoTerminal, if set, will create a pseudo-tty and attach it to the plugin
+	// process. This is useful when the plugin performs actions which require
+	// the output of the process to be a terminal, e.g. printing coloured text.
+	SpawnPseudoTerminal bool
 
 	// Test, if non-nil, will put plugin serving into "test mode". This is
 	// meant to be used as part of `go test` within a plugin's codebase to
@@ -333,16 +340,50 @@ func Serve(opts *ServeConfig) {
 
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
+	var stdout_w, stderr_w *os.File
 	var stdout_r, stderr_r io.Reader
-	stdout_r, stdout_w, err := os.Pipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
-		os.Exit(1)
-	}
-	stderr_r, stderr_w, err := os.Pipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
-		os.Exit(1)
+	if opts.SpawnPseudoTerminal { //nolint: nestif // make an exception for the go routine
+		ptmx, tty, err := pty.Open()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating a pseudo-tty: %s\n", err)
+			os.Exit(1)
+		}
+
+		// Handle pty size.
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGWINCH)
+		go func() {
+			for range ch {
+				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+					logger.Error("resize pseudo-tty", "error", err)
+				}
+			}
+		}()
+		ch <- syscall.SIGWINCH // Initial resize.
+		defer func() {
+			signal.Stop(ch)
+			close(ch)
+		}()
+
+		defer func() { _ = tty.Close() }() // Best effort.
+
+		stdout_r = ptmx
+		stderr_r = ptmx
+		stdout_w = tty
+		stderr_w = tty
+
+	} else {
+		var err error
+		stdout_r, stdout_w, err = os.Pipe()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
+			os.Exit(1)
+		}
+		stderr_r, stderr_w, err = os.Pipe()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error preparing plugin: %s\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// If we're in test mode, we tee off the reader and write the data

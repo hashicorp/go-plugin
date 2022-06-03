@@ -1056,7 +1056,6 @@ func TestClient_wrongVersion(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected incorrect protocol version server")
 	}
-
 }
 
 func TestClient_legacyClient(t *testing.T) {
@@ -1393,5 +1392,93 @@ this line is short
 
 	if read != msg {
 		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
+	}
+}
+
+func TestClient_WithoutPseudoTerminal(t *testing.T) {
+	process := helperProcess("test-interface-no-pty")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	tester, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	isTerminal := tester.IsTerminal()
+	if isTerminal {
+		t.Fatal("expected to not be in a terminal, but we are")
+	}
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
+	}
+}
+
+func TestClient_WithPseudoTerminal(t *testing.T) {
+	process := helperProcess("test-interface-with-pty")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	tester, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	isTerminal := tester.IsTerminal()
+	if !isTerminal {
+		t.Fatal("expected to be in a terminal, but we are not")
+	}
+
+	// Kill it
+	c.Kill()
+
+	// Test that it knows it is exited
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+
+	if c.killed() {
+		t.Fatal("process failed to exit gracefully")
 	}
 }

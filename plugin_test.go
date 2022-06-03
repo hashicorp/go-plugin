@@ -18,6 +18,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"golang.org/x/net/context"
+	"golang.org/x/term"
 	"google.golang.org/grpc"
 )
 
@@ -41,6 +42,7 @@ type testInterface interface {
 	PrintKV(string, interface{})
 	Bidirectional() error
 	PrintStdio(stdout, stderr []byte)
+	IsTerminal() bool
 }
 
 // testStreamer is used to test the grpc streaming interface
@@ -139,6 +141,10 @@ func (i *testInterfaceImpl) PrintStdio(stdout, stderr []byte) {
 	}
 }
 
+func (i *testInterfaceImpl) IsTerminal() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
 // testInterfaceClient implements testInterface to communicate over RPC
 type testInterfaceClient struct {
 	Client *rpc.Client
@@ -176,6 +182,16 @@ func (impl *testInterfaceClient) PrintStdio(stdout, stderr []byte) {
 	return
 }
 
+func (impl *testInterfaceClient) IsTerminal() bool {
+	var resp bool
+	err := impl.Client.Call("Plugin.IsTerminal", new(interface{}), &resp)
+	if err != nil {
+		panic(err)
+	}
+
+	return resp
+}
+
 // testInterfaceServer is the RPC server for testInterfaceClient
 type testInterfaceServer struct {
 	Broker *MuxBroker
@@ -189,6 +205,11 @@ func (s *testInterfaceServer) Double(arg int, resp *int) error {
 
 func (s *testInterfaceServer) PrintKV(args map[string]interface{}, _ *struct{}) error {
 	s.Impl.PrintKV(args["key"].(string), args["value"])
+	return nil
+}
+
+func (s *testInterfaceServer) IsTerminal(_ interface{}, resp *bool) error {
+	*resp = s.Impl.IsTerminal()
 	return nil
 }
 
@@ -210,7 +231,8 @@ type testGRPCServer struct {
 
 func (s *testGRPCServer) Double(
 	ctx context.Context,
-	req *grpctest.TestRequest) (*grpctest.TestResponse, error) {
+	req *grpctest.TestRequest,
+) (*grpctest.TestResponse, error) {
 	return &grpctest.TestResponse{
 		Output: int32(s.Impl.Double(int(req.Input))),
 	}, nil
@@ -218,7 +240,8 @@ func (s *testGRPCServer) Double(
 
 func (s *testGRPCServer) PrintKV(
 	ctx context.Context,
-	req *grpctest.PrintKVRequest) (*grpctest.PrintKVResponse, error) {
+	req *grpctest.PrintKVRequest,
+) (*grpctest.PrintKVResponse, error) {
 	var v interface{}
 	switch rv := req.Value.(type) {
 	case *grpctest.PrintKVRequest_ValueString:
@@ -470,7 +493,7 @@ func TestHelperProcess(*testing.T) {
 		// If we have an arg, we write there on start
 		if len(args) > 0 {
 			path := args[0]
-			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			err := ioutil.WriteFile(path, []byte("foo"), 0o644)
 			if err != nil {
 				panic(err)
 			}
@@ -518,7 +541,7 @@ func TestHelperProcess(*testing.T) {
 		// up properly versus just calling os.Exit
 		path := args[0]
 		defer func() {
-			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			err := ioutil.WriteFile(path, []byte("foo"), 0o644)
 			if err != nil {
 				panic(err)
 			}
@@ -555,6 +578,23 @@ func TestHelperProcess(*testing.T) {
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-interface-no-pty":
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+		})
+
+		// Shouldn't reach here but make sure we exit anyways
+		os.Exit(0)
+	case "test-interface-with-pty":
+		Serve(&ServeConfig{
+			HandshakeConfig:     testHandshake,
+			Plugins:             testPluginMap,
+			SpawnPseudoTerminal: true,
 		})
 
 		// Shouldn't reach here but make sure we exit anyways
@@ -622,7 +662,7 @@ func TestHelperProcess(*testing.T) {
 		Serve(&ServeConfig{
 			HandshakeConfig: testVersionedHandshake,
 			VersionedPlugins: map[int]PluginSet{
-				1: PluginSet{
+				1: {
 					"old": &testInterfacePlugin{Impl: testPlugin},
 				},
 				2: testGRPCPluginMap,

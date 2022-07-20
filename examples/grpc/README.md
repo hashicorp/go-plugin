@@ -67,5 +67,5 @@ $ protoc -I proto/ proto/kv.proto --go_out=plugins=grpc:proto/
 For Python:
 
 ```sh
-$ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto
+$ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto ./proto/grpc_stdio.proto
 ```

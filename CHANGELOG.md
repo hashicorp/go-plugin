@@ -1,3 +1,10 @@
+## v1.4.5
+
+ENHANCEMENTS:
+
+* client: log warning when SecureConfig is nil [[GH-207](https://github.com/hashicorp/go-plugin/pull/207)]
+
+
 ## v1.4.4
 
 ENHANCEMENTS:

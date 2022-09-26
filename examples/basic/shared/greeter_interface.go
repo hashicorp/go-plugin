@@ -1,4 +1,4 @@
-package example
+package shared
 
 import (
 	"net/rpc"

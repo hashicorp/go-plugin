@@ -8,7 +8,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/basic/commons"
+	"github.com/hashicorp/go-plugin/examples/basic/shared"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 
 	// We should have a Greeter now! This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	greeter := raw.(example.Greeter)
+	greeter := raw.(shared.Greeter)
 	fmt.Println(greeter.Greet())
 }
 
@@ -58,5 +58,5 @@ var handshakeConfig = plugin.HandshakeConfig{
 
 // pluginMap is the map of plugins we can dispense.
 var pluginMap = map[string]plugin.Plugin{
-	"greeter": &example.GreeterPlugin{},
+	"greeter": &shared.GreeterPlugin{},
 }

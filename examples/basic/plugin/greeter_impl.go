@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/go-plugin/examples/basic/commons"
+	"github.com/hashicorp/go-plugin/examples/basic/shared"
 )
 
 // Here is a real implementation of Greeter
@@ -40,7 +40,7 @@ func main() {
 	}
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
-		"greeter": &example.GreeterPlugin{Impl: greeter},
+		"greeter": &shared.GreeterPlugin{Impl: greeter},
 	}
 
 	logger.Debug("message from plugin", "foo", "bar")

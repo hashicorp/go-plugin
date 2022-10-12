@@ -90,7 +90,7 @@ And last but not least is the `Plugins` map. This map is used in order to identi
 
 ~~~go
 // pluginMap is the map of plugins we can dispense.
-var pluginMap = map[string]plugin.Plugin{"greeter": &example.GreeterPlugin{}}
+var pluginMap = map[string]plugin.Plugin{"greeter": &shared.GreeterPlugin{}}
 ~~~
 
 You can see that the key is the name of the plugin and the value is the plugin.
@@ -126,7 +126,7 @@ Now, the magic:
 ~~~go
 	// We should have a Greeter now! This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	greeter := raw.(example.Greeter)
+	greeter := raw.(shared.Greeter)
 	fmt.Println(greeter.Greet())
 ~~~
 
@@ -277,7 +277,7 @@ greeter := &GreeterHello{
 }
 // pluginMap is the map of plugins we can dispense.
 var pluginMap = map[string]plugin.Plugin{
-    "greeter": &example.GreeterPlugin{Impl: greeter},
+    "greeter": &shared.GreeterPlugin{Impl: greeter},
 }
 
 logger.Debug("message from plugin", "foo", "bar")

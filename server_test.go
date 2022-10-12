@@ -151,6 +151,37 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 	<-closeCh
 }
 
+func TestServer_RPC(t *testing.T) {
+	closeCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// make a server, but we don't need to attach to it
+	ch := make(chan *ReattachConfig, 1)
+	go Serve(&ServeConfig{
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		Test: &ServeTestConfig{
+			Context:          ctx,
+			CloseCh:          closeCh,
+			ReattachConfigCh: ch,
+		},
+	})
+
+	// Wait for the server
+	select {
+	case cfg := <-ch:
+		if cfg == nil {
+			t.Fatal("attach config should not be nil")
+		}
+	case <-time.After(2000 * time.Millisecond):
+		t.Fatal("should've received reattach")
+	}
+
+	cancel()
+	<-closeCh
+}
+
 func TestRmListener_impl(t *testing.T) {
 	var _ net.Listener = new(rmListener)
 }

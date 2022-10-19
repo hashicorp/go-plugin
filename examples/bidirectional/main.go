@@ -36,14 +36,14 @@ func main() {
 	rpcClient, err := client.Client()
 	if err != nil {
 		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return
 	}
 
 	// Request the plugin
 	raw, err := rpcClient.Dispense("counter")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return
 	}
 
 	// We should have a Counter store now! This feels like a normal interface
@@ -56,26 +56,23 @@ func main() {
 		result, err := counter.Get(os.Args[1])
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			os.Exit(1)
+			return
 		}
-
 		fmt.Println(result)
 
 	case "put":
 		i, err := strconv.Atoi(os.Args[2])
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			os.Exit(1)
+			return
 		}
 
 		err = counter.Put(os.Args[1], int64(i), &addHelper{})
 		if err != nil {
 			fmt.Println("Error:", err.Error())
-			os.Exit(1)
 		}
-
 	default:
 		fmt.Println("Please only use 'get' or 'put'")
-		os.Exit(1)
 	}
+	return
 }

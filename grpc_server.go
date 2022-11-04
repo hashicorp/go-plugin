@@ -107,8 +107,12 @@ func (s *GRPCServer) Init() error {
 	return nil
 }
 
-// Stop calls Stop on the underlying grpc.Server
+// Stop calls Close on the underlying grpc.Broker and Stop on the underlying
+// grpc.Server
 func (s *GRPCServer) Stop() {
+	if s.broker != nil {
+		s.broker.Close()
+	}
 	s.server.Stop()
 }
 

@@ -110,15 +110,22 @@ func (s *GRPCServer) Init() error {
 // Stop calls Close on the underlying grpc.Broker and Stop on the underlying
 // grpc.Server
 func (s *GRPCServer) Stop() {
+	s.server.Stop()
+
 	if s.broker != nil {
 		s.broker.Close()
+		s.broker = nil
 	}
-	s.server.Stop()
 }
 
 // GracefulStop calls GracefulStop on the underlying grpc.Server
 func (s *GRPCServer) GracefulStop() {
 	s.server.GracefulStop()
+
+	if s.broker != nil {
+		s.broker.Close()
+		s.broker = nil
+	}
 }
 
 // Config is the GRPCServerConfig encoded as JSON then base64.

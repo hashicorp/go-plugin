@@ -1,3 +1,9 @@
+## v1.4.6
+
+BUG FIXES:
+
+* server: Prevent gRPC broker goroutine leak when using `GRPCServer` type `GracefulStop()` or `Stop()` methods [[GH-220](https://github.com/hashicorp/go-plugin/pull/220)]
+
 ## v1.4.5
 
 ENHANCEMENTS:

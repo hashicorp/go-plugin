@@ -497,10 +497,11 @@ var peTypes = map[uint16]string{
 
 // additionalNotesAboutCommand tries to get additional information about a command that might help diagnose
 // why it won't run correctly. It runs as a best effort only.
-func additionalNotesAboutCommand(path string) (notes string) {
+func additionalNotesAboutCommand(path string) string {
+	notes := ""
 	stat, err := os.Stat(path)
 	if err != nil {
-		return
+		return notes
 	}
 
 	notes += "\nAdditional notes about plugin:"
@@ -518,7 +519,7 @@ func additionalNotesAboutCommand(path string) (notes string) {
 		}
 		notes += fmt.Sprintf("  PE architecture: %s (current architecture: %s)\n", machine, runtime.GOARCH)
 	}
-	return
+	return notes
 }
 
 // Start the underlying subprocess, communicating with it to negotiate

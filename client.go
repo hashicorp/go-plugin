@@ -504,7 +504,7 @@ func additionalNotesAboutCommand(path string) string {
 		return notes
 	}
 
-	notes += "\nAdditional notes about plugin:"
+	notes += "\nAdditional notes about plugin:\n"
 	notes += fmt.Sprintf("  Path: %s\n", path)
 	notes += fmt.Sprintf("  Mode: %s\n", stat.Mode())
 

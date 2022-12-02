@@ -1,3 +1,3 @@
-module example.com/testadata
+module example.com/testdata
 
 go 1.19

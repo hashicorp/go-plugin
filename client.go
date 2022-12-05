@@ -6,6 +6,9 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"debug/elf"
+	"debug/macho"
+	"debug/pe"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -15,16 +18,27 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
 )
+
+const unrecognizedRemotePluginMessage = `Unrecognized remote plugin message: %s
+This usually means
+  the plugin was not compiled for this architecture,
+  the plugin is missing dynamic-link libraries necessary to run,
+  the plugin is not executable by this process due to file permissions, or
+  the plugin failed to negotiate the initial go-plugin protocol handshake
+%s`
 
 // If this is 1, then we've called CleanupClients. This can be used
 // by plugin RPC implementations to change error behavior since you
@@ -473,7 +487,65 @@ func (c *Client) Kill() {
 	c.l.Unlock()
 }
 
-// Starts the underlying subprocess, communicating with it to negotiate
+// peTypes is a list of Portable Executable (PE) machine types from https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
+// mapped to GOARCH types. It is not comprehensive, and only includes machine types that Go supports.
+var peTypes = map[uint16]string{
+	0x14c:  "386",
+	0x1c0:  "arm",
+	0x6264: "loong64",
+	0x8664: "amd64",
+	0xaa64: "arm64",
+}
+
+// additionalNotesAboutCommand tries to get additional information about a command that might help diagnose
+// why it won't run correctly. It runs as a best effort only.
+func additionalNotesAboutCommand(path string) string {
+	notes := ""
+	stat, err := os.Stat(path)
+	if err != nil {
+		return notes
+	}
+
+	notes += "\nAdditional notes about plugin:\n"
+	notes += fmt.Sprintf("  Path: %s\n", path)
+	notes += fmt.Sprintf("  Mode: %s\n", stat.Mode())
+	statT, ok := stat.Sys().(*syscall.Stat_t)
+	if ok {
+		currentUsername := "?"
+		if u, err := user.LookupId(strconv.FormatUint(uint64(os.Getuid()), 10)); err == nil {
+			currentUsername = u.Username
+		}
+		currentGroup := "?"
+		if g, err := user.LookupGroupId(strconv.FormatUint(uint64(os.Getgid()), 10)); err == nil {
+			currentGroup = g.Name
+		}
+		username := "?"
+		if u, err := user.LookupId(strconv.FormatUint(uint64(statT.Uid), 10)); err == nil {
+			username = u.Username
+		}
+		group := "?"
+		if g, err := user.LookupGroupId(strconv.FormatUint(uint64(statT.Gid), 10)); err == nil {
+			group = g.Name
+		}
+		notes += fmt.Sprintf("  Owner: %d [%s] (current: %d [%s])\n", statT.Uid, username, os.Getuid(), currentUsername)
+		notes += fmt.Sprintf("  Group: %d [%s] (current: %d [%s])\n", statT.Gid, group, os.Getgid(), currentGroup)
+	}
+
+	if elfFile, err := elf.Open(path); err == nil {
+		notes += fmt.Sprintf("  ELF architecture: %s (current architecture: %s)\n", elfFile.Machine, runtime.GOARCH)
+	} else if machoFile, err := macho.Open(path); err == nil {
+		notes += fmt.Sprintf("  MachO architecture: %s (current architecture: %s)\n", machoFile.Cpu, runtime.GOARCH)
+	} else if peFile, err := pe.Open(path); err == nil {
+		machine, ok := peTypes[peFile.Machine]
+		if !ok {
+			machine = "unknown"
+		}
+		notes += fmt.Sprintf("  PE architecture: %s (current architecture: %s)\n", machine, runtime.GOARCH)
+	}
+	return notes
+}
+
+// Start the underlying subprocess, communicating with it to negotiate
 // a port for RPC connections, and returning the address to connect via RPC.
 //
 // This method is safe to call multiple times. Subsequent calls have no effect.
@@ -697,10 +769,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			err = fmt.Errorf(
-				"Unrecognized remote plugin message: %s\n\n"+
-					"This usually means that the plugin is either invalid or simply\n"+
-					"needs to be recompiled to support the latest protocol.", line)
+			err = fmt.Errorf(unrecognizedRemotePluginMessage, line, additionalNotesAboutCommand(cmd.Path))
 			return
 		}
 

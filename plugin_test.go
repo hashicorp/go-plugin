@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

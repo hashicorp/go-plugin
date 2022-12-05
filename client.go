@@ -34,7 +34,7 @@ const unrecognizedRemotePluginMessage = `Unrecognized remote plugin message: %s
 This usually means
   the plugin was not compiled for this architecture,
   the plugin is missing dynamic-link libraries necessary to run,
-  the plugin is not readable by this process, or
+  the plugin is not executable by this process due to file permissions, or
   the plugin failed to negotiate the initial go-plugin protocol handshake
 %s`
 

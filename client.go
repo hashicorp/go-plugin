@@ -35,7 +35,7 @@ This usually means
   the plugin was not compiled for this architecture,
   the plugin is missing dynamic-link libraries necessary to run,
   the plugin is not readable by this process, or
-  the plugin was compiled with an incompatible version of the go-plugin protocol
+  the plugin failed to negotiate the initial go-plugin protocol handshake
 %s`
 
 // If this is 1, then we've called CleanupClients. This can be used

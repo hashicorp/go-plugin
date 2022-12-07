@@ -6,9 +6,6 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
-	"debug/elf"
-	"debug/macho"
-	"debug/pe"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -18,14 +15,11 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -495,54 +489,6 @@ var peTypes = map[uint16]string{
 	0x6264: "loong64",
 	0x8664: "amd64",
 	0xaa64: "arm64",
-}
-
-// additionalNotesAboutCommand tries to get additional information about a command that might help diagnose
-// why it won't run correctly. It runs as a best effort only.
-func additionalNotesAboutCommand(path string) string {
-	notes := ""
-	stat, err := os.Stat(path)
-	if err != nil {
-		return notes
-	}
-
-	notes += "\nAdditional notes about plugin:\n"
-	notes += fmt.Sprintf("  Path: %s\n", path)
-	notes += fmt.Sprintf("  Mode: %s\n", stat.Mode())
-	statT, ok := stat.Sys().(*syscall.Stat_t)
-	if ok {
-		currentUsername := "?"
-		if u, err := user.LookupId(strconv.FormatUint(uint64(os.Getuid()), 10)); err == nil {
-			currentUsername = u.Username
-		}
-		currentGroup := "?"
-		if g, err := user.LookupGroupId(strconv.FormatUint(uint64(os.Getgid()), 10)); err == nil {
-			currentGroup = g.Name
-		}
-		username := "?"
-		if u, err := user.LookupId(strconv.FormatUint(uint64(statT.Uid), 10)); err == nil {
-			username = u.Username
-		}
-		group := "?"
-		if g, err := user.LookupGroupId(strconv.FormatUint(uint64(statT.Gid), 10)); err == nil {
-			group = g.Name
-		}
-		notes += fmt.Sprintf("  Owner: %d [%s] (current: %d [%s])\n", statT.Uid, username, os.Getuid(), currentUsername)
-		notes += fmt.Sprintf("  Group: %d [%s] (current: %d [%s])\n", statT.Gid, group, os.Getgid(), currentGroup)
-	}
-
-	if elfFile, err := elf.Open(path); err == nil {
-		notes += fmt.Sprintf("  ELF architecture: %s (current architecture: %s)\n", elfFile.Machine, runtime.GOARCH)
-	} else if machoFile, err := macho.Open(path); err == nil {
-		notes += fmt.Sprintf("  MachO architecture: %s (current architecture: %s)\n", machoFile.Cpu, runtime.GOARCH)
-	} else if peFile, err := pe.Open(path); err == nil {
-		machine, ok := peTypes[peFile.Machine]
-		if !ok {
-			machine = "unknown"
-		}
-		notes += fmt.Sprintf("  PE architecture: %s (current architecture: %s)\n", machine, runtime.GOARCH)
-	}
-	return notes
 }
 
 // Start the underlying subprocess, communicating with it to negotiate

@@ -19,6 +19,7 @@ func main() {
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
+		SyncStdout:      os.Stdout,
 		Cmd:             exec.Command("sh", "-c", os.Getenv("KV_PLUGIN")),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},

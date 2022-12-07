@@ -160,7 +160,7 @@ func (c *grpcStdioClient) Run(stdout, stderr io.Writer) {
 
 		// Write! In the event of an error we just continue.
 		if c.log.IsTrace() {
-			c.log.Trace("received data", "channel", data.Channel.String(), "len", len(data.Data))
+			c.log.Trace("received plugin data", "channel", data.Channel.String(), "len", len(data.Data))
 		}
 		if _, err := io.Copy(w, bytes.NewReader(data.Data)); err != nil {
 			c.log.Error("failed to copy all bytes", "err", err)

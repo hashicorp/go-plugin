@@ -377,6 +377,8 @@ func (c *Client) Client() (ClientProtocol, error) {
 		c.client, err = newRPCClient(c)
 
 	case ProtocolGRPC:
+		//c.client, err = newRPCClient(c)
+		//
 		c.client, err = newGRPCClient(c.doneCtx, c)
 
 	default:

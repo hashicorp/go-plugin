@@ -1,3 +1,9 @@
+## v1.4.8
+
+BUG FIXES:
+
+* Fix windows build: [[GH-227](https://github.com/hashicorp/go-plugin/pull/227)]
+
 ## v1.4.7
 
 ENHANCEMENTS:

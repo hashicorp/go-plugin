@@ -7,11 +7,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
+	"regexp"
 	"strings"
 	"text/template"
 
-	proto "github.com/gogo/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -99,37 +98,45 @@ func makeFirstLetterUpperCase(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
+var pluginNameRE = regexp.MustCompile(`\d+:["]?([^"]+)["]?`)
+
+func parsePluginName(s string) string {
+	arr := pluginNameRE.FindAllStringSubmatch(s, -1)
+	if len(arr) == 0 {
+		return ""
+	}
+	if len(arr[0]) < 2 {
+		return ""
+	}
+	return arr[0][1]
+}
+
 func getServiceOptionOfPluginName(service *desc.ServiceDescriptor) string {
 	opt, ok := service.GetOptions().(*descriptorpb.ServiceOptions)
 	if !ok {
 		return service.GetName()
 	}
-	prefix := strconv.Itoa(int(E_PluginName.Field)) + ":"
-	if strings.HasPrefix(opt.String(), prefix) {
-		s := opt.String()[len(prefix):]
-		if s[0] == '"' {
-			s = s[1:]
-		}
-		if s[len(s)-1] == '"' {
-			s = s[:len(s)-1]
-		}
-		return s
+	pluginName := parsePluginName(opt.String())
+	if len(pluginName) > 0 {
+		return pluginName
 	}
+	// prefix := strconv.Itoa(int(E_PluginName.Field)) + ":"
+	// if strings.HasPrefix(opt.String(), prefix) {
+	// 	s := opt.String()[len(prefix):]
+	// 	if s[0] == '"' {
+	// 		s = s[1:]
+	// 	}
+	// 	if s[len(s)-1] == '"' {
+	// 		s = s[:len(s)-1]
+	// 	}
+	// 	return s
+	// }
 	return service.GetName()
 }
 
 func getServiceInfo(pbFile *desc.FileDescriptor) []Service {
 	out := make([]Service, 0, len(pbFile.GetServices()))
 	for _, service := range pbFile.GetServices() {
-		// if proto.HasExtension(service.GetServiceOptions(), E_PluginName) {
-		// 	opt1, err := proto.GetExtension(service.GetServiceOptions(), E_PluginName)
-		// 	if err != nil {
-		// 		log.Fatalln("GetExtension error, err=", err)
-		// 	}
-		// 	log.Printf("opt1=%+v", opt1)
-		// } else {
-		// 	log.Println("HasExtension fail")
-		// }
 		out = append(out, Service{
 			Name:       service.GetName(),
 			PluginName: getServiceOptionOfPluginName(service),
@@ -157,23 +164,19 @@ type pbStruct struct {
 	Services        []Service
 }
 
-var E_PluginName = &proto.ExtensionDesc{
-	ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
-	ExtensionType: (*string)(nil),
-	Field:         51235,
-	Name:          "grpc_plugin.plugin_name",
-	Tag:           "bytes,51235,opt,name=plugin_name",
-	Filename:      "proto/my_test_grpc_plugin.proto",
-}
+// var E_PluginName = &proto.ExtensionDesc{
+// 	ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
+// 	ExtensionType: (*string)(nil),
+// 	Field:         51235,
+// 	Name:          "grpc_plugin.plugin_name",
+// 	Tag:           "bytes,51235,opt,name=plugin_name",
+// 	Filename:      "proto/my_test_grpc_plugin.proto",
+// }
 
 func genPluginFile(fullPath string, pbFile *desc.FileDescriptor, st *pbStruct) {
 	packageName := filepath.Base(fullPath)
 	mainFile := createFile(filepath.Join(fullPath, fmt.Sprintf("%s.plugin.go", strings.ToLower(packageName))))
 	defer mainFile.Close()
-	// st := &pbStruct{
-	// 	Package:  packageName,
-	// 	Services: getServiceInfo(pbFile),
-	// }
 	err := tService.Execute(mainFile, st)
 	if err != nil {
 		log.Fatalf("write xx.plugin.go fail:%+v", err)

@@ -21,6 +21,9 @@ go install github.com/gogo/protobuf/protoc-gen-gogo
 see example: [./proto/my_test_grpc_plugin.proto]
 * define Request and Response message format
 * define a service
+  - use extension to add a plugin name:
+  - `option (plugin_name) = "my_plugin_1";`
+  - It will use service name when plugin name not set
 * use protoc to generate XX.pb.go files
 ```shell
 make pb proto_path="${HOME}/code/"

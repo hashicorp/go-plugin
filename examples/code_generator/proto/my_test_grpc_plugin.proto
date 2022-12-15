@@ -3,7 +3,6 @@ package grpc_plugin;
 option go_package = "github.com/hashicorp/go-plugin/examples/my_test_grpc_plugin";
 
 import "google/protobuf/descriptor.proto";
-//import "github.com/golang/protobuf/descriptor/"
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 extend google.protobuf.ServiceOptions {

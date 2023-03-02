@@ -1,3 +1,9 @@
+## v1.4.9
+
+ENHANCEMENTS:
+
+* client: Remove log warning introduced in 1.4.5 when SecureConfig is nil. [[GH-238](https://github.com/hashicorp/go-plugin/pull/238)]
+
 ## v1.4.8
 
 BUG FIXES:
@@ -33,5 +39,3 @@ BUG FIXES:
 
 * Bidirectional communication: fix bidirectional communication when AutoMTLS is enabled [[GH-193](https://github.com/hashicorp/go-plugin/pull/193)]
 * RPC: Trim a spurious log message for plugins using RPC [[GH-186](https://github.com/hashicorp/go-plugin/pull/186)]
-
-

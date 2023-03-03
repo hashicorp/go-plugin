@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -17,7 +18,6 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	hclog "github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 

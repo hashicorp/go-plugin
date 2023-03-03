@@ -1,8 +1,9 @@
 package shared
 
 import (
+	"context"
+
 	"github.com/hashicorp/go-plugin/examples/grpc/proto"
-	"golang.org/x/net/context"
 )
 
 // GRPCClient is an implementation of KV that talks over RPC.

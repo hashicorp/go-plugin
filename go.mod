@@ -18,7 +18,7 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
-	golang.org/x/sys v0.0.0-20191008105621-543471e840be // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
 )

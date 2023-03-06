@@ -4,6 +4,8 @@
 package shared
 
 import (
+	"sync"
+
 	hclog "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/bidirectional/proto"
@@ -21,15 +23,20 @@ func (m *GRPCClient) Put(key string, value int64, a AddHelper) error {
 	addHelperServer := &GRPCAddHelperServer{Impl: a}
 
 	var s *grpc.Server
+	var wg sync.WaitGroup
+	wg.Add(1)
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		s = grpc.NewServer(opts...)
 		proto.RegisterAddHelperServer(s, addHelperServer)
 
+		wg.Done()
 		return s
 	}
 
 	brokerID := m.broker.NextId()
 	go m.broker.AcceptAndServe(brokerID, serverFunc)
+
+	wg.Wait()
 
 	_, err := m.client.Put(context.Background(), &proto.PutRequest{
 		AddServer: brokerID,

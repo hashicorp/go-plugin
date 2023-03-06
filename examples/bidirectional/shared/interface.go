@@ -5,7 +5,8 @@
 package shared
 
 import (
-	"golang.org/x/net/context"
+	"context"
+
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"

@@ -69,8 +69,6 @@ specified to restrict the port that will be assigned to be from within a
 specific range. If not values are provided, the port will be randomly assigned
 by the operating system.
 
- * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to
- * the listener.
+ * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to the listener.
  
- * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to
- * the listener.
+ * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to the listener.

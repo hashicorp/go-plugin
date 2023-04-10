@@ -58,10 +58,15 @@ If you update the protocol buffers file, you can regenerate the file
 using the following command from this directory. You do not need to run
 this if you're just trying the example.
 
-For Go:
+For Go (you can check which versions of `protoc`, `protoc-gen-go`, and
+`protoc-gen-go-grpc` were last used by looking at the previously generated
+code):
 
 ```sh
-$ protoc -I proto/ proto/kv.proto --go_out=plugins=grpc:proto/
+$ cd proto ; protoc --proto_path=. \
+    --go_out=. --go_opt=paths=source_relative \
+    --go_grpc_out=. --go-grpc_opt=paths=source_relative \
+    kv.proto
 ```
 
 For Python:

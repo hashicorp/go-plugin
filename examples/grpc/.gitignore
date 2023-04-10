@@ -2,4 +2,5 @@
 kv
 kv-*
 kv_*
+!proto/*
 !kv_*.py

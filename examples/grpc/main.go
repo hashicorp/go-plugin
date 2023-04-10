@@ -35,8 +35,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	// Request the plugin. Iterate to allow either gRPC or net/rpc examples
+	// in this folder to work.
+	var raw interface{}
+	for pluginName := range *client.Plugins() {
+		raw, err = rpcClient.Dispense(pluginName)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)

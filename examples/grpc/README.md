@@ -46,9 +46,10 @@ $ export KV_PLUGIN="./kv-go-netrpc"
 
 ### Plugin: plugin-python
 
-This plugin is written in Python:
+This plugin is written in Python (tested on 3.7):
 
 ```
+$ pip install --user grpcio-tools grpcio-health-checking protobuf
 $ export KV_PLUGIN="python plugin-python/plugin.py"
 ```
 
@@ -69,7 +70,7 @@ $ cd proto ; protoc --proto_path=. \
     kv.proto
 ```
 
-For Python:
+For Python (last generated with Python 3.7, `grpcio-tools` 1.53.0, `protobuf` 4.22.1):
 
 ```sh
 $ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto

@@ -59,6 +59,7 @@ type GRPCServer struct {
 	Impl Counter
 
 	broker *plugin.GRPCBroker
+	proto.UnimplementedCounterServer
 }
 
 func (m *GRPCServer) Put(ctx context.Context, req *proto.PutRequest) (*proto.Empty, error) {
@@ -96,6 +97,7 @@ func (m *GRPCAddHelperClient) Sum(a, b int64) (int64, error) {
 type GRPCAddHelperServer struct {
 	// This is the real implementation
 	Impl AddHelper
+	proto.UnimplementedAddHelperServer
 }
 
 func (m *GRPCAddHelperServer) Sum(ctx context.Context, req *proto.SumRequest) (resp *proto.SumResponse, err error) {

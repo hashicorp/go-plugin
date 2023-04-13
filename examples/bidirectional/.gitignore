@@ -1,0 +1,6 @@
+counter
+counter-*
+kv
+kv-*
+kv_*
+!proto/*

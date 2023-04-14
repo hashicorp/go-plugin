@@ -367,7 +367,7 @@ func (b *GRPCBroker) Close() error {
 }
 
 // Dial opens a connection by ID.
-func (b *GRPCBroker) Dial(id uint32) (conn *grpc.ClientConn, err error) {
+func (b *GRPCBroker) Dial(id uint32, dialOpts ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
 	var c *plugin.ConnInfo
 
 	// Open the stream
@@ -392,7 +392,7 @@ func (b *GRPCBroker) Dial(id uint32) (conn *grpc.ClientConn, err error) {
 		return nil, err
 	}
 
-	return dialGRPCConn(b.tls, netAddrDialer(addr))
+	return dialGRPCConn(b.tls, netAddrDialer(addr), dialOpts...)
 }
 
 // NextId returns a unique ID to use next.

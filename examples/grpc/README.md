@@ -46,9 +46,10 @@ $ export KV_PLUGIN="./kv-go-netrpc"
 
 ### Plugin: plugin-python
 
-This plugin is written in Python:
+This plugin is written in Python (tested on 3.7):
 
 ```
+$ pip install --user grpcio-tools grpcio-health-checking protobuf
 $ export KV_PLUGIN="python plugin-python/plugin.py"
 ```
 
@@ -58,13 +59,18 @@ If you update the protocol buffers file, you can regenerate the file
 using the following command from this directory. You do not need to run
 this if you're just trying the example.
 
-For Go:
+For Go (you can check which versions of `protoc`, `protoc-gen-go`, and
+`protoc-gen-go-grpc` were last used by looking at the previously generated
+code):
 
 ```sh
-$ protoc -I proto/ proto/kv.proto --go_out=plugins=grpc:proto/
+$ cd proto ; protoc --proto_path=. \
+    --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    kv.proto
 ```
 
-For Python:
+For Python (last generated with Python 3.7, `grpcio-tools` 1.53.0, `protobuf` 4.22.1):
 
 ```sh
 $ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto

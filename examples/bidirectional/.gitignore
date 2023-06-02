@@ -1,6 +1,6 @@
-*.pyc
+counter
+counter-*
 kv
 kv-*
 kv_*
 !proto/*
-!kv_*.py

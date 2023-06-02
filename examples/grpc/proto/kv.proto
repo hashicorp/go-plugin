@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 syntax = "proto3";
+option go_package = "github.com/hashicorp/go-plugin/examples/grpc/proto";
 package proto;
 
 message GetRequest {

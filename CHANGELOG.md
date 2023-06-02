@@ -1,3 +1,13 @@
+## v1.4.10
+
+BUG FIXES:
+
+* additional notes: ensure to close files [GH-241](https://github.com/hashicorp/go-plugin/pull/241)]
+
+ENHANCEMENTS:
+
+* deps: Remove direct dependency on golang.org/x/net [GH-240](https://github.com/hashicorp/go-plugin/pull/240)]
+
 ## v1.4.9
 
 ENHANCEMENTS:

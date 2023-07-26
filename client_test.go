@@ -1367,18 +1367,13 @@ func testClient_logger(t *testing.T, proto string) {
 
 // Test that we continue to consume stderr over long lines.
 func TestClient_logStderr(t *testing.T) {
-	orig := stdErrBufferSize
-	stdErrBufferSize = 32
-	defer func() {
-		stdErrBufferSize = orig
-	}()
-
 	stderr := bytes.Buffer{}
 	c := NewClient(&ClientConfig{
 		Stderr: &stderr,
 		Cmd: &exec.Cmd{
 			Path: "test",
 		},
+		LogBufferSize: 32,
 	})
 	c.clientWaitGroup.Add(1)
 

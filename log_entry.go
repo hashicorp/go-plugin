@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"regexp"
 	"time"
 )
 
@@ -64,13 +65,28 @@ func parseJSON(input []byte) (*logEntry, error) {
 		delete(raw, "@timestamp")
 	}
 
-	// Parse dynamic KV args from the hclog payload.
-	for k, v := range raw {
-		entry.KVPairs = append(entry.KVPairs, &logEntryKV{
-			Key:   k,
-			Value: v,
-		})
+	orderedKeys := getOrderedKeys(input)
+
+	// Parse dynamic KV args from the hclog payload in order
+	for _, k := range orderedKeys {
+		if v, ok := raw[k]; ok {
+			entry.KVPairs = append(entry.KVPairs, &logEntryKV{
+				Key:   k,
+				Value: v,
+			})
+		}
 	}
 
 	return entry, nil
+}
+
+func getOrderedKeys(input []byte) []string {
+	r := regexp.MustCompile(`"([^"]+)":\s*`)
+	matches := r.FindAllStringSubmatch(string(input), -1)
+
+	keys := make([]string, len(matches))
+	for i, match := range matches {
+		keys[i] = match[1]
+	}
+	return keys
 }

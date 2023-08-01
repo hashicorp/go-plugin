@@ -4,8 +4,9 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
-	"regexp"
+	"sort"
 	"time"
 )
 
@@ -21,6 +22,12 @@ type logEntry struct {
 type logEntryKV struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
+}
+
+// jsonKey has the log key and its position in the raw log. It's used for ordering
+type jsonKey struct {
+	key      string
+	position int
 }
 
 // flattenKVPairs is used to flatten KVPair slice into []interface{}
@@ -65,28 +72,34 @@ func parseJSON(input []byte) (*logEntry, error) {
 		delete(raw, "@timestamp")
 	}
 
-	orderedKeys := getOrderedKeys(input)
+	orderedKeys := getOrderedKeys(input, raw)
 
 	// Parse dynamic KV args from the hclog payload in order
 	for _, k := range orderedKeys {
-		if v, ok := raw[k]; ok {
-			entry.KVPairs = append(entry.KVPairs, &logEntryKV{
-				Key:   k,
-				Value: v,
-			})
-		}
+		entry.KVPairs = append(entry.KVPairs, &logEntryKV{
+			Key:   k.key,
+			Value: raw[k.key],
+		})
 	}
 
 	return entry, nil
 }
 
-func getOrderedKeys(input []byte) []string {
-	r := regexp.MustCompile(`"([^"]+)":\s*`)
-	matches := r.FindAllStringSubmatch(string(input), -1)
+// getOrderedKeys returns the log keys ordered according to their original order of appearance
+func getOrderedKeys(input []byte, raw map[string]interface{}) []jsonKey {
+	var orderedKeys []jsonKey
 
-	keys := make([]string, len(matches))
-	for i, match := range matches {
-		keys[i] = match[1]
+	for key := range raw {
+		position := bytes.Index(input, []byte("\""+key+"\":"))
+		orderedKeys = append(orderedKeys, jsonKey{
+			key,
+			position,
+		})
 	}
-	return keys
+
+	sort.Slice(orderedKeys, func(i, j int) bool {
+		return orderedKeys[i].position < orderedKeys[j].position
+	})
+
+	return orderedKeys
 }

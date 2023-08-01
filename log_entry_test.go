@@ -5,19 +5,23 @@ package plugin
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 )
 
 func TestParseJson(t *testing.T) {
 	keys := []string{"firstKey", "secondKey", "thirdKey"}
+	raw := map[string]interface{}{
+		keys[0]: "thirdKey", // we use keys as values to test correct key matching
+		keys[1]: "secondKey",
+		keys[2]: "firstKey",
+	}
 
 	input := []byte(
 		fmt.Sprintf(
-			`{"@level":"info","@message":"msg","@timestamp":"2023-07-28T17:50:47.333365+02:00","%s":"1","%s":"2","%s":"3"}`,
-			keys[0],
-			keys[1],
-			keys[2],
+			`{"@level":"info","@message":"msg","@timestamp":"2023-07-28T17:50:47.333365+02:00","%s":"%s","%s":"%s","%s":"%s"}`,
+			keys[0], raw[keys[0]],
+			keys[1], raw[keys[1]],
+			keys[2], raw[keys[2]],
 		),
 	)
 
@@ -30,33 +34,12 @@ func TestParseJson(t *testing.T) {
 
 		for i := 0; i < len(keys); i++ {
 			if keys[i] != entry.KVPairs[i].Key {
-				t.Fatalf("expected: %v\ngot: %v", keys[i], entry.KVPairs[i].Key)
+				t.Fatalf("expected key: %v\ngot key: %v", keys[i], entry.KVPairs[i].Key)
+			}
+			if raw[keys[i]] != entry.KVPairs[i].Value {
+				t.Fatalf("expected value: %v\ngot value: %v", keys[i], entry.KVPairs[i].Key)
 			}
 		}
 	}
 
-}
-
-func TestGetOrderedKeys(t *testing.T) {
-	hclogKeys := []string{"@level", "@message", "@timestamp"}
-	customKeys := []string{"firstKey", "secondKey", "thirdKey"}
-
-	input := []byte(
-		fmt.Sprintf(
-			`{"%s":"info","%s":"msg","%s":"2023-07-28T17:50:47.333365+02:00","%s":"1","%s":"2","%s":"3"}`,
-			hclogKeys[0],
-			hclogKeys[1],
-			hclogKeys[2],
-			customKeys[0],
-			customKeys[1],
-			customKeys[2],
-		),
-	)
-
-	expectedKeys := append(hclogKeys, customKeys...)
-	actualKeys := getOrderedKeys(input)
-
-	if !reflect.DeepEqual(expectedKeys, actualKeys) {
-		t.Fatalf("expected: %v\ngot: %v", expectedKeys, actualKeys)
-	}
 }

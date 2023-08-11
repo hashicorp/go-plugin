@@ -1,3 +1,9 @@
+## v1.4.11-rc1
+
+ENHANCEMENTS:
+
+* deps: bump protoreflect to v1.15.1 [GH-264](https://github.com/hashicorp/go-plugin/pull/264)]
+
 ## v1.4.10
 
 BUG FIXES:

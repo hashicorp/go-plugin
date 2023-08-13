@@ -819,7 +819,34 @@ func TestClient_Stdin(t *testing.T) {
 		t.Fatal("process didn't exit cleanly")
 	}
 }
+func TestClient_StdinBuffer(t *testing.T) {
 
+	process := helperProcess("stdin")
+	process.Stdin = bytes.NewBufferString("hello")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+	})
+	defer c.Kill()
+
+	_, err := c.Start()
+	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+
+	for {
+		if c.Exited() {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if !process.ProcessState.Success() {
+		t.Fatal("process didn't exit cleanly")
+	}
+}
 func TestClient_SecureConfig(t *testing.T) {
 	// Test failure case
 	secureConfig := &SecureConfig{

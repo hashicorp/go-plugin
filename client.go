@@ -557,7 +557,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	cmd := c.config.Cmd
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, env...)
-	cmd.Stdin = os.Stdin
+	if cmd.Stdin == nil {
+		cmd.Stdin = os.Stdin
+	}
 
 	cmdStdout, err := cmd.StdoutPipe()
 	if err != nil {

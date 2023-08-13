@@ -88,6 +88,10 @@ type ServeConfig struct {
 	// server will create a default logger.
 	Logger hclog.Logger
 
+	// NetworkType determines what type of network the server will listen on. Valid options are "tcp" and "unix. If
+	// no NetworkType is specified, the server will default to "tcp" on Windows, and "unix" otherwise.
+	NetworkType string
+
 	// Test, if non-nil, will put plugin serving into "test mode". This is
 	// meant to be used as part of `go test` within a plugin's codebase to
 	// launch the plugin in-process and output a ReattachConfig.
@@ -273,7 +277,7 @@ func Serve(opts *ServeConfig) {
 	}
 
 	// Register a listener so we can accept a connection
-	listener, err := serverListener()
+	listener, err := serverListener(opts.NetworkType)
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
 		return
@@ -496,8 +500,12 @@ func Serve(opts *ServeConfig) {
 	}
 }
 
-func serverListener() (net.Listener, error) {
-	if runtime.GOOS == "windows" {
+func serverListener(networkType string) (net.Listener, error) {
+	if networkType == "tcp" {
+		return serverListener_tcp()
+	} else if networkType == "unix" {
+		return serverListener_unix()
+	} else if networkType == "" && runtime.GOOS == "windows" {
 		return serverListener_tcp()
 	}
 

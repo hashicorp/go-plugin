@@ -273,7 +273,7 @@ func Serve(opts *ServeConfig) {
 	}
 
 	// Register a listener so we can accept a connection
-	listener, err := serverListener()
+	listener, err := serverListener(os.Getenv(EnvUnixSocketDir))
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
 		return
@@ -476,6 +476,7 @@ func Serve(opts *ServeConfig) {
 		// Cancellation. We can stop the server by closing the listener.
 		// This isn't graceful at all but this is currently only used by
 		// tests and its our only way to stop.
+		logger.Trace("context done")
 		listener.Close()
 
 		// If this is a grpc server, then we also ask the server itself to
@@ -487,21 +488,23 @@ func Serve(opts *ServeConfig) {
 
 		// Wait for the server itself to shut down
 		<-doneCh
+		logger.Trace("server finished shutting down")
 
 	case <-doneCh:
 		// Note that given the documentation of Serve we should probably be
 		// setting exitCode = 0 and using os.Exit here. That's how it used to
 		// work before extracting this library. However, for years we've done
 		// this so we'll keep this functionality.
+		logger.Trace("shutting down")
 	}
 }
 
-func serverListener() (net.Listener, error) {
+func serverListener(dir string) (net.Listener, error) {
 	if runtime.GOOS == "windows" {
 		return serverListener_tcp()
 	}
 
-	return serverListener_unix()
+	return serverListener_unix(dir)
 }
 
 func serverListener_tcp() (net.Listener, error) {
@@ -546,8 +549,8 @@ func serverListener_tcp() (net.Listener, error) {
 	return nil, errors.New("Couldn't bind plugin TCP listener")
 }
 
-func serverListener_unix() (net.Listener, error) {
-	tf, err := ioutil.TempFile("", "plugin")
+func serverListener_unix(dir string) (net.Listener, error) {
+	tf, err := ioutil.TempFile(dir, "plugin")
 	if err != nil {
 		return nil, err
 	}
@@ -565,6 +568,25 @@ func serverListener_unix() (net.Listener, error) {
 	l, err := net.Listen("unix", path)
 	if err != nil {
 		return nil, err
+	}
+
+	// By default, unix sockets are only writable by the owner. Set up a custom
+	// group owner and group write permissions if configured.
+	if groupString := os.Getenv(EnvUnixSocketGroup); groupString != "" {
+		group, err := strconv.Atoi(groupString)
+		if err != nil {
+			return nil, fmt.Errorf("non-integer %s environment variable specified: %s", EnvUnixSocketGroup, groupString)
+		}
+
+		err = os.Chown(path, -1, group)
+		if err != nil {
+			return nil, err
+		}
+
+		err = os.Chmod(path, 0o660)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Wrap the listener in rmListener so that the Unix domain socket file

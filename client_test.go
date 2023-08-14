@@ -224,7 +224,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1161,7 +1161,7 @@ func TestClient_versionedClient(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1217,7 +1217,7 @@ func TestClient_mtlsClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1263,7 +1263,7 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():

@@ -220,6 +220,9 @@ type ClientConfig struct {
 	// to create gRPC connections. This only affects plugins using the gRPC
 	// protocol.
 	GRPCDialOptions []grpc.DialOption
+	
+	// GracefulStopTimeout is the timeout to wait for the plugin stop.
+	GracefulStopTimeout time.Duration
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -336,6 +339,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 
 	if config.AllowedProtocols == nil {
 		config.AllowedProtocols = []Protocol{ProtocolNetRPC}
+	}
+	
+	if config.GracefulStopTimeout == 0 {
+		config.GracefulStopTimeout = 2 * time.Second
 	}
 
 	if config.Logger == nil {
@@ -471,7 +478,7 @@ func (c *Client) Kill() {
 		case <-c.doneCtx.Done():
 			c.logger.Debug("plugin exited")
 			return
-		case <-time.After(2 * time.Second):
+		case <-time.After(c.config.GracefulStopTimeout):
 		}
 	}
 

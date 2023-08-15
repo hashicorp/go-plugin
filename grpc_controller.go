@@ -20,7 +20,6 @@ type grpcControllerServer struct {
 func (s *grpcControllerServer) Shutdown(ctx context.Context, _ *plugin.Empty) (*plugin.Empty, error) {
 	resp := &plugin.Empty{}
 
-	// TODO: figure out why GracefullStop doesn't work.
-	s.server.Stop()
+	go s.server.GracefulStop()
 	return resp, nil
 }

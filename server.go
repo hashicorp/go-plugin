@@ -476,7 +476,6 @@ func Serve(opts *ServeConfig) {
 		// Cancellation. We can stop the server by closing the listener.
 		// This isn't graceful at all but this is currently only used by
 		// tests and its our only way to stop.
-		logger.Trace("context done")
 		listener.Close()
 
 		// If this is a grpc server, then we also ask the server itself to
@@ -488,14 +487,12 @@ func Serve(opts *ServeConfig) {
 
 		// Wait for the server itself to shut down
 		<-doneCh
-		logger.Trace("server finished shutting down")
 
 	case <-doneCh:
 		// Note that given the documentation of Serve we should probably be
 		// setting exitCode = 0 and using os.Exit here. That's how it used to
 		// work before extracting this library. However, for years we've done
 		// this so we'll keep this functionality.
-		logger.Trace("shutting down")
 	}
 }
 

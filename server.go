@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -547,7 +546,7 @@ func serverListener_tcp() (net.Listener, error) {
 }
 
 func serverListener_unix(dir string) (net.Listener, error) {
-	tf, err := ioutil.TempFile(dir, "plugin")
+	tf, err := os.CreateTemp(dir, "plugin")
 	if err != nil {
 		return nil, err
 	}

@@ -440,6 +440,7 @@ func (c *Client) Kill() {
 	c.l.Lock()
 	runner := c.runner
 	addr := c.address
+	hostSocketDir := c.hostSocketDir
 	c.l.Unlock()
 
 	// If there is no runner or ID, there is nothing to kill.
@@ -450,6 +451,10 @@ func (c *Client) Kill() {
 	defer func() {
 		// Wait for the all client goroutines to finish.
 		c.clientWaitGroup.Wait()
+
+		if hostSocketDir != "" {
+			os.RemoveAll(hostSocketDir)
+		}
 
 		// Make sure there is no reference to the old process after it has been
 		// killed.
@@ -538,7 +543,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		attachSet := c.config.Reattach != nil
 		secureSet := c.config.SecureConfig != nil
 		if cmdSet == attachSet {
-			return nil, fmt.Errorf("Only one of Cmd or Reattach must be set")
+			return nil, fmt.Errorf("Exactly one of Cmd or Reattach must be set")
 		}
 
 		if secureSet && attachSet {

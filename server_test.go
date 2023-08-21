@@ -6,10 +6,12 @@ package plugin
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"net"
 	"os"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -195,7 +197,7 @@ func TestRmListener(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	tf, err := ioutil.TempFile("", "plugin")
+	tf, err := os.CreateTemp("", "plugin")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -306,5 +308,75 @@ func TestServer_testStdLogger(t *testing.T) {
 
 	if !strings.Contains(logOut.String(), "test log") {
 		t.Fatalf("expected: %q\ngot: %q", "test log", logOut.String())
+	}
+}
+
+func TestUnixSocketDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets not supported on Windows")
+	}
+
+	tmpDir := t.TempDir()
+	t.Setenv(EnvUnixSocketDir, tmpDir)
+
+	closeCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// make a server, but we don't need to attach to it
+	ch := make(chan *ReattachConfig, 1)
+	go Serve(&ServeConfig{
+		HandshakeConfig: testHandshake,
+		Plugins:         testGRPCPluginMap,
+		GRPCServer:      DefaultGRPCServer,
+		Logger:          hclog.NewNullLogger(),
+		Test: &ServeTestConfig{
+			Context:          ctx,
+			CloseCh:          closeCh,
+			ReattachConfigCh: ch,
+		},
+	})
+
+	// Wait for the server
+	var cfg *ReattachConfig
+	select {
+	case cfg = <-ch:
+		if cfg == nil {
+			t.Fatal("attach config should not be nil")
+		}
+	case <-time.After(2000 * time.Millisecond):
+		t.Fatal("should've received reattach")
+	}
+
+	actualDir := path.Clean(path.Dir(cfg.Addr.String()))
+	expectedDir := path.Clean(tmpDir)
+	if actualDir != expectedDir {
+		t.Fatalf("Expected socket in dir: %s, but was in %s", expectedDir, actualDir)
+	}
+
+	// shut down the server so there's no race on the buffer
+	cancel()
+	<-closeCh
+}
+
+func TestUnixSocketGroupPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets not supported on Windows")
+	}
+
+	t.Setenv(EnvUnixSocketGroup, fmt.Sprintf("%d", os.Getgid()))
+
+	ln, err := serverListener_unix("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	info, err := os.Lstat(ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModePerm != 0o660 {
+		t.Fatal(info.Mode())
 	}
 }

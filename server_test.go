@@ -354,7 +354,6 @@ func TestUnixSocketDir(t *testing.T) {
 		t.Fatalf("Expected socket in dir: %s, but was in %s", expectedDir, actualDir)
 	}
 
-	// shut down the server so there's no race on the buffer
 	cancel()
 	<-closeCh
 }

@@ -1,15 +1,26 @@
-package runner
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package cmdrunner
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/runner"
 )
 
-var _ runner.Runner = (*CmdRunner)(nil)
+var (
+	_ runner.Runner = (*CmdRunner)(nil)
+
+	// ErrProcessNotFound is returned when a client is instantiated to
+	// reattach to an existing process and it isn't found.
+	ErrProcessNotFound = errors.New("Reattachment process not found")
+)
 
 // CmdRunner implements the Executor interface. It mostly just passes through
 // to exec.Cmd methods.
@@ -24,9 +35,12 @@ type CmdRunner struct {
 	// after Kill is called.
 	path string
 	pid  int
+
+	addrTranslator
 }
 
-// NewCmdRunner must be passed a cmd that hasn't yet been started.
+// NewCmdRunner returns an implementation of runner.Runner for running a plugin
+// as a subprocess. It must be passed a cmd that hasn't yet been started.
 func NewCmdRunner(logger hclog.Logger, cmd *exec.Cmd) (*CmdRunner, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -55,7 +69,7 @@ func (c *CmdRunner) Start() error {
 	}
 
 	c.pid = c.cmd.Process.Pid
-	c.logger.Debug("plugin started", "path", c.cmd.Path, "pid", c.cmd.Process.Pid)
+	c.logger.Debug("plugin started", "path", c.path, "pid", c.pid)
 	return nil
 }
 
@@ -65,7 +79,12 @@ func (c *CmdRunner) Wait() error {
 
 func (c *CmdRunner) Kill() error {
 	if c.cmd.Process != nil {
-		return c.cmd.Process.Kill()
+		err := c.cmd.Process.Kill()
+		// Swallow ErrProcessDone, we support calling Kill multiple times.
+		if !errors.Is(err, os.ErrProcessDone) {
+			return err
+		}
+		return nil
 	}
 
 	return nil
@@ -77,14 +96,6 @@ func (c *CmdRunner) Stdout() io.ReadCloser {
 
 func (c *CmdRunner) Stderr() io.ReadCloser {
 	return c.stderr
-}
-
-func (c *CmdRunner) PluginToHost(pluginNet, pluginAddr string) (string, string, error) {
-	return pluginNet, pluginAddr, nil
-}
-
-func (c *CmdRunner) HostToPlugin(hostNet, hostAddr string) (string, string, error) {
-	return hostNet, hostAddr, nil
 }
 
 func (c *CmdRunner) Name() string {

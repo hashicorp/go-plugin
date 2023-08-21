@@ -1392,7 +1392,7 @@ this line is short
 	reader := strings.NewReader(msg)
 
 	c.stderrWaitGroup.Add(1)
-	c.logStderr(reader)
+	c.logStderr(c.config.Cmd.Path, reader)
 	read := stderr.String()
 
 	if read != msg {

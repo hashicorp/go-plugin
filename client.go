@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	cmdrunner "github.com/hashicorp/go-plugin/internal/runner"
+	"github.com/hashicorp/go-plugin/internal/cmdrunner"
 	"github.com/hashicorp/go-plugin/runner"
 	"google.golang.org/grpc"
 )
@@ -54,7 +54,7 @@ var managedClientsLock sync.Mutex
 var (
 	// ErrProcessNotFound is returned when a client is instantiated to
 	// reattach to an existing process and it isn't found.
-	ErrProcessNotFound = errors.New("Reattachment process not found")
+	ErrProcessNotFound = cmdrunner.ErrProcessNotFound
 
 	// ErrChecksumsDoNotMatch is returned when binary's checksum doesn't match
 	// the one provided in the SecureConfig.
@@ -89,7 +89,7 @@ type Client struct {
 	exited            bool
 	l                 sync.Mutex
 	address           net.Addr
-	runner            runner.Runner
+	runner            runner.AttachedRunner
 	client            ClientProtocol
 	protocol          Protocol
 	logger            hclog.Logger
@@ -145,6 +145,11 @@ type ClientConfig struct {
 	Cmd      *exec.Cmd
 	Reattach *ReattachConfig
 
+	// RunnerFunc allows consumers to provide their own implementation of
+	// runner.Runner and control the context within which a plugin is executed.
+	// The cmd argument will have been copied from the config and populated with
+	// environment variables that a go-plugin server expects to read such as
+	// AutoMTLS certs and the magic cookie key.
 	RunnerFunc func(l hclog.Logger, cmd *exec.Cmd, tmpDir string) (runner.Runner, error)
 
 	// SecureConfig is configuration for verifying the integrity of the
@@ -240,6 +245,11 @@ type ReattachConfig struct {
 	ProtocolVersion int
 	Addr            net.Addr
 	Pid             int
+
+	// ReattachFunc allows consumers to provide their own implementation of
+	// runner.ReattachedRunner and attach to something other than a plain process.
+	// At least one of Pid or ReattachFunc must be set.
+	ReattachFunc runner.ReattachFunc
 
 	// Test is set to true if this is reattaching to to a plugin in "test mode"
 	// (see ServeConfig.Test). In this mode, client.Kill will NOT kill the
@@ -487,7 +497,9 @@ func (c *Client) Kill() {
 
 	// If graceful exiting failed, just kill it
 	c.logger.Warn("plugin failed to exit gracefully")
-	runner.Kill()
+	if err := runner.Kill(); err != nil {
+		c.logger.Debug("error killing plugin", "error", err)
+	}
 
 	c.l.Lock()
 	c.processKilled = true
@@ -604,6 +616,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
+	var runner runner.Runner
 	switch {
 	case c.config.RunnerFunc != nil:
 		c.hostSocketDir, err = os.MkdirTemp("", "")
@@ -611,19 +624,20 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			return nil, err
 		}
 		c.logger.Trace("created temporary directory for unix sockets", "dir", c.hostSocketDir)
-		c.runner, err = c.config.RunnerFunc(c.logger, cmd, c.hostSocketDir)
+		runner, err = c.config.RunnerFunc(c.logger, cmd, c.hostSocketDir)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		c.runner, err = cmdrunner.NewCmdRunner(c.logger, cmd)
+		runner, err = cmdrunner.NewCmdRunner(c.logger, cmd)
 		if err != nil {
 			return nil, err
 		}
 
 	}
 
-	err = c.runner.Start()
+	c.runner = runner
+	err = runner.Start()
 	if err != nil {
 		return nil, err
 	}
@@ -633,7 +647,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		rErr := recover()
 
 		if err != nil || rErr != nil {
-			c.runner.Kill()
+			runner.Kill()
 		}
 
 		if rErr != nil {
@@ -648,7 +662,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	c.clientWaitGroup.Add(1)
 	c.stderrWaitGroup.Add(1)
 	// logStderr calls Done()
-	go c.logStderr(c.runner.Stderr())
+	go c.logStderr(runner.Name(), runner.Stderr())
 
 	c.clientWaitGroup.Add(1)
 	go func() {
@@ -662,12 +676,12 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		c.stderrWaitGroup.Wait()
 
 		// Wait for the command to end.
-		err := c.runner.Wait()
+		err := runner.Wait()
 		if err != nil {
-			c.logger.Error("plugin process exited", "plugin", c.runner.Name(), "id", c.runner.ID(), "error", err.Error())
+			c.logger.Error("plugin process exited", "plugin", runner.Name(), "id", runner.ID(), "error", err.Error())
 		} else {
 			// Log and make sure to flush the logs right away
-			c.logger.Info("plugin process exited", "plugin", c.runner.Name(), "id", c.runner.ID())
+			c.logger.Info("plugin process exited", "plugin", runner.Name(), "id", runner.ID())
 		}
 
 		os.Stderr.Sync()
@@ -686,7 +700,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		defer c.clientWaitGroup.Done()
 		defer close(linesCh)
 
-		scanner := bufio.NewScanner(c.runner.Stdout())
+		scanner := bufio.NewScanner(runner.Stdout())
 		for scanner.Scan() {
 			linesCh <- scanner.Text()
 		}
@@ -759,7 +773,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		c.negotiatedVersion = version
 		c.logger.Debug("using plugin", "version", version)
 
-		network, address, err := c.runner.PluginToHost(parts[2], parts[3])
+		network, address, err := runner.PluginToHost(parts[2], parts[3])
 		if err != nil {
 			return addr, err
 		}
@@ -770,7 +784,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		case "unix":
 			addr, err = net.ResolveUnixAddr("unix", address)
 		default:
-			return nil, fmt.Errorf("Unknown address type: %s", address)
+			err = fmt.Errorf("Unknown address type: %s", address)
 		}
 
 		// If we have a server type, then record that. We default to net/rpc
@@ -831,39 +845,30 @@ func (c *Client) loadServerCert(cert string) error {
 }
 
 func (c *Client) reattach() (net.Addr, error) {
-	// Verify the process still exists. If not, then it is an error
-	p, err := os.FindProcess(c.config.Reattach.Pid)
-	if err != nil {
-		// On Unix systems, FindProcess never returns an error.
-		// On Windows, for non-existent pids it returns:
-		// os.SyscallError - 'OpenProcess: the paremter is incorrect'
-		return nil, ErrProcessNotFound
+	reattachFunc := c.config.Reattach.ReattachFunc
+	// For backwards compatibility default to cmdrunner.ReattachFunc
+	if reattachFunc == nil {
+		reattachFunc = cmdrunner.ReattachFunc(c.config.Reattach.Pid, c.config.Reattach.Addr)
 	}
 
-	// Attempt to connect to the addr since on Unix systems FindProcess
-	// doesn't actually return an error if it can't find the process.
-	conn, err := net.Dial(
-		c.config.Reattach.Addr.Network(),
-		c.config.Reattach.Addr.String())
+	r, err := reattachFunc()
 	if err != nil {
-		p.Kill()
-		return nil, ErrProcessNotFound
+		return nil, err
 	}
-	conn.Close()
 
 	// Create a context for when we kill
 	c.doneCtx, c.ctxCancel = context.WithCancel(context.Background())
 
 	c.clientWaitGroup.Add(1)
 	// Goroutine to mark exit status
-	go func(pid int) {
+	go func(r runner.AttachedRunner) {
 		defer c.clientWaitGroup.Done()
 
 		// ensure the context is cancelled when we're done
 		defer c.ctxCancel()
 
 		// Wait for the process to die
-		pidWait(pid)
+		r.Wait()
 
 		// Log so we can see it
 		c.logger.Debug("reattached plugin process exited")
@@ -872,7 +877,7 @@ func (c *Client) reattach() (net.Addr, error) {
 		c.l.Lock()
 		defer c.l.Unlock()
 		c.exited = true
-	}(p.Pid)
+	}(r)
 
 	// Set the address and protocol
 	c.address = c.config.Reattach.Addr
@@ -890,7 +895,7 @@ func (c *Client) reattach() (net.Addr, error) {
 	// process being killed (the only purpose we have for c.process), since
 	// in test mode the process is responsible for exiting on its own.
 	if !c.config.Reattach.Test {
-		// c.process = p
+		c.runner = r
 	}
 
 	return c.address, nil
@@ -1002,10 +1007,10 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 
 var stdErrBufferSize = 64 * 1024
 
-func (c *Client) logStderr(r io.Reader) {
+func (c *Client) logStderr(name string, r io.Reader) {
 	defer c.clientWaitGroup.Done()
 	defer c.stderrWaitGroup.Done()
-	l := c.logger.Named(filepath.Base(c.runner.Name()))
+	l := c.logger.Named(filepath.Base(name))
 
 	reader := bufio.NewReaderSize(r, stdErrBufferSize)
 	// continuation indicates the previous line was a prefix

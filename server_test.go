@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -312,10 +311,6 @@ func TestServer_testStdLogger(t *testing.T) {
 }
 
 func TestUnixSocketDir(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Unix sockets not supported on Windows")
-	}
-
 	tmpDir := t.TempDir()
 	t.Setenv(EnvUnixSocketDir, tmpDir)
 
@@ -359,10 +354,6 @@ func TestUnixSocketDir(t *testing.T) {
 }
 
 func TestUnixSocketGroupPermissions(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Unix sockets not supported on Windows")
-	}
-
 	t.Setenv(EnvUnixSocketGroup, fmt.Sprintf("%d", os.Getgid()))
 
 	ln, err := serverListener_unix("")

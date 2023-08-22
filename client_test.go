@@ -25,20 +25,12 @@ import (
 	"github.com/hashicorp/go-plugin/runner"
 )
 
-func testLogger(t *testing.T) hclog.Logger {
-	return hclog.New(&hclog.LoggerOptions{
-		Level:           hclog.Trace,
-		IncludeLocation: true,
-	}).With("test", t.Name())
-}
-
 func TestClient(t *testing.T) {
 	process := helperProcess("mock")
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -82,7 +74,7 @@ func TestClient_killStart(t *testing.T) {
 	// Start the client
 	path := filepath.Join(td, "booted")
 	process := helperProcess("bad-version", path)
-	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake, Logger: testLogger(t)})
+	c := NewClient(&ClientConfig{Cmd: process, HandshakeConfig: testHandshake})
 	defer c.Kill()
 
 	// Verify our path doesn't exist
@@ -138,7 +130,6 @@ func TestClient_testCleanup(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	// Grab the client so the process starts
@@ -162,7 +153,6 @@ func TestClient_testInterface(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -208,7 +198,6 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		HandshakeConfig:  testHandshake,
 		Plugins:          testGRPCPluginMap,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -253,7 +242,6 @@ func TestClient_grpc(t *testing.T) {
 		HandshakeConfig:  testHandshake,
 		Plugins:          testGRPCPluginMap,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -306,7 +294,6 @@ func TestClient_grpcNotAllowed(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -333,7 +320,6 @@ func TestClient_grpcSyncStdio(t *testing.T) {
 				AllowedProtocols: []Protocol{ProtocolGRPC},
 				SyncStdout:       &syncOut,
 				SyncStderr:       &syncErr,
-				Logger:           testLogger(t),
 			}
 
 			if tc.useRunnerFunc {
@@ -394,7 +380,6 @@ func TestClient_cmdAndReattach(t *testing.T) {
 	config := &ClientConfig{
 		Cmd:      helperProcess("start-timeout"),
 		Reattach: &ReattachConfig{},
-		Logger:   testLogger(t),
 	}
 
 	c := NewClient(config)
@@ -412,7 +397,6 @@ func TestClient_reattach(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -430,7 +414,6 @@ func TestClient_reattach(t *testing.T) {
 		Reattach:        reattach,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	// Grab the RPC client
@@ -474,7 +457,6 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -493,7 +475,6 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 		Reattach:        reattach,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	// Grab the RPC client
@@ -545,7 +526,6 @@ func TestClient_reattachGRPC(t *testing.T) {
 				HandshakeConfig:  testHandshake,
 				Plugins:          testGRPCPluginMap,
 				AllowedProtocols: []Protocol{ProtocolGRPC},
-				Logger:           testLogger(t),
 			})
 			defer c.Kill()
 
@@ -570,7 +550,6 @@ func TestClient_reattachGRPC(t *testing.T) {
 				HandshakeConfig:  testHandshake,
 				Plugins:          testGRPCPluginMap,
 				AllowedProtocols: []Protocol{ProtocolGRPC},
-				Logger:           testLogger(t),
 			})
 
 			// Grab the RPC client
@@ -636,7 +615,6 @@ func TestClient_reattachNotFound(t *testing.T) {
 		},
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	if _, err := c.Start(); err == nil {
@@ -652,7 +630,6 @@ func TestClientStart_badVersion(t *testing.T) {
 		StartTimeout:    50 * time.Millisecond,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	}
 
 	c := NewClient(config)
@@ -671,7 +648,6 @@ func TestClientStart_badNegotiatedVersion(t *testing.T) {
 		// test-versioned-plugins only has version 2
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	}
 
 	c := NewClient(config)
@@ -690,7 +666,6 @@ func TestClient_Start_Timeout(t *testing.T) {
 		StartTimeout:    50 * time.Millisecond,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	}
 
 	c := NewClient(config)
@@ -710,7 +685,6 @@ func TestClient_Stderr(t *testing.T) {
 		Stderr:          stderr,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -747,7 +721,7 @@ func TestClient_StderrJSON(t *testing.T) {
 		Level:  hclog.Trace,
 		Output: &logBuf,
 		Mutex:  mutex,
-	}).With("test", t.Name())
+	})
 
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
@@ -772,11 +746,11 @@ func TestClient_StderrJSON(t *testing.T) {
 
 	logOut := logBuf.String()
 
-	if !strings.Contains(logOut, "[\"HELLO\"]") {
+	if !strings.Contains(logOut, "[\"HELLO\"]\n") {
 		t.Fatalf("missing json list: '%s'", logOut)
 	}
 
-	if !strings.Contains(logOut, "12345") {
+	if !strings.Contains(logOut, "12345\n") {
 		t.Fatalf("missing line with raw number: '%s'", logOut)
 	}
 
@@ -797,7 +771,7 @@ func TestClient_textLogLevel(t *testing.T) {
 		Level:  hclog.Warn,
 		Output: &logBuf,
 		Mutex:  mutex,
-	}).With("test", t.Name())
+	})
 
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
@@ -857,7 +831,6 @@ func TestClient_Stdin(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -891,7 +864,6 @@ func TestClient_SecureConfig(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
 		SecureConfig:    secureConfig,
-		Logger:          testLogger(t),
 	})
 
 	// Grab the RPC client, should error
@@ -928,7 +900,6 @@ func TestClient_SecureConfig(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
 		SecureConfig:    secureConfig,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -946,7 +917,6 @@ func TestClient_TLS(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer cBad.Kill()
 
@@ -976,7 +946,6 @@ func TestClient_TLS(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
 		TLSConfig:       tlsConfig,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1029,7 +998,6 @@ func TestClient_TLS_grpc(t *testing.T) {
 		Plugins:          testGRPCPluginMap,
 		TLSConfig:        tlsConfig,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1071,7 +1039,6 @@ func TestClient_secureConfigAndReattach(t *testing.T) {
 	config := &ClientConfig{
 		SecureConfig: &SecureConfig{},
 		Reattach:     &ReattachConfig{},
-		Logger:       testLogger(t),
 	}
 
 	c := NewClient(config)
@@ -1089,7 +1056,6 @@ func TestClient_ping(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1118,7 +1084,6 @@ func TestClient_wrongVersion(t *testing.T) {
 		HandshakeConfig:  testHandshake,
 		Plugins:          testGRPCPluginMap,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1138,7 +1103,6 @@ func TestClient_legacyClient(t *testing.T) {
 		VersionedPlugins: map[int]PluginSet{
 			1: testPluginMap,
 		},
-		Logger: testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1169,7 +1133,6 @@ func TestClient_legacyServer(t *testing.T) {
 			2: testGRPCPluginMap,
 		},
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1198,7 +1161,6 @@ func TestClient_versionedClient(t *testing.T) {
 			2: testGRPCPluginMap,
 		},
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1250,7 +1212,6 @@ func TestClient_mtlsClient(t *testing.T) {
 			2: testGRPCPluginMap,
 		},
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1305,7 +1266,6 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 		HandshakeConfig:  testVersionedHandshake,
 		Plugins:          testPluginMap,
 		AllowedProtocols: []Protocol{ProtocolNetRPC},
-		Logger:           testLogger(t),
 	})
 	defer c.Kill()
 
@@ -1359,7 +1319,7 @@ func testClient_logger(t *testing.T, proto string) {
 		Level:  hclog.Trace,
 		Output: stderr,
 		Mutex:  mutex,
-	}).With("test", t.Name())
+	})
 
 	process := helperProcess("test-interface-logger-" + proto)
 	c := NewClient(&ClientConfig{
@@ -1451,7 +1411,6 @@ func TestClient_logStderr(t *testing.T) {
 		Cmd: &exec.Cmd{
 			Path: "test",
 		},
-		Logger: testLogger(t),
 	})
 	c.clientWaitGroup.Add(1)
 

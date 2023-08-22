@@ -27,7 +27,6 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	// Start it so we can get the reattach info
@@ -55,7 +54,6 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 		Reattach:        reattach,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
-		Logger:          testLogger(t),
 	})
 
 	// Start shouldn't error

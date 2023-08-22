@@ -59,7 +59,6 @@ func TestServer_testMode(t *testing.T) {
 		Plugins:          testGRPCPluginMap,
 		Reattach:         config,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
-		Logger:           testLogger(t),
 	})
 	client, err := c.Client()
 	if err != nil {
@@ -99,7 +98,7 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 			2: testGRPCPluginMap,
 		},
 		GRPCServer: DefaultGRPCServer,
-		Logger:     testLogger(t).With("plugin", "test"),
+		Logger:     hclog.NewNullLogger(),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			ReattachConfigCh: nil,
@@ -117,7 +116,6 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 		},
 		AllowedProtocols: []Protocol{ProtocolGRPC},
 		AutoMTLS:         true,
-		Logger:           testLogger(t),
 	})
 	client, err := c.Client()
 	if err != nil {
@@ -285,7 +283,7 @@ func TestServer_testStdLogger(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,
-		Logger:          testLogger(t).With("plugin", "test"),
+		Logger:          hclog.NewNullLogger(),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			CloseCh:          closeCh,
@@ -331,7 +329,7 @@ func TestUnixSocketDir(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,
-		Logger:          testLogger(t).With("plugin", "test"),
+		Logger:          hclog.NewNullLogger(),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			CloseCh:          closeCh,

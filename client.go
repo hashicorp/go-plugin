@@ -497,7 +497,6 @@ func (c *Client) Kill() {
 			c.logger.Debug("plugin exited")
 			return
 		case <-time.After(2 * time.Second):
-			c.logger.Trace("timed out waiting for plugin to exit gracefully")
 		}
 	}
 

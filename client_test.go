@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin/internal/cmdrunner"
+	"github.com/hashicorp/go-plugin/runner"
 )
 
 func TestClient(t *testing.T) {
@@ -224,7 +226,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -301,17 +303,37 @@ func TestClient_grpcNotAllowed(t *testing.T) {
 }
 
 func TestClient_grpcSyncStdio(t *testing.T) {
+	for name, tc := range map[string]struct {
+		useRunnerFunc bool
+	}{
+		"default":        {false},
+		"use RunnerFunc": {true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testClient_grpcSyncStdio(t, tc.useRunnerFunc)
+		})
+	}
+}
+
+func testClient_grpcSyncStdio(t *testing.T, useRunnerFunc bool) {
 	var syncOut, syncErr safeBuffer
 
 	process := helperProcess("test-grpc")
-	c := NewClient(&ClientConfig{
+	cfg := &ClientConfig{
 		Cmd:              process,
 		HandshakeConfig:  testHandshake,
 		Plugins:          testGRPCPluginMap,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
 		SyncStdout:       &syncOut,
 		SyncStderr:       &syncErr,
-	})
+	}
+
+	if useRunnerFunc {
+		cfg.RunnerFunc = func(l hclog.Logger, cmd *exec.Cmd, _ string) (runner.Runner, error) {
+			return cmdrunner.NewCmdRunner(l, cmd)
+		}
+	}
+	c := NewClient(cfg)
 	defer c.Kill()
 
 	if _, err := c.Start(); err != nil {
@@ -495,6 +517,19 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 }
 
 func TestClient_reattachGRPC(t *testing.T) {
+	for name, tc := range map[string]struct {
+		useReattachFunc bool
+	}{
+		"default":          {false},
+		"use ReattachFunc": {true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testClient_reattachGRPC(t, tc.useReattachFunc)
+		})
+	}
+}
+
+func testClient_reattachGRPC(t *testing.T, useReattachFunc bool) {
 	process := helperProcess("test-grpc")
 	c := NewClient(&ClientConfig{
 		Cmd:              process,
@@ -512,6 +547,12 @@ func TestClient_reattachGRPC(t *testing.T) {
 
 	// Get the reattach configuration
 	reattach := c.ReattachConfig()
+
+	if useReattachFunc {
+		pid := reattach.Pid
+		reattach.Pid = 0
+		reattach.ReattachFunc = cmdrunner.ReattachFunc(pid, reattach.Addr)
+	}
 
 	// Create a new client
 	c = NewClient(&ClientConfig{
@@ -584,7 +625,6 @@ func TestClient_reattachNotFound(t *testing.T) {
 		Plugins:         testPluginMap,
 	})
 
-	// Start shouldn't error
 	if _, err := c.Start(); err == nil {
 		t.Fatal("should error")
 	} else if err != ErrProcessNotFound {
@@ -817,6 +857,45 @@ func TestClient_Stdin(t *testing.T) {
 
 	if !process.ProcessState.Success() {
 		t.Fatal("process didn't exit cleanly")
+	}
+}
+
+func TestClient_SkipHostEnv(t *testing.T) {
+	for _, tc := range []struct {
+		helper string
+		skip   bool
+	}{
+		{"test-skip-host-env-true", true},
+		{"test-skip-host-env-false", false},
+	} {
+		t.Run(tc.helper, func(t *testing.T) {
+			process := helperProcess(tc.helper)
+			t.Setenv("PLUGIN_TEST_SKIP_HOST_ENV", "foo")
+			c := NewClient(&ClientConfig{
+				Cmd:             process,
+				HandshakeConfig: testHandshake,
+				Plugins:         testPluginMap,
+				SkipHostEnv:     tc.skip,
+			})
+			defer c.Kill()
+
+			_, err := c.Start()
+			if err != nil {
+				t.Fatalf("error: %s", err)
+			}
+
+			for {
+				if c.Exited() {
+					break
+				}
+
+				time.Sleep(50 * time.Millisecond)
+			}
+
+			if !process.ProcessState.Success() {
+				t.Fatal("process didn't exit cleanly")
+			}
+		})
 	}
 }
 
@@ -1161,7 +1240,7 @@ func TestClient_versionedClient(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1217,7 +1296,7 @@ func TestClient_mtlsClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1263,7 +1342,7 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.process.Kill()
+	c.runner.Kill()
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1392,7 +1471,7 @@ this line is short
 	reader := strings.NewReader(msg)
 
 	c.stderrWaitGroup.Add(1)
-	c.logStderr(reader)
+	c.logStderr(c.config.Cmd.Path, reader)
 	read := stderr.String()
 
 	if read != msg {

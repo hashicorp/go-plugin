@@ -665,6 +665,20 @@ func TestHelperProcess(*testing.T) {
 
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
+	case "test-skip-host-env-true":
+		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		if os.Getenv("PLUGIN_TEST_SKIP_HOST_ENV") == "" {
+			os.Exit(0)
+		}
+
+		os.Exit(1)
+	case "test-skip-host-env-false":
+		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		if os.Getenv("PLUGIN_TEST_SKIP_HOST_ENV") != "" {
+			os.Exit(0)
+		}
+
+		os.Exit(1)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", cmd)
 		os.Exit(2)

@@ -58,6 +58,7 @@ func TestServer_testMode(t *testing.T) {
 		Plugins:          testGRPCPluginMap,
 		Reattach:         config,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
+		Logger:           testLogger(t),
 	})
 	client, err := c.Client()
 	if err != nil {
@@ -115,6 +116,7 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 		},
 		AllowedProtocols: []Protocol{ProtocolGRPC},
 		AutoMTLS:         true,
+		Logger:           testLogger(t),
 	})
 	client, err := c.Client()
 	if err != nil {

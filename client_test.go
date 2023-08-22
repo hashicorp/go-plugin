@@ -26,7 +26,10 @@ import (
 )
 
 func testLogger(t *testing.T) hclog.Logger {
-	return hclog.Default().With("test", t.Name())
+	return hclog.New(&hclog.LoggerOptions{
+		Level:           hclog.Trace,
+		IncludeLocation: true,
+	}).With("test", t.Name())
 }
 
 func TestClient(t *testing.T) {
@@ -769,11 +772,11 @@ func TestClient_StderrJSON(t *testing.T) {
 
 	logOut := logBuf.String()
 
-	if !strings.Contains(logOut, "[\"HELLO\"]\n") {
+	if !strings.Contains(logOut, "[\"HELLO\"]") {
 		t.Fatalf("missing json list: '%s'", logOut)
 	}
 
-	if !strings.Contains(logOut, "12345\n") {
+	if !strings.Contains(logOut, "12345") {
 		t.Fatalf("missing line with raw number: '%s'", logOut)
 	}
 

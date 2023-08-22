@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -98,7 +99,7 @@ func TestServer_testMode_AutoMTLS(t *testing.T) {
 			2: testGRPCPluginMap,
 		},
 		GRPCServer: DefaultGRPCServer,
-		Logger:     hclog.NewNullLogger(),
+		Logger:     testLogger(t).With("plugin", "test"),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			ReattachConfigCh: nil,
@@ -284,7 +285,7 @@ func TestServer_testStdLogger(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,
-		Logger:          hclog.NewNullLogger(),
+		Logger:          testLogger(t).With("plugin", "test"),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			CloseCh:          closeCh,
@@ -313,6 +314,10 @@ func TestServer_testStdLogger(t *testing.T) {
 }
 
 func TestUnixSocketDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("go-plugin doesn't support unix sockets on Windows")
+	}
+
 	tmpDir := t.TempDir()
 	t.Setenv(EnvUnixSocketDir, tmpDir)
 
@@ -326,7 +331,7 @@ func TestUnixSocketDir(t *testing.T) {
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,
-		Logger:          hclog.NewNullLogger(),
+		Logger:          testLogger(t).With("plugin", "test"),
 		Test: &ServeTestConfig{
 			Context:          ctx,
 			CloseCh:          closeCh,
@@ -356,6 +361,10 @@ func TestUnixSocketDir(t *testing.T) {
 }
 
 func TestUnixSocketGroupPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("go-plugin doesn't support unix sockets on Windows")
+	}
+
 	t.Setenv(EnvUnixSocketGroup, fmt.Sprintf("%d", os.Getgid()))
 
 	ln, err := serverListener_unix("")

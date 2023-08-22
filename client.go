@@ -543,7 +543,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		attachSet := c.config.Reattach != nil
 		secureSet := c.config.SecureConfig != nil
 		if cmdSet == attachSet {
-			return nil, fmt.Errorf("Exactly one of Cmd or Reattach must be set")
+			return nil, fmt.Errorf("exactly one of Cmd or Reattach must be set")
 		}
 
 		if secureSet && attachSet {

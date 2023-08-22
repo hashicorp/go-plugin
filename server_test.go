@@ -10,9 +10,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/user"
 	"path"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -363,19 +365,39 @@ func TestUnixSocketGroupPermissions(t *testing.T) {
 		t.Skip("go-plugin doesn't support unix sockets on Windows")
 	}
 
-	t.Setenv(EnvUnixSocketGroup, fmt.Sprintf("%d", os.Getgid()))
-
-	ln, err := serverListener_unix("")
+	group, err := user.LookupGroupId(fmt.Sprintf("%d", os.Getgid()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	for name, tc := range map[string]struct {
+		gid string
+	}{
+		"as integer": {fmt.Sprintf("%d", os.Getgid())},
+		"as name":    {group.Name},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(EnvUnixSocketGroup, tc.gid)
 
-	info, err := os.Lstat(ln.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode()&os.ModePerm != 0o660 {
-		t.Fatal(info.Mode())
+			ln, err := serverListener_unix("")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer ln.Close()
+
+			info, err := os.Lstat(ln.Addr().String())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode()&os.ModePerm != 0o660 {
+				t.Fatal(info.Mode())
+			}
+			stat, ok := info.Sys().(*syscall.Stat_t)
+			if !ok {
+				t.Fatal()
+			}
+			if stat.Gid != uint32(os.Getgid()) {
+				t.Fatalf("Expected %d, but got %d", os.Getgid(), stat.Gid)
+			}
+		})
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"os/user"
 	"runtime"
 	"sort"
 	"strconv"
@@ -569,12 +570,19 @@ func serverListener_unix(dir string) (net.Listener, error) {
 	// By default, unix sockets are only writable by the owner. Set up a custom
 	// group owner and group write permissions if configured.
 	if groupString := os.Getenv(EnvUnixSocketGroup); groupString != "" {
-		group, err := strconv.Atoi(groupString)
+		groupID, err := strconv.Atoi(groupString)
 		if err != nil {
-			return nil, fmt.Errorf("non-integer %s environment variable specified: %s", EnvUnixSocketGroup, groupString)
+			group, err := user.LookupGroup(groupString)
+			if err != nil {
+				return nil, fmt.Errorf("failed to find group ID from %s=%s environment variable: %w", EnvUnixSocketGroup, groupString, err)
+			}
+			groupID, err = strconv.Atoi(group.Gid)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse %q group's Gid as an integer: %w", groupString, err)
+			}
 		}
 
-		err = os.Chown(path, -1, group)
+		err = os.Chown(path, -1, groupID)
 		if err != nil {
 			return nil, err
 		}

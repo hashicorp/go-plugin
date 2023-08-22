@@ -860,6 +860,45 @@ func TestClient_Stdin(t *testing.T) {
 	}
 }
 
+func TestClient_SkipHostEnv(t *testing.T) {
+	for _, tc := range []struct {
+		helper string
+		skip   bool
+	}{
+		{"test-skip-host-env-true", true},
+		{"test-skip-host-env-false", false},
+	} {
+		t.Run(tc.helper, func(t *testing.T) {
+			process := helperProcess(tc.helper)
+			t.Setenv("PLUGIN_TEST_SKIP_HOST_ENV", "foo")
+			c := NewClient(&ClientConfig{
+				Cmd:             process,
+				HandshakeConfig: testHandshake,
+				Plugins:         testPluginMap,
+				SkipHostEnv:     tc.skip,
+			})
+			defer c.Kill()
+
+			_, err := c.Start()
+			if err != nil {
+				t.Fatalf("error: %s", err)
+			}
+
+			for {
+				if c.Exited() {
+					break
+				}
+
+				time.Sleep(50 * time.Millisecond)
+			}
+
+			if !process.ProcessState.Success() {
+				t.Fatal("process didn't exit cleanly")
+			}
+		})
+	}
+}
+
 func TestClient_SecureConfig(t *testing.T) {
 	// Test failure case
 	secureConfig := &SecureConfig{

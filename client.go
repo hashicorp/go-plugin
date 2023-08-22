@@ -310,7 +310,7 @@ func CleanupClients() {
 // plugin and gets the address for the RPC connection.
 //
 // The client must be cleaned up at some point by calling Kill(). If
-// the client is a managed client (created with NewManagedClient) you
+// the client is a managed client (created with ClientConfig.Managed) you
 // can just call CleanupClients at the end of your program and they will
 // be properly cleaned.
 func NewClient(config *ClientConfig) (c *Client) {

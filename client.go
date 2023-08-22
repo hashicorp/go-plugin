@@ -247,7 +247,7 @@ type ReattachConfig struct {
 	Pid             int
 
 	// ReattachFunc allows consumers to provide their own implementation of
-	// runner.ReattachedRunner and attach to something other than a plain process.
+	// runner.AttachedRunner and attach to something other than a plain process.
 	// At least one of Pid or ReattachFunc must be set.
 	ReattachFunc runner.ReattachFunc
 

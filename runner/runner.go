@@ -39,7 +39,7 @@ type AttachedRunner interface {
 	// Kill should stop the plugin and perform any cleanup required.
 	Kill() error
 
-	// ID is a unique identifier to represent the running plugin. e.g. pod or
+	// ID is a unique identifier to represent the running plugin. e.g. pid or
 	// container ID.
 	ID() string
 

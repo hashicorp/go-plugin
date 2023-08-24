@@ -320,7 +320,6 @@ func testClient_grpcSyncStdio(t *testing.T, useRunnerFunc bool) {
 
 	process := helperProcess("test-grpc")
 	cfg := &ClientConfig{
-		Cmd:              process,
 		HandshakeConfig:  testHandshake,
 		Plugins:          testGRPCPluginMap,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
@@ -330,8 +329,11 @@ func testClient_grpcSyncStdio(t *testing.T, useRunnerFunc bool) {
 
 	if useRunnerFunc {
 		cfg.RunnerFunc = func(l hclog.Logger, cmd *exec.Cmd, _ string) (runner.Runner, error) {
-			return cmdrunner.NewCmdRunner(l, cmd)
+			process.Env = append(process.Env, cmd.Env...)
+			return cmdrunner.NewCmdRunner(l, process)
 		}
+	} else {
+		cfg.Cmd = process
 	}
 	c := NewClient(cfg)
 	defer c.Kill()
@@ -359,6 +361,18 @@ func testClient_grpcSyncStdio(t *testing.T, useRunnerFunc bool) {
 	impl, ok := raw.(testInterface)
 	if !ok {
 		t.Fatalf("bad: %#v", raw)
+	}
+
+	// Check reattach config is sensible.
+	reattach := c.ReattachConfig()
+	if useRunnerFunc {
+		if reattach.Pid != 0 {
+			t.Fatal(reattach.Pid)
+		}
+	} else {
+		if reattach.Pid == 0 {
+			t.Fatal(reattach.Pid)
+		}
 	}
 
 	// Print the data
@@ -870,6 +884,7 @@ func TestClient_SkipHostEnv(t *testing.T) {
 	} {
 		t.Run(tc.helper, func(t *testing.T) {
 			process := helperProcess(tc.helper)
+			// Set env in the host process, which we'll look for in the plugin.
 			t.Setenv("PLUGIN_TEST_SKIP_HOST_ENV", "foo")
 			c := NewClient(&ClientConfig{
 				Cmd:             process,

@@ -502,7 +502,7 @@ func (c *Client) Kill() {
 
 	// If graceful exiting failed, just kill it
 	c.logger.Warn("plugin failed to exit gracefully")
-	if err := runner.Kill(); err != nil {
+	if err := runner.Kill(context.Background()); err != nil {
 		c.logger.Debug("error killing plugin", "error", err)
 	}
 
@@ -642,7 +642,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	c.runner = runner
-	err = runner.Start()
+	startCtx, startCtxCancel := context.WithTimeout(context.Background(), c.config.StartTimeout)
+	defer startCtxCancel()
+	err = runner.Start(startCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -652,7 +654,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		rErr := recover()
 
 		if err != nil || rErr != nil {
-			runner.Kill()
+			runner.Kill(context.Background())
 		}
 
 		if rErr != nil {
@@ -681,7 +683,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		c.stderrWaitGroup.Wait()
 
 		// Wait for the command to end.
-		err := runner.Wait()
+		err := runner.Wait(context.Background())
 		if err != nil {
 			c.logger.Error("plugin process exited", "plugin", runner.Name(), "id", runner.ID(), "error", err.Error())
 		} else {
@@ -873,7 +875,7 @@ func (c *Client) reattach() (net.Addr, error) {
 		defer c.ctxCancel()
 
 		// Wait for the process to die
-		r.Wait()
+		r.Wait(context.Background())
 
 		// Log so we can see it
 		c.logger.Debug("reattached plugin process exited")

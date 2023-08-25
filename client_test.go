@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -226,7 +227,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.runner.Kill()
+	c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1255,7 +1256,7 @@ func TestClient_versionedClient(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.runner.Kill()
+	c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1311,7 +1312,7 @@ func TestClient_mtlsClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.runner.Kill()
+	c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1357,7 +1358,7 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.runner.Kill()
+	c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():

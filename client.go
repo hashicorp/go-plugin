@@ -118,6 +118,19 @@ func (c *Client) NegotiatedVersion() int {
 	return c.negotiatedVersion
 }
 
+// ID returns a unique ID for the running plugin. By default this is the process
+// ID (pid), but it could take other forms if RunnerFunc was provided.
+func (c *Client) ID() string {
+	c.l.Lock()
+	defer c.l.Unlock()
+
+	if c.runner != nil {
+		return c.runner.ID()
+	}
+
+	return ""
+}
+
 // ClientConfig is the configuration used to initialize a new
 // plugin client. After being used to initialize a plugin client,
 // that configuration must not be modified again.
@@ -539,14 +552,21 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	// this in a {} for scoping reasons, and hopeful that the escape
 	// analysis will pop the stack here.
 	{
-		cmdSet := c.config.Cmd != nil
-		attachSet := c.config.Reattach != nil
-		secureSet := c.config.SecureConfig != nil
-		if cmdSet == attachSet {
-			return nil, fmt.Errorf("exactly one of Cmd or Reattach must be set")
+		var mutuallyExclusiveOptions int
+		if c.config.Cmd != nil {
+			mutuallyExclusiveOptions += 1
+		}
+		if c.config.Reattach != nil {
+			mutuallyExclusiveOptions += 1
+		}
+		if c.config.RunnerFunc != nil {
+			mutuallyExclusiveOptions += 1
+		}
+		if mutuallyExclusiveOptions != 1 {
+			return nil, fmt.Errorf("exactly one of Cmd, or Reattach, or RunnerFunc must be set")
 		}
 
-		if secureSet && attachSet {
+		if c.config.SecureConfig != nil && c.config.Reattach != nil {
 			return nil, ErrSecureConfigAndReattach
 		}
 	}
@@ -582,6 +602,12 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	cmd := c.config.Cmd
+	if cmd == nil {
+		// It's only possible to get here if RunnerFunc is non-nil, but we'll
+		// still use cmd as a spec to populate metadata for the external
+		// implementation to consume.
+		cmd = exec.Command("")
+	}
 	if !c.config.SkipHostEnv {
 		cmd.Env = append(cmd.Env, os.Environ()...)
 	}
@@ -731,7 +757,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	timeout := time.After(c.config.StartTimeout)
 
 	// Start looking for the address
-	c.logger.Debug("waiting for RPC address", "path", cmd.Path)
+	c.logger.Debug("waiting for RPC address", "plugin", runner.Name())
 	select {
 	case <-timeout:
 		err = errors.New("timeout while waiting for plugin to start")
@@ -939,6 +965,9 @@ func (c *Client) checkProtoVersion(protoVersion string) (int, PluginSet, error) 
 //
 // If this returns nil then the process hasn't been started yet. Please
 // call Start or Client before calling this.
+//
+// Clients who specified a RunnerFunc will need to populate their own
+// ReattachFunc in the returned ReattachConfig before it can be used.
 func (c *Client) ReattachConfig() *ReattachConfig {
 	c.l.Lock()
 	defer c.l.Unlock()
@@ -956,11 +985,16 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 		return c.config.Reattach
 	}
 
-	return &ReattachConfig{
+	reattach := &ReattachConfig{
 		Protocol: c.protocol,
 		Addr:     c.address,
-		Pid:      c.config.Cmd.Process.Pid,
 	}
+
+	if c.config.Cmd != nil && c.config.Cmd.Process != nil {
+		reattach.Pid = c.config.Cmd.Process.Pid
+	}
+
+	return reattach
 }
 
 // Protocol returns the protocol of server on the remote end. This will

@@ -524,16 +524,6 @@ func (c *Client) Kill() {
 	c.l.Unlock()
 }
 
-// peTypes is a list of Portable Executable (PE) machine types from https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
-// mapped to GOARCH types. It is not comprehensive, and only includes machine types that Go supports.
-var peTypes = map[uint16]string{
-	0x14c:  "386",
-	0x1c0:  "arm",
-	0x6264: "loong64",
-	0x8664: "amd64",
-	0xaa64: "arm64",
-}
-
 // Start the underlying subprocess, communicating with it to negotiate
 // a port for RPC connections, and returning the address to connect via RPC.
 //
@@ -771,7 +761,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			err = fmt.Errorf(unrecognizedRemotePluginMessage, line, additionalNotesAboutCommand(cmd.Path))
+			err = fmt.Errorf(unrecognizedRemotePluginMessage, line, runner.Diagnose(context.Background()))
 			return
 		}
 

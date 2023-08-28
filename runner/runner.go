@@ -18,6 +18,11 @@ type Runner interface {
 	// handled separately.
 	Start(ctx context.Context) error
 
+	// Diagnose makes a best-effort attempt to return any debug information that
+	// might help users understand why a plugin failed to start and negotiate a
+	// connection.
+	Diagnose(ctx context.Context) string
+
 	// Stdout is used to negotiate the go-plugin protocol.
 	Stdout() io.ReadCloser
 

@@ -4,7 +4,6 @@
 package cmdrunner
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -50,11 +49,11 @@ type CmdAttachedRunner struct {
 	addrTranslator
 }
 
-func (c *CmdAttachedRunner) Wait(_ context.Context) error {
+func (c *CmdAttachedRunner) Wait() error {
 	return pidWait(c.pid)
 }
 
-func (c *CmdAttachedRunner) Kill(_ context.Context) error {
+func (c *CmdAttachedRunner) Kill() error {
 	return c.process.Kill()
 }
 

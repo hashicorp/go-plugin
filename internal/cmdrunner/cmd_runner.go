@@ -4,7 +4,6 @@
 package cmdrunner
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -62,7 +61,7 @@ func NewCmdRunner(logger hclog.Logger, cmd *exec.Cmd) (*CmdRunner, error) {
 	}, nil
 }
 
-func (c *CmdRunner) Start(_ context.Context) error {
+func (c *CmdRunner) Start() error {
 	c.logger.Debug("starting plugin", "path", c.cmd.Path, "args", c.cmd.Args)
 	err := c.cmd.Start()
 	if err != nil {
@@ -74,11 +73,11 @@ func (c *CmdRunner) Start(_ context.Context) error {
 	return nil
 }
 
-func (c *CmdRunner) Wait(_ context.Context) error {
+func (c *CmdRunner) Wait() error {
 	return c.cmd.Wait()
 }
 
-func (c *CmdRunner) Kill(_ context.Context) error {
+func (c *CmdRunner) Kill() error {
 	if c.cmd.Process != nil {
 		err := c.cmd.Process.Kill()
 		// Swallow ErrProcessDone, we support calling Kill multiple times.

@@ -4,7 +4,6 @@
 package runner
 
 import (
-	"context"
 	"io"
 )
 
@@ -12,11 +11,9 @@ import (
 // of a plugin and attempt to negotiate a connection with it. Note that this
 // is orthogonal to the protocol and transport used, which is negotiated over stdout.
 type Runner interface {
-	// Start should start the plugin and ensure any work required for servicing
-	// other interface methods is done. If the context is cancelled, it should
-	// only abort any attempts to _start_ the plugin. Waiting and shutdown are
-	// handled separately.
-	Start(ctx context.Context) error
+	// Start should start the plugin and ensure any context required for servicing
+	// other interface methods is set up.
+	Start() error
 
 	// Stdout is used to negotiate the go-plugin protocol.
 	Stdout() io.ReadCloser
@@ -37,10 +34,10 @@ type Runner interface {
 type AttachedRunner interface {
 	// Wait should wait until the plugin stops running, whether in response to
 	// an out of band signal or in response to calling Kill().
-	Wait(ctx context.Context) error
+	Wait() error
 
 	// Kill should stop the plugin and perform any cleanup required.
-	Kill(ctx context.Context) error
+	Kill() error
 
 	// ID is a unique identifier to represent the running plugin. e.g. pid or
 	// container ID.

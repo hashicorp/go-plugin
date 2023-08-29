@@ -31,14 +31,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-const unrecognizedRemotePluginMessage = `Unrecognized remote plugin message: %q
-This usually means
-  the plugin was not compiled for this architecture,
-  the plugin is missing dynamic-link libraries necessary to run,
-  the plugin is not executable by this process due to file permissions, or
-  the plugin failed to negotiate the initial go-plugin protocol handshake
-%s`
-
 // If this is 1, then we've called CleanupClients. This can be used
 // by plugin RPC implementations to change error behavior since you
 // can expected network connection errors at this point. This should be
@@ -761,7 +753,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			err = fmt.Errorf(unrecognizedRemotePluginMessage, line, runner.Diagnose(context.Background()))
+			err = runner.Diagnose(context.Background(), line)
 			return
 		}
 

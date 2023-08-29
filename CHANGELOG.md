@@ -1,3 +1,15 @@
+## v1.5.0
+
+ENHANCEMENTS:
+
+* client: New `runner.Runner` interface to support clients providing custom plugin command runner implementations [GH-270](https://github.com/hashicorp/go-plugin/pull/270)]
+    * Accessible via new `ClientConfig` field `RunnerFunc`, which is mutually exclusive with `Cmd` and `Reattach`
+    * Reattaching support via `ReattachConfig` field `ReattachFunc`
+* client: New `ClientConfig` field `SkipHostEnv` allows omitting the client process' own environment variables from the plugin command's environment [GH-270](https://github.com/hashicorp/go-plugin/pull/270)]
+* client: Add `ID()` method to `Client` for retrieving the pid or other unique ID of a running plugin [GH-272](https://github.com/hashicorp/go-plugin/pull/272)]
+* server: Support setting the directory to create Unix sockets in with the env var `PLUGIN_UNIX_SOCKET_DIR` [GH-270](https://github.com/hashicorp/go-plugin/pull/270)]
+* server: Support setting group write permission and a custom group name or gid owner with the env var `PLUGIN_UNIX_SOCKET_GROUP` [GH-270](https://github.com/hashicorp/go-plugin/pull/270)]
+
 ## v1.4.11-rc1
 
 ENHANCEMENTS:

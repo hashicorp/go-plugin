@@ -753,11 +753,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			var errText string
-			if ok {
-				errText = fmt.Sprintf("unrecognized plugin message: %q", line)
-			} else {
-				errText = "failed to read any lines from plugin's stdout"
+			errText := fmt.Sprintf("Unrecognized remote plugin message: %s", line)
+			if !ok {
+				errText += "\n" + "Failed to read any lines from plugin's stdout"
 			}
 			additionalNotes := runner.Diagnose(context.Background())
 			if additionalNotes != "" {

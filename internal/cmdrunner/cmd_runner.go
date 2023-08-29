@@ -30,7 +30,7 @@ const unrecognizedRemotePluginMessage = `This usually means
   the plugin failed to negotiate the initial go-plugin protocol handshake
 %s`
 
-// CmdRunner implements the Executor interface. It mostly just passes through
+// CmdRunner implements the runner.Runner interface. It mostly just passes through
 // to exec.Cmd methods.
 type CmdRunner struct {
 	logger hclog.Logger

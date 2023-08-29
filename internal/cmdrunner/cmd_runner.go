@@ -23,8 +23,7 @@ var (
 	ErrProcessNotFound = errors.New("Reattachment process not found")
 )
 
-const unrecognizedRemotePluginMessage = `Unrecognized remote plugin message: %q
-This usually means
+const unrecognizedRemotePluginMessage = `This usually means
   the plugin was not compiled for this architecture,
   the plugin is missing dynamic-link libraries necessary to run,
   the plugin is not executable by this process due to file permissions, or
@@ -125,6 +124,6 @@ var peTypes = map[uint16]string{
 	0xaa64: "arm64",
 }
 
-func (c *CmdRunner) Diagnose(_ context.Context, line string) error {
-	return fmt.Errorf(unrecognizedRemotePluginMessage, line, additionalNotesAboutCommand(c.cmd.Path))
+func (c *CmdRunner) Diagnose(_ context.Context) string {
+	return fmt.Sprintf(unrecognizedRemotePluginMessage, additionalNotesAboutCommand(c.cmd.Path))
 }

@@ -747,13 +747,23 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		err = errors.New("timeout while waiting for plugin to start")
 	case <-c.doneCtx.Done():
 		err = errors.New("plugin exited before we could connect")
-	case line := <-linesCh:
+	case line, ok := <-linesCh:
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			err = runner.Diagnose(context.Background(), line)
+			var errText string
+			if ok {
+				errText = fmt.Sprintf("unrecognized plugin message: %q", line)
+			} else {
+				errText = "failed to read any lines from plugin's stdout"
+			}
+			additionalNotes := runner.Diagnose(context.Background())
+			if additionalNotes != "" {
+				errText += "\n" + additionalNotes
+			}
+			err = errors.New(errText)
 			return
 		}
 

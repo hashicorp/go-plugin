@@ -31,14 +31,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-const unrecognizedRemotePluginMessage = `Unrecognized remote plugin message: %q
-This usually means
-  the plugin was not compiled for this architecture,
-  the plugin is missing dynamic-link libraries necessary to run,
-  the plugin is not executable by this process due to file permissions, or
-  the plugin failed to negotiate the initial go-plugin protocol handshake
-%s`
-
 // If this is 1, then we've called CleanupClients. This can be used
 // by plugin RPC implementations to change error behavior since you
 // can expected network connection errors at this point. This should be
@@ -524,16 +516,6 @@ func (c *Client) Kill() {
 	c.l.Unlock()
 }
 
-// peTypes is a list of Portable Executable (PE) machine types from https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
-// mapped to GOARCH types. It is not comprehensive, and only includes machine types that Go supports.
-var peTypes = map[uint16]string{
-	0x14c:  "386",
-	0x1c0:  "arm",
-	0x6264: "loong64",
-	0x8664: "amd64",
-	0xaa64: "arm64",
-}
-
 // Start the underlying subprocess, communicating with it to negotiate
 // a port for RPC connections, and returning the address to connect via RPC.
 //
@@ -765,13 +747,21 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		err = errors.New("timeout while waiting for plugin to start")
 	case <-c.doneCtx.Done():
 		err = errors.New("plugin exited before we could connect")
-	case line := <-linesCh:
+	case line, ok := <-linesCh:
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line = strings.TrimSpace(line)
 		parts := strings.SplitN(line, "|", 6)
 		if len(parts) < 4 {
-			err = fmt.Errorf(unrecognizedRemotePluginMessage, line, additionalNotesAboutCommand(cmd.Path))
+			errText := fmt.Sprintf("Unrecognized remote plugin message: %s", line)
+			if !ok {
+				errText += "\n" + "Failed to read any lines from plugin's stdout"
+			}
+			additionalNotes := runner.Diagnose(context.Background())
+			if additionalNotes != "" {
+				errText += "\n" + additionalNotes
+			}
+			err = errors.New(errText)
 			return
 		}
 

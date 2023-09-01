@@ -25,15 +25,13 @@ func TestUnixSocketGroupPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, tc := range map[string]struct {
-		gid string
+		group string
 	}{
 		"as integer": {fmt.Sprintf("%d", os.Getgid())},
 		"as name":    {group.Name},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Setenv(EnvUnixSocketGroup, tc.gid)
-
-			ln, err := serverListener_unix("")
+			ln, err := serverListener_unix(UnixSocketConfig{Group: tc.group})
 			if err != nil {
 				t.Fatal(err)
 			}

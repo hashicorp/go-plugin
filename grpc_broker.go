@@ -268,7 +268,7 @@ type GRPCBroker struct {
 	doneCh   chan struct{}
 	o        sync.Once
 
-	socketDir      string
+	unixSocketCfg  UnixSocketConfig
 	addrTranslator runner.AddrTranslator
 
 	sync.Mutex
@@ -279,14 +279,14 @@ type gRPCBrokerPending struct {
 	doneCh chan struct{}
 }
 
-func newGRPCBroker(s streamer, tls *tls.Config, socketDir string, addrTranslator runner.AddrTranslator) *GRPCBroker {
+func newGRPCBroker(s streamer, tls *tls.Config, unixSocketCfg UnixSocketConfig, addrTranslator runner.AddrTranslator) *GRPCBroker {
 	return &GRPCBroker{
 		streamer: s,
 		streams:  make(map[uint32]*gRPCBrokerPending),
 		tls:      tls,
 		doneCh:   make(chan struct{}),
 
-		socketDir:      socketDir,
+		unixSocketCfg:  unixSocketCfg,
 		addrTranslator: addrTranslator,
 	}
 }
@@ -295,7 +295,7 @@ func newGRPCBroker(s streamer, tls *tls.Config, socketDir string, addrTranslator
 //
 // This should not be called multiple times with the same ID at one time.
 func (b *GRPCBroker) Accept(id uint32) (net.Listener, error) {
-	listener, err := serverListener(b.socketDir)
+	listener, err := serverListener(b.unixSocketCfg)
 	if err != nil {
 		return nil, err
 	}

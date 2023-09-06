@@ -27,13 +27,9 @@ type RPCClient struct {
 // to be successfully started already with a lock held.
 func newRPCClient(c *Client) (*RPCClient, error) {
 	// Connect to the client
-	conn, err := net.Dial(c.address.Network(), c.address.String())
+	conn, err := dialRPC(c)
 	if err != nil {
 		return nil, err
-	}
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
 	}
 
 	if c.config.TLSConfig != nil {

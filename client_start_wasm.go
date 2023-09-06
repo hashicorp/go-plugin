@@ -262,10 +262,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 
 		switch network {
-		// case "tcp":
-		// 	addr, err = net.ResolveTCPAddr("tcp", address)
-		// case "unix":
-		// 	addr, err = net.ResolveUnixAddr("unix", address)
+		case "webworker":
+			addr = WebWorkerAddr{Name: address}
 		default:
 			err = fmt.Errorf("Unknown address type: %s", address)
 		}

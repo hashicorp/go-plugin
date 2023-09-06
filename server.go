@@ -210,7 +210,7 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 }
 
 func serverListener(dir string) (net.Listener, error) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "js" {
+	if runtime.GOOS == "windows" {
 		return serverListener_tcp()
 	}
 

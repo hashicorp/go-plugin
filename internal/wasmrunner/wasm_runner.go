@@ -95,3 +95,7 @@ func (c *WasmRunner) ID() string {
 func (c *WasmRunner) Diagnose(ctx context.Context) string {
 	return fmt.Sprintf(unrecognizedRemotePluginMessage, c.ww.Path)
 }
+
+func (c *WasmRunner) WebWorker() *wasmww.WasmWebWorkerConn {
+	return c.ww
+}

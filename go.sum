@@ -48,10 +48,10 @@ github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb h1:b5rjCoWHc7eqmAS
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/jhump/protoreflect v1.15.1 h1:HUMERORf3I3ZdX05WaQ6MIpd/NJ434hTp5YiKgfCL6c=
 github.com/jhump/protoreflect v1.15.1/go.mod h1:jD/2GMKKE6OqX8qTjhADU1e6DShO+gavG9e0Q693nKo=
-github.com/magodo/chanio v0.0.0-20230901115729-fd5b8225ff0b h1:SQWe6H8SBiS3JOLcYZkFtC0jf7dxqygAqVC5+Jxc2Fo=
-github.com/magodo/chanio v0.0.0-20230901115729-fd5b8225ff0b/go.mod h1:h8znBXxSpGVpiLc79RwAaMndx+d3DrnynGlmbxPWcX8=
-github.com/magodo/go-wasmww v0.0.0-20230904090519-70aa9affe685 h1:l60FGC0J8WQk8TRcpHogFYxlPTQ+JI57XLn8JflJ0ZI=
-github.com/magodo/go-wasmww v0.0.0-20230904090519-70aa9affe685/go.mod h1:xJ1RIRulStU21Ev+0w0sR8ixbi3McvuZI2U7viLiI6A=
+github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc h1:OA/l08Abuwg0v3g6piwgnHzK8QcV+rgUwrmvKSSVT28=
+github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc/go.mod h1:h8znBXxSpGVpiLc79RwAaMndx+d3DrnynGlmbxPWcX8=
+github.com/magodo/go-wasmww v0.0.0-20230905142830-ccf6326ae16e h1:EgfHnVB7njFrY7S8si7eK2Nez20Rj7VDkd9UCqNqe/U=
+github.com/magodo/go-wasmww v0.0.0-20230905142830-ccf6326ae16e/go.mod h1:CFCTBp2DLx2Jf1UALF1MsNk9X5gq0Ir+r2/60/Rbx+M=
 github.com/mattn/go-colorable v0.1.4 h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=

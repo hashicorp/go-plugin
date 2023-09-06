@@ -2,6 +2,23 @@
 
 package plugin
 
+import (
+	"bufio"
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/hashicorp/go-plugin/internal/cmdrunner"
+	"github.com/hashicorp/go-plugin/runner"
+)
+
 // Start the underlying subprocess, communicating with it to negotiate
 // a port for RPC connections, and returning the address to connect via RPC.
 //

@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/magodo/chanio"
+	"github.com/magodo/go-wasmww"
 )
 
 // Serve serves the plugins given by ServeConfig.
@@ -75,7 +76,7 @@ func Serve(opts *ServeConfig) {
 	}
 
 	// Register a listener so we can accept a connection
-	listener, err := serverListener(os.Getenv(EnvUnixSocketDir))
+	listener, err := NewWebWorkerListener()
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
 		return
@@ -205,8 +206,15 @@ func Serve(opts *ServeConfig) {
 
 	// Set our stdout, stderr to the stdio stream that clients can retrieve
 	// using ClientConfig.SyncStdout/err.
-	os.Stdout = stdout_w
-	os.Stderr = stderr_w
+	self, err := wasmww.SelfConn()
+	if err != nil {
+		panic("failed to get self: " + err.Error())
+	}
+
+	self.SetWriteSync(
+		[]wasmww.MsgWriter{self.NewMsgWriterToIoWriter(stdout_w)},
+		[]wasmww.MsgWriter{self.NewMsgWriterToIoWriter(stderr_w)},
+	)
 
 	// Accept connections and wait for completion
 	go server.Serve(listener)

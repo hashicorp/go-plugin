@@ -4,11 +4,13 @@ go 1.21.0
 
 require (
 	github.com/golang/protobuf v1.5.0
+	github.com/hack-pad/go-webworkers v0.1.0
+	github.com/hack-pad/safejs v0.1.1
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
 	github.com/jhump/protoreflect v1.15.1
-	github.com/magodo/chanio v0.0.0-20230901115729-fd5b8225ff0b
-	github.com/magodo/go-wasmww v0.0.0-20230904090519-70aa9affe685
+	github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc
+	github.com/magodo/go-wasmww v0.0.0-20230905142830-ccf6326ae16e
 	github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77
 	github.com/oklog/run v1.0.0
 	google.golang.org/grpc v1.38.0
@@ -18,8 +20,6 @@ require (
 	github.com/bufbuild/protocompile v0.4.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/google/uuid v1.3.1 // indirect
-	github.com/hack-pad/go-webworkers v0.1.0 // indirect
-	github.com/hack-pad/safejs v0.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

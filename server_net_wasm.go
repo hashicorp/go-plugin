@@ -10,18 +10,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/hack-pad/go-webworkers/worker"
 	"github.com/hack-pad/safejs"
 	"github.com/magodo/go-wasmww"
+	"github.com/magodo/go-webworkers/types"
 )
 
 var _ net.Listener = &WebWorkerListener{}
 
 // WebWorkerListener implements the net.Listener
 type WebWorkerListener struct {
-	self    *wasmww.GlobalSelfConn
-	ch      <-chan worker.MessageEvent
-	closeFn wasmww.WebWorkerCloseFunc
+	self *wasmww.SelfConn
+	ch   <-chan types.MessageEventMessage
 
 	// acceptCh is a 1 buffered channel, which only allow the 1st receive.
 	// Currently, the web worker is only a dedicated one, which means
@@ -30,11 +29,11 @@ type WebWorkerListener struct {
 }
 
 func NewWebWorkerListener() (net.Listener, error) {
-	self, err := wasmww.SelfConn()
+	self, err := wasmww.NewSelfConn()
 	if err != nil {
 		return nil, err
 	}
-	ch, closeFn, err := self.SetupConn()
+	ch, err := self.SetupConn()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,6 @@ func NewWebWorkerListener() (net.Listener, error) {
 	return &WebWorkerListener{
 		self:     self,
 		ch:       ch,
-		closeFn:  closeFn,
 		acceptCh: acceptCh,
 	}, nil
 }
@@ -70,7 +68,7 @@ func (l *WebWorkerListener) Addr() net.Addr {
 }
 
 func (l *WebWorkerListener) Close() error {
-	return l.closeFn()
+	return l.self.Close()
 }
 
 // WebWorkerAddr implements the net.Addr
@@ -89,7 +87,7 @@ func (addr WebWorkerAddr) String() string {
 // WebWorkerConn implements the net.Conn
 type WebWorkerConn struct {
 	name     string
-	ch       <-chan worker.MessageEvent
+	ch       <-chan types.MessageEventMessage
 	timerR   *time.Timer
 	timerW   *time.Timer
 	postFunc postMessageFunc
@@ -103,7 +101,7 @@ type postMessageFunc func(message safejs.Value, transfers []safejs.Value) error
 
 var _ net.Conn = &WebWorkerConn{}
 
-func NewWebWorkerConnForServer(name string, ch <-chan worker.MessageEvent, postFunc postMessageFunc, acceptCh chan any) *WebWorkerConn {
+func NewWebWorkerConnForServer(name string, ch <-chan types.MessageEventMessage, postFunc postMessageFunc, acceptCh chan any) *WebWorkerConn {
 	return &WebWorkerConn{
 		name:     name,
 		ch:       ch,
@@ -112,7 +110,7 @@ func NewWebWorkerConnForServer(name string, ch <-chan worker.MessageEvent, postF
 	}
 }
 
-func NewWebWorkerConnForClient(name string, ch <-chan worker.MessageEvent, postFunc postMessageFunc) *WebWorkerConn {
+func NewWebWorkerConnForClient(name string, ch <-chan types.MessageEventMessage, postFunc postMessageFunc) *WebWorkerConn {
 	return &WebWorkerConn{
 		name:     name,
 		ch:       ch,
@@ -133,7 +131,7 @@ func (conn *WebWorkerConn) LocalAddr() net.Addr {
 
 func (conn *WebWorkerConn) Read(b []byte) (n int, err error) {
 	var (
-		event worker.MessageEvent
+		event types.MessageEventMessage
 		ok    bool
 	)
 	if timeout := conn.timerR; timeout != nil {

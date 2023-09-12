@@ -9,8 +9,8 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb
 	github.com/jhump/protoreflect v1.15.1
 	github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc
-	github.com/magodo/go-wasmww v0.0.0-20230912084813-af188676507e
-	github.com/magodo/go-webworkers v0.0.0-20230912024750-bb9fd84a26ba
+	github.com/magodo/go-wasmww v0.0.0-20230912131045-bd57c3c25542
+	github.com/magodo/go-webworkers v0.0.0-20230912130354-7cb7781df4ee
 	github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77
 	github.com/oklog/run v1.0.0
 	google.golang.org/grpc v1.38.0

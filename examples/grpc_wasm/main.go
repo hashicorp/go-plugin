@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	result, err := kv.Get(os.Args[1])
+	result, err := kv.Get("hello")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)

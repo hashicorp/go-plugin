@@ -48,8 +48,8 @@ github.com/jhump/protoreflect v1.15.1 h1:HUMERORf3I3ZdX05WaQ6MIpd/NJ434hTp5YiKgf
 github.com/jhump/protoreflect v1.15.1/go.mod h1:jD/2GMKKE6OqX8qTjhADU1e6DShO+gavG9e0Q693nKo=
 github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc h1:OA/l08Abuwg0v3g6piwgnHzK8QcV+rgUwrmvKSSVT28=
 github.com/magodo/chanio v0.0.0-20230905063744-5f1bf45eacbc/go.mod h1:h8znBXxSpGVpiLc79RwAaMndx+d3DrnynGlmbxPWcX8=
-github.com/magodo/go-wasmww v0.0.0-20230912131045-bd57c3c25542 h1:R2a9roNObo8BxaYAv4y29Ud6iHJ7tlbaGUpl6wrwhAc=
-github.com/magodo/go-wasmww v0.0.0-20230912131045-bd57c3c25542/go.mod h1:3Da4y024Wt+xMHGKEdkLx8wBn4ZF0wC4XtzHKzNCLjA=
+github.com/magodo/go-wasmww v0.0.0-20230913121652-f3c074162429 h1:gSjl5GydHzd+rncWbS8KAtl2XooX/m/g//CIZUVZF6E=
+github.com/magodo/go-wasmww v0.0.0-20230913121652-f3c074162429/go.mod h1:3Da4y024Wt+xMHGKEdkLx8wBn4ZF0wC4XtzHKzNCLjA=
 github.com/magodo/go-webworkers v0.0.0-20230912130354-7cb7781df4ee h1:XaNsxpodBifEAUm5iFCT0oxFw+OVmlCRxwBfqOd/Gi8=
 github.com/magodo/go-webworkers v0.0.0-20230912130354-7cb7781df4ee/go.mod h1:75pYYUWzQZKwI7HXgCOD6CAqEvNhln+yyxV3vIJWxaE=
 github.com/mattn/go-colorable v0.1.4 h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=

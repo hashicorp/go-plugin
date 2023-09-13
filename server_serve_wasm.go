@@ -206,10 +206,6 @@ func Serve(opts *ServeConfig) {
 
 	// Set our stdout, stderr to the stdio stream that clients can retrieve
 	// using ClientConfig.SyncStdout/err.
-	if _, err := wasmww.NewSelfSharedConn(); err != nil {
-		panic("failed to get self: " + err.Error())
-	}
-
 	wasmww.SetWriteSync(
 		[]wasmww.MsgWriter{wasmww.NewMsgWriterToIoWriter(stdout_w)},
 		[]wasmww.MsgWriter{wasmww.NewMsgWriterToIoWriter(stderr_w)},

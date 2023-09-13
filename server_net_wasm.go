@@ -45,21 +45,7 @@ func (l *WebWorkerListener) Accept() (net.Conn, error) {
 		return nil, net.ErrClosed
 	}
 
-	name, err := l.self.Name()
-	if err != nil {
-		return nil, err
-	}
-	location, err := l.self.Location()
-	if err != nil {
-		return nil, err
-	}
-
-	ch, err := port.SetupConn()
-	if err != nil {
-		return nil, err
-	}
-
-	return NewWebWorkerConnForServer(name, location.Href, ch, port.PostMessage, port.Close), nil
+	return NewWebWorkerConnForServer(port)
 }
 
 func (l *WebWorkerListener) Addr() net.Addr {
@@ -86,12 +72,12 @@ type WebWorkerAddr struct {
 
 var _ net.Addr = WebWorkerAddr{}
 
-func ParseWebWorkerAddr(addr string) (*WebWorkerAddr, error) {
+func ParseWebWorkerAddr(addr string) (WebWorkerAddr, error) {
 	name, url, ok := strings.Cut(addr, ":")
 	if !ok {
-		return nil, fmt.Errorf("malformed address: %s", addr)
+		return WebWorkerAddr{}, fmt.Errorf("malformed address: %s", addr)
 	}
-	return &WebWorkerAddr{
+	return WebWorkerAddr{
 		Name: name,
 		URL:  url,
 	}, nil
@@ -123,24 +109,47 @@ type connCloseFunc func() error
 
 var _ net.Conn = &WebWorkerConn{}
 
-func NewWebWorkerConnForServer(name, url string, ch <-chan types.MessageEventMessage, postFunc connPostMessageFunc, closeFunc connCloseFunc) *WebWorkerConn {
+func NewWebWorkerConnForServer(port *wasmww.SelfSharedConnPort) (*WebWorkerConn, error) {
+	self, err := wasmww.NewSelfSharedConn()
+	if err != nil {
+		return nil, err
+	}
+	name, err := self.Name()
+	if err != nil {
+		return nil, err
+	}
+	location, err := self.Location()
+	if err != nil {
+		return nil, err
+	}
+	ch, err := port.SetupConn()
+	if err != nil {
+		return nil, err
+	}
 	return &WebWorkerConn{
-		localAddr:  WebWorkerAddr{Name: name, URL: url},
+		localAddr:  WebWorkerAddr{Name: name, URL: location.Href},
 		remoteAddr: WebWorkerAddr{Name: "outside"},
 		ch:         ch,
-		postFunc:   postFunc,
-		closeFunc:  closeFunc,
-	}
+		postFunc:   port.PostMessage,
+		closeFunc:  port.Close,
+	}, nil
 }
 
-func NewWebWorkerConnForClient(name, url string, ch <-chan types.MessageEventMessage, postFunc connPostMessageFunc, closeFunc connCloseFunc) *WebWorkerConn {
+func NewWebWorkerConnForClient(addr WebWorkerAddr) (*WebWorkerConn, error) {
+	ww := &wasmww.WasmSharedWebWorkerConn{
+		Name: addr.Name,
+		URL:  addr.URL,
+	}
+	if err := ww.Connect(); err != nil {
+		return nil, err
+	}
 	return &WebWorkerConn{
 		localAddr:  WebWorkerAddr{Name: "outside"},
-		remoteAddr: WebWorkerAddr{Name: name, URL: url},
-		ch:         ch,
-		postFunc:   postFunc,
-		closeFunc:  closeFunc,
-	}
+		remoteAddr: WebWorkerAddr{Name: ww.Name, URL: ww.URL},
+		ch:         ww.EventChannel(),
+		postFunc:   ww.PostMessage,
+		closeFunc:  ww.Close,
+	}, nil
 }
 
 func (conn *WebWorkerConn) Close() error {
@@ -156,13 +165,6 @@ func (conn *WebWorkerConn) Read(b []byte) (n int, err error) {
 		event types.MessageEventMessage
 		ok    bool
 	)
-	if timeout := conn.timerR; timeout != nil {
-		select {
-		case <-timeout.C:
-			return 0, os.ErrDeadlineExceeded
-		default:
-		}
-	}
 	// If there is unread bytes in the buffer, just read them out
 	if conn.readBuf.Len() != 0 {
 		return io.ReadAtLeast(&conn.readBuf, b, min(len(b), conn.readBuf.Len()))
@@ -243,11 +245,19 @@ func (conn *WebWorkerConn) SetDeadline(t time.Time) error {
 }
 
 func (conn *WebWorkerConn) SetReadDeadline(t time.Time) error {
+	if t.IsZero() {
+		conn.timerR = nil
+		return nil
+	}
 	conn.timerR = time.NewTimer(time.Until(t))
 	return nil
 }
 
 func (conn *WebWorkerConn) SetWriteDeadline(t time.Time) error {
+	if t.IsZero() {
+		conn.timerW = nil
+		return nil
+	}
 	conn.timerW = time.NewTimer(time.Until(t))
 	return nil
 }

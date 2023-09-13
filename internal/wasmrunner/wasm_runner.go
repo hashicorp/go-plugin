@@ -21,8 +21,9 @@ const unrecognizedRemotePluginMessage = `This usually means
 var _ runner.Runner = (*WasmRunner)(nil)
 
 type WasmRunner struct {
-	logger hclog.Logger
-	ww     *wasmww.WasmWebWorkerConn
+	logger   hclog.Logger
+	wwConn   *wasmww.WasmSharedWebWorkerConn
+	mgmtConn *wasmww.WasmSharedWebWorkerMgmtConn
 
 	stdout io.ReadCloser
 	stderr io.ReadCloser
@@ -31,71 +32,59 @@ type WasmRunner struct {
 }
 
 func NewWasmRunner(logger hclog.Logger, cmd *exec.Cmd) (*WasmRunner, error) {
-	ww := &wasmww.WasmWebWorkerConn{
+	ww := &wasmww.WasmSharedWebWorkerConn{
 		Path: cmd.Path,
 		Args: cmd.Args,
 		Env:  cmd.Env,
 	}
 
-	stdout, err := ww.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stderr, err := ww.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
 	return &WasmRunner{
 		logger: logger,
-		ww:     ww,
-		stdout: stdout,
-		stderr: stderr,
+		wwConn: ww,
 	}, nil
 }
 
 func (c *WasmRunner) Start(_ context.Context) error {
-	c.logger.Debug("starting plugin", "path", c.ww.Path, "args", c.ww.Args)
-	err := c.ww.Start()
+	c.logger.Debug("starting plugin", "path", c.wwConn.Path, "args", c.wwConn.Args)
+	mgmtConn, err := c.wwConn.Start()
 	if err != nil {
 		return err
 	}
+	c.mgmtConn = mgmtConn
 
-	c.logger.Debug("plugin started", "path", c.ww.Path, "name", c.ww.Name)
+	c.logger.Debug("plugin started", "path", c.wwConn.Path, "name", c.wwConn.Name)
 	return nil
 }
 
 func (c *WasmRunner) Wait(_ context.Context) error {
-	c.ww.Wait()
+	c.wwConn.Wait()
 	return nil
 }
 
 func (c *WasmRunner) Kill(_ context.Context) error {
-	c.ww.Terminate()
-	return nil
+	return c.wwConn.Close()
 }
 
 func (c *WasmRunner) Stdout() io.ReadCloser {
-	return c.stdout
+	return c.mgmtConn.Stdout()
 }
 
 func (c *WasmRunner) Stderr() io.ReadCloser {
-	return c.stderr
+	return c.mgmtConn.Stderr()
 }
 
 func (c *WasmRunner) Name() string {
-	return c.ww.Path
+	return c.wwConn.Path
 }
 
 func (c *WasmRunner) ID() string {
-	return c.ww.Name
+	return c.wwConn.Name
 }
 
 func (c *WasmRunner) Diagnose(ctx context.Context) string {
-	return fmt.Sprintf(unrecognizedRemotePluginMessage, c.ww.Path)
+	return fmt.Sprintf(unrecognizedRemotePluginMessage, c.wwConn.Path)
 }
 
-func (c *WasmRunner) WebWorker() *wasmww.WasmWebWorkerConn {
-	return c.ww
+func (c *WasmRunner) WebWorker() *wasmww.WasmSharedWebWorkerConn {
+	return c.wwConn
 }

@@ -10,6 +10,6 @@ import (
 
 func dialRPC(c *Client) (net.Conn, error) {
 	ww := c.runner.(*wasmrunner.WasmRunner).WebWorker()
-	conn := NewWebWorkerConnForClient(ww.Name, ww.EventChannel(), ww.PostMessage)
+	conn := NewWebWorkerConnForClient(ww.Name, ww.URL, ww.EventChannel(), ww.PostMessage, ww.Close)
 	return conn, nil
 }

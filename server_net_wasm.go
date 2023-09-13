@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hack-pad/safejs"
@@ -19,17 +20,12 @@ var _ net.Listener = &WebWorkerListener{}
 
 // WebWorkerListener implements the net.Listener
 type WebWorkerListener struct {
-	self *wasmww.SelfConn
-	ch   <-chan types.MessageEventMessage
-
-	// acceptCh is a 1 buffered channel, which only allow the 1st receive.
-	// Currently, the web worker is only a dedicated one, which means
-	// only one client can connect to this web worker at one point.
-	acceptCh chan any
+	self *wasmww.SelfSharedConn
+	ch   <-chan *wasmww.SelfSharedConnPort
 }
 
 func NewWebWorkerListener() (net.Listener, error) {
-	self, err := wasmww.NewSelfConn()
+	self, err := wasmww.NewSelfSharedConn()
 	if err != nil {
 		return nil, err
 	}
@@ -37,26 +33,33 @@ func NewWebWorkerListener() (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	acceptCh := make(chan any, 1)
-	acceptCh <- struct{}{}
 	return &WebWorkerListener{
-		self:     self,
-		ch:       ch,
-		acceptCh: acceptCh,
+		self: self,
+		ch:   ch,
 	}, nil
 }
 
 func (l *WebWorkerListener) Accept() (net.Conn, error) {
-	_, ok := <-l.acceptCh
+	port, ok := <-l.ch
 	if !ok {
 		return nil, net.ErrClosed
 	}
 
-	var name string
-	if v, err := l.self.Name(); err == nil {
-		name = v
+	name, err := l.self.Name()
+	if err != nil {
+		return nil, err
 	}
-	return NewWebWorkerConnForServer(name, l.ch, l.self.PostMessage, l.acceptCh), nil
+	location, err := l.self.Location()
+	if err != nil {
+		return nil, err
+	}
+
+	ch, err := port.SetupConn()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewWebWorkerConnForServer(name, location.Href, ch, port.PostMessage, port.Close), nil
 }
 
 func (l *WebWorkerListener) Addr() net.Addr {
@@ -64,7 +67,11 @@ func (l *WebWorkerListener) Addr() net.Addr {
 	if v, err := l.self.Name(); err == nil {
 		name = v
 	}
-	return WebWorkerAddr{Name: name}
+	var url string
+	if v, err := l.self.Location(); err == nil {
+		url = v.Href
+	}
+	return WebWorkerAddr{Name: name, URL: url}
 }
 
 func (l *WebWorkerListener) Close() error {
@@ -72,61 +79,76 @@ func (l *WebWorkerListener) Close() error {
 }
 
 // WebWorkerAddr implements the net.Addr
-type WebWorkerAddr struct{ Name string }
+type WebWorkerAddr struct {
+	Name string
+	URL  string
+}
 
 var _ net.Addr = WebWorkerAddr{}
+
+func ParseWebWorkerAddr(addr string) (*WebWorkerAddr, error) {
+	name, url, ok := strings.Cut(addr, ":")
+	if !ok {
+		return nil, fmt.Errorf("malformed address: %s", addr)
+	}
+	return &WebWorkerAddr{
+		Name: name,
+		URL:  url,
+	}, nil
+}
 
 func (WebWorkerAddr) Network() string {
 	return "webworker"
 }
 
 func (addr WebWorkerAddr) String() string {
-	return addr.Name
+	return fmt.Sprintf("%s:%s", addr.Name, addr.URL)
 }
 
 // WebWorkerConn implements the net.Conn
 type WebWorkerConn struct {
-	name     string
-	ch       <-chan types.MessageEventMessage
-	timerR   *time.Timer
-	timerW   *time.Timer
-	postFunc postMessageFunc
-	readBuf  bytes.Buffer
+	localAddr  net.Addr
+	remoteAddr net.Addr
+	ch         <-chan types.MessageEventMessage
+	closeFunc  connCloseFunc
+	postFunc   connPostMessageFunc
 
-	// server only
-	acceptCh chan any
+	timerR  *time.Timer
+	timerW  *time.Timer
+	readBuf bytes.Buffer
 }
 
-type postMessageFunc func(message safejs.Value, transfers []safejs.Value) error
+type connPostMessageFunc func(message safejs.Value, transfers []safejs.Value) error
+type connCloseFunc func() error
 
 var _ net.Conn = &WebWorkerConn{}
 
-func NewWebWorkerConnForServer(name string, ch <-chan types.MessageEventMessage, postFunc postMessageFunc, acceptCh chan any) *WebWorkerConn {
+func NewWebWorkerConnForServer(name, url string, ch <-chan types.MessageEventMessage, postFunc connPostMessageFunc, closeFunc connCloseFunc) *WebWorkerConn {
 	return &WebWorkerConn{
-		name:     name,
-		ch:       ch,
-		postFunc: postFunc,
-		acceptCh: acceptCh,
+		localAddr:  WebWorkerAddr{Name: name, URL: url},
+		remoteAddr: WebWorkerAddr{Name: "outside"},
+		ch:         ch,
+		postFunc:   postFunc,
+		closeFunc:  closeFunc,
 	}
 }
 
-func NewWebWorkerConnForClient(name string, ch <-chan types.MessageEventMessage, postFunc postMessageFunc) *WebWorkerConn {
+func NewWebWorkerConnForClient(name, url string, ch <-chan types.MessageEventMessage, postFunc connPostMessageFunc, closeFunc connCloseFunc) *WebWorkerConn {
 	return &WebWorkerConn{
-		name:     name,
-		ch:       ch,
-		postFunc: postFunc,
+		localAddr:  WebWorkerAddr{Name: "outside"},
+		remoteAddr: WebWorkerAddr{Name: name, URL: url},
+		ch:         ch,
+		postFunc:   postFunc,
+		closeFunc:  closeFunc,
 	}
 }
 
 func (conn *WebWorkerConn) Close() error {
-	if conn.acceptCh != nil {
-		conn.acceptCh <- struct{}{}
-	}
-	return nil
+	return conn.closeFunc()
 }
 
 func (conn *WebWorkerConn) LocalAddr() net.Addr {
-	return WebWorkerAddr{Name: conn.name}
+	return conn.localAddr
 }
 
 func (conn *WebWorkerConn) Read(b []byte) (n int, err error) {
@@ -206,8 +228,8 @@ func (conn *WebWorkerConn) Write(b []byte) (n int, err error) {
 	return len(b), nil
 }
 
-func (*WebWorkerConn) RemoteAddr() net.Addr {
-	return WebWorkerAddr{Name: "remote"}
+func (conn *WebWorkerConn) RemoteAddr() net.Addr {
+	return conn.remoteAddr
 }
 
 func (conn *WebWorkerConn) SetDeadline(t time.Time) error {

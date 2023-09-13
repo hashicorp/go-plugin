@@ -263,7 +263,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		switch network {
 		case "webworker":
-			addr = WebWorkerAddr{Name: address}
+			addr, err = ParseWebWorkerAddr(address)
 		default:
 			err = fmt.Errorf("Unknown address type: %s", address)
 		}

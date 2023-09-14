@@ -57,7 +57,7 @@ func (c *WasmRunner) Start(_ context.Context) error {
 }
 
 func (c *WasmRunner) Wait(_ context.Context) error {
-	c.wwConn.Wait()
+	c.mgmtConn.Wait()
 	return nil
 }
 

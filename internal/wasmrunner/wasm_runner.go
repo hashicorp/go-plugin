@@ -62,7 +62,7 @@ func (c *WasmRunner) Wait(_ context.Context) error {
 }
 
 func (c *WasmRunner) Kill(_ context.Context) error {
-	return c.wwConn.Close()
+	return c.mgmtConn.Close()
 }
 
 func (c *WasmRunner) Stdout() io.ReadCloser {

@@ -101,7 +101,7 @@ type Client struct {
 	// forcefully killed.
 	processKilled bool
 
-	hostSocketDir string
+	unixSocketCfg UnixSocketConfig
 }
 
 // NegotiatedVersion returns the protocol version negotiated with the server.
@@ -240,6 +240,28 @@ type ClientConfig struct {
 	// SkipHostEnv allows plugins to run without inheriting the parent process'
 	// environment variables.
 	SkipHostEnv bool
+
+	// UnixSocketConfig configures additional options for any Unix sockets
+	// that are created. Not normally required. Not supported on Windows.
+	UnixSocketConfig *UnixSocketConfig
+}
+
+type UnixSocketConfig struct {
+	// If set, go-plugin will change the owner of any Unix sockets created to
+	// this group, and set them as group-writable. Can be a name or gid. The
+	// client process must be a member of this group or chown will fail.
+	Group string
+
+	// The directory to create Unix sockets in. Internally managed by go-plugin
+	// and deleted when the plugin is killed.
+	directory string
+}
+
+func unixSocketConfigFromEnv() UnixSocketConfig {
+	return UnixSocketConfig{
+		Group:     os.Getenv(EnvUnixSocketGroup),
+		directory: os.Getenv(EnvUnixSocketDir),
+	}
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -445,7 +467,7 @@ func (c *Client) Kill() {
 	c.l.Lock()
 	runner := c.runner
 	addr := c.address
-	hostSocketDir := c.hostSocketDir
+	hostSocketDir := c.unixSocketCfg.directory
 	c.l.Unlock()
 
 	// If there is no runner or ID, there is nothing to kill.

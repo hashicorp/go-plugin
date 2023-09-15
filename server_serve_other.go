@@ -75,7 +75,7 @@ func Serve(opts *ServeConfig) {
 	}
 
 	// Register a listener so we can accept a connection
-	listener, err := serverListener(os.Getenv(EnvUnixSocketDir))
+	listener, err := serverListener(unixSocketConfigFromEnv())
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
 		return

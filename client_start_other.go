@@ -132,15 +132,33 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
+	if c.config.UnixSocketConfig != nil {
+		c.unixSocketCfg.Group = c.config.UnixSocketConfig.Group
+	}
+
+	if c.unixSocketCfg.Group != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketGroup, c.unixSocketCfg.Group))
+	}
+
 	var runner runner.Runner
 	switch {
 	case c.config.RunnerFunc != nil:
-		c.hostSocketDir, err = os.MkdirTemp("", "")
+		c.unixSocketCfg.directory, err = os.MkdirTemp("", "plugin-dir")
 		if err != nil {
 			return nil, err
 		}
-		c.logger.Trace("created temporary directory for unix sockets", "dir", c.hostSocketDir)
-		runner, err = c.config.RunnerFunc(c.logger, cmd, c.hostSocketDir)
+		// os.MkdirTemp creates folders with 0o700, so if we have a group
+		// configured we need to make it group-writable.
+		if c.unixSocketCfg.Group != "" {
+			err = setGroupWritable(c.unixSocketCfg.directory, c.unixSocketCfg.Group, 0o770)
+			if err != nil {
+				return nil, err
+			}
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketDir, c.unixSocketCfg.directory))
+		c.logger.Trace("created temporary directory for unix sockets", "dir", c.unixSocketCfg.directory)
+
+		runner, err = c.config.RunnerFunc(c.logger, cmd, c.unixSocketCfg.directory)
 		if err != nil {
 			return nil, err
 		}

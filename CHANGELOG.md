@@ -1,3 +1,13 @@
+## v1.5.1
+
+BUGS:
+
+* server: `PLUGIN_UNIX_SOCKET_DIR` is consistently used for gRPC broker sockets as well as the initial socket [[GH-277](https://github.com/hashicorp/go-plugin/pull/277)]
+
+ENHANCEMENTS:
+
+* client: New `UnixSocketConfig` option in `ClientConfig` to support making the client's Unix sockets group-writable [[GH-277](https://github.com/hashicorp/go-plugin/pull/277)]
+
 ## v1.5.0
 
 ENHANCEMENTS:

@@ -104,7 +104,7 @@ type Client struct {
 	// forcefully killed.
 	processKilled bool
 
-	hostSocketDir string
+	unixSocketCfg UnixSocketConfig
 }
 
 // NegotiatedVersion returns the protocol version negotiated with the server.
@@ -247,6 +247,28 @@ type ClientConfig struct {
 	// SkipHostEnv allows plugins to run without inheriting the parent process'
 	// environment variables.
 	SkipHostEnv bool
+
+	// UnixSocketConfig configures additional options for any Unix sockets
+	// that are created. Not normally required. Not supported on Windows.
+	UnixSocketConfig *UnixSocketConfig
+}
+
+type UnixSocketConfig struct {
+	// If set, go-plugin will change the owner of any Unix sockets created to
+	// this group, and set them as group-writable. Can be a name or gid. The
+	// client process must be a member of this group or chown will fail.
+	Group string
+
+	// The directory to create Unix sockets in. Internally managed by go-plugin
+	// and deleted when the plugin is killed.
+	directory string
+}
+
+func unixSocketConfigFromEnv() UnixSocketConfig {
+	return UnixSocketConfig{
+		Group:     os.Getenv(EnvUnixSocketGroup),
+		directory: os.Getenv(EnvUnixSocketDir),
+	}
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -456,7 +478,7 @@ func (c *Client) Kill() {
 	c.l.Lock()
 	runner := c.runner
 	addr := c.address
-	hostSocketDir := c.hostSocketDir
+	hostSocketDir := c.unixSocketCfg.directory
 	c.l.Unlock()
 
 	// If there is no runner or ID, there is nothing to kill.
@@ -640,15 +662,33 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
+	if c.config.UnixSocketConfig != nil {
+		c.unixSocketCfg.Group = c.config.UnixSocketConfig.Group
+	}
+
+	if c.unixSocketCfg.Group != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketGroup, c.unixSocketCfg.Group))
+	}
+
 	var runner runner.Runner
 	switch {
 	case c.config.RunnerFunc != nil:
-		c.hostSocketDir, err = os.MkdirTemp("", "")
+		c.unixSocketCfg.directory, err = os.MkdirTemp("", "plugin-dir")
 		if err != nil {
 			return nil, err
 		}
-		c.logger.Trace("created temporary directory for unix sockets", "dir", c.hostSocketDir)
-		runner, err = c.config.RunnerFunc(c.logger, cmd, c.hostSocketDir)
+		// os.MkdirTemp creates folders with 0o700, so if we have a group
+		// configured we need to make it group-writable.
+		if c.unixSocketCfg.Group != "" {
+			err = setGroupWritable(c.unixSocketCfg.directory, c.unixSocketCfg.Group, 0o770)
+			if err != nil {
+				return nil, err
+			}
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketDir, c.unixSocketCfg.directory))
+		c.logger.Trace("created temporary directory for unix sockets", "dir", c.unixSocketCfg.directory)
+
+		runner, err = c.config.RunnerFunc(c.logger, cmd, c.unixSocketCfg.directory)
 		if err != nil {
 			return nil, err
 		}

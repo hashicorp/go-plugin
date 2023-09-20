@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"context"
+	"crypto/elliptic"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -100,6 +101,12 @@ type ServeConfig struct {
 	//   * Connection information will not be sent to stdout
 	//
 	Test *ServeTestConfig
+
+	// AutoMTLSCurve is the elliptic curve to use for generating the certificates
+	// used for AutoMTLS.
+	// This is only used if the client is configured to use AutoMTLS.
+	// If this is nil, then the default of elliptic.P521() is used.
+	AutoMTLSCurve elliptic.Curve
 }
 
 // ServeTestConfig configures plugin serving for test mode. See ServeConfig.Test.
@@ -305,7 +312,11 @@ func Serve(opts *ServeConfig) {
 			logger.Error("client cert provided but failed to parse", "cert", clientCert)
 		}
 
-		certPEM, keyPEM, err := generateCert()
+		if opts.AutoMTLSCurve == nil {
+			opts.AutoMTLSCurve = defaultMTLSCurve
+		}
+
+		certPEM, keyPEM, err := generateCert(opts.AutoMTLSCurve)
 		if err != nil {
 			logger.Error("failed to generate server certificate", "error", err)
 			panic(err)

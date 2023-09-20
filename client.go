@@ -6,6 +6,7 @@ package plugin
 import (
 	"bufio"
 	"context"
+	"crypto/elliptic"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
@@ -216,6 +217,11 @@ type ClientConfig struct {
 	// You cannot Reattach to a server with this option enabled.
 	AutoMTLS bool
 
+	// AutoMTLSCurve is the elliptic curve to use for generating the certificates
+	// used for AutoMTLS.
+	// If this is nil, then the default of elliptic.P521() is used.
+	AutoMTLSCurve elliptic.Curve
+
 	// GRPCDialOptions allows plugin users to pass custom grpc.DialOption
 	// to create gRPC connections. This only affects plugins using the gRPC
 	// protocol.
@@ -344,6 +350,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 			Level:  hclog.Trace,
 			Name:   "plugin",
 		})
+	}
+
+	if config.AutoMTLSCurve == nil {
+		config.AutoMTLSCurve = defaultMTLSCurve
 	}
 
 	c = &Client{
@@ -580,7 +590,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	// certificate to the plugin.
 	if c.config.AutoMTLS {
 		c.logger.Info("configuring client automatic mTLS")
-		certPEM, keyPEM, err := generateCert()
+		certPEM, keyPEM, err := generateCert(c.config.AutoMTLSCurve)
 		if err != nil {
 			c.logger.Error("failed to generate client certificate", "error", err)
 			return nil, err

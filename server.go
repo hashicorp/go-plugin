@@ -137,7 +137,7 @@ type ServeTestConfig struct {
 func unixSocketConfigFromEnv() UnixSocketConfig {
 	return UnixSocketConfig{
 		Group:     os.Getenv(EnvUnixSocketGroup),
-		directory: os.Getenv(EnvUnixSocketDir),
+		socketDir: os.Getenv(EnvUnixSocketDir),
 	}
 }
 
@@ -554,7 +554,7 @@ func serverListener_tcp() (net.Listener, error) {
 }
 
 func serverListener_unix(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
-	tf, err := os.CreateTemp(unixSocketCfg.directory, "plugin")
+	tf, err := os.CreateTemp(unixSocketCfg.socketDir, "plugin")
 	if err != nil {
 		return nil, err
 	}

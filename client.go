@@ -650,7 +650,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	if c.config.UnixSocketConfig != nil {
-		c.unixSocketCfg.Group = c.config.UnixSocketConfig.Group
+		c.unixSocketCfg = *c.config.UnixSocketConfig
 	}
 
 	if c.unixSocketCfg.Group != "" {

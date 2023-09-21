@@ -134,6 +134,13 @@ type ServeTestConfig struct {
 	SyncStdio bool
 }
 
+func unixSocketConfigFromEnv() UnixSocketConfig {
+	return UnixSocketConfig{
+		Group:     os.Getenv(EnvUnixSocketGroup),
+		socketDir: os.Getenv(EnvUnixSocketDir),
+	}
+}
+
 // protocolVersion determines the protocol version and plugin set to be used by
 // the server. In the event that there is no suitable version, the last version
 // in the config is returned leaving the client to report the incompatibility.
@@ -547,7 +554,7 @@ func serverListener_tcp() (net.Listener, error) {
 }
 
 func serverListener_unix(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
-	tf, err := os.CreateTemp(unixSocketCfg.directory, "plugin")
+	tf, err := os.CreateTemp(unixSocketCfg.socketDir, "plugin")
 	if err != nil {
 		return nil, err
 	}

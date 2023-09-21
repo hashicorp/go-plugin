@@ -252,16 +252,15 @@ type UnixSocketConfig struct {
 	// client process must be a member of this group or chown will fail.
 	Group string
 
-	// The directory to create Unix sockets in. Internally managed by go-plugin
-	// and deleted when the plugin is killed.
-	directory string
-}
+	// TempDir specifies the base directory to use when creating a plugin-specific
+	// temporary directory. It is expected to already exist and be writable. If
+	// not set, defaults to the directory chosen by os.MkdirTemp.
+	TempDir string
 
-func unixSocketConfigFromEnv() UnixSocketConfig {
-	return UnixSocketConfig{
-		Group:     os.Getenv(EnvUnixSocketGroup),
-		directory: os.Getenv(EnvUnixSocketDir),
-	}
+	// The directory to create Unix sockets in. Internally created and managed
+	// by go-plugin and deleted when the plugin is killed. Will be created
+	// inside TempDir if specified.
+	socketDir string
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -467,7 +466,7 @@ func (c *Client) Kill() {
 	c.l.Lock()
 	runner := c.runner
 	addr := c.address
-	hostSocketDir := c.unixSocketCfg.directory
+	hostSocketDir := c.unixSocketCfg.socketDir
 	c.l.Unlock()
 
 	// If there is no runner or ID, there is nothing to kill.
@@ -652,7 +651,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	if c.config.UnixSocketConfig != nil {
-		c.unixSocketCfg.Group = c.config.UnixSocketConfig.Group
+		c.unixSocketCfg = *c.config.UnixSocketConfig
 	}
 
 	if c.unixSocketCfg.Group != "" {
@@ -662,22 +661,22 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	var runner runner.Runner
 	switch {
 	case c.config.RunnerFunc != nil:
-		c.unixSocketCfg.directory, err = os.MkdirTemp("", "plugin-dir")
+		c.unixSocketCfg.socketDir, err = os.MkdirTemp(c.unixSocketCfg.TempDir, "plugin-dir")
 		if err != nil {
 			return nil, err
 		}
 		// os.MkdirTemp creates folders with 0o700, so if we have a group
 		// configured we need to make it group-writable.
 		if c.unixSocketCfg.Group != "" {
-			err = setGroupWritable(c.unixSocketCfg.directory, c.unixSocketCfg.Group, 0o770)
+			err = setGroupWritable(c.unixSocketCfg.socketDir, c.unixSocketCfg.Group, 0o770)
 			if err != nil {
 				return nil, err
 			}
 		}
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketDir, c.unixSocketCfg.directory))
-		c.logger.Trace("created temporary directory for unix sockets", "dir", c.unixSocketCfg.directory)
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", EnvUnixSocketDir, c.unixSocketCfg.socketDir))
+		c.logger.Trace("created temporary directory for unix sockets", "dir", c.unixSocketCfg.socketDir)
 
-		runner, err = c.config.RunnerFunc(c.logger, cmd, c.unixSocketCfg.directory)
+		runner, err = c.config.RunnerFunc(c.logger, cmd, c.unixSocketCfg.socketDir)
 		if err != nil {
 			return nil, err
 		}

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin/internal/grpcmux"
 	"google.golang.org/grpc"
 )
 
@@ -387,6 +388,12 @@ func Serve(opts *ServeConfig) {
 		}
 
 	case ProtocolGRPC:
+		var muxer *grpcmux.GRPCServerMuxer
+		if multiplex := os.Getenv(envMultiplexGRPC); multiplex == "true" || multiplex == "1" {
+			muxer = grpcmux.NewGRPCServerMuxer(logger, listener)
+			listener = muxer
+		}
+
 		// Create the gRPC server
 		server = &GRPCServer{
 			Plugins: pluginSet,
@@ -396,6 +403,7 @@ func Serve(opts *ServeConfig) {
 			Stderr:  stderr_r,
 			DoneCh:  doneCh,
 			logger:  logger,
+			muxer:   muxer,
 		}
 
 	default:
@@ -585,10 +593,7 @@ func serverListener_unix(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
 
 	// Wrap the listener in rmListener so that the Unix domain socket file
 	// is removed on close.
-	return &rmListener{
-		Listener: l,
-		Path:     path,
-	}, nil
+	return newDeleteFileListener(l, path), nil
 }
 
 func setGroupWritable(path, groupString string, mode os.FileMode) error {
@@ -618,11 +623,21 @@ func setGroupWritable(path, groupString string, mode os.FileMode) error {
 }
 
 // rmListener is an implementation of net.Listener that forwards most
-// calls to the listener but also removes a file as part of the close. We
-// use this to cleanup the unix domain socket on close.
+// calls to the listener but also calls an additional close function. We
+// use this to cleanup the unix domain socket on close, as well as clean
+// up multiplexed listeners.
 type rmListener struct {
 	net.Listener
-	Path string
+	close func() error
+}
+
+func newDeleteFileListener(ln net.Listener, path string) *rmListener {
+	return &rmListener{
+		Listener: ln,
+		close: func() error {
+			return os.Remove(path)
+		},
+	}
 }
 
 func (l *rmListener) Close() error {
@@ -632,5 +647,5 @@ func (l *rmListener) Close() error {
 	}
 
 	// Remove the file
-	return os.Remove(l.Path)
+	return l.close()
 }

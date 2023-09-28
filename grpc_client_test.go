@@ -14,8 +14,17 @@ import (
 	reflectpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
-func TestGRPCClient_App(t *testing.T) {
-	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+func TestGRPC_App(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		testGRPCClientApp(t, false)
+	})
+	t.Run("mux", func(t *testing.T) {
+		testGRPCClientApp(t, true)
+	})
+}
+
+func testGRPCClientApp(t *testing.T, multiplex bool) {
+	client, server := TestPluginGRPCConn(t, multiplex, map[string]Plugin{
 		"test": new(testGRPCInterfacePlugin),
 	})
 	defer client.Close()
@@ -59,7 +68,16 @@ func TestGRPCConn_BidirectionalPing(t *testing.T) {
 }
 
 func TestGRPCC_Stream(t *testing.T) {
-	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+	t.Run("default", func(t *testing.T) {
+		testGRPCStream(t, false)
+	})
+	t.Run("mux", func(t *testing.T) {
+		testGRPCStream(t, true)
+	})
+}
+
+func testGRPCStream(t *testing.T, multiplex bool) {
+	client, server := TestPluginGRPCConn(t, multiplex, map[string]Plugin{
 		"test": new(testGRPCInterfacePlugin),
 	})
 	defer client.Close()
@@ -86,8 +104,17 @@ func TestGRPCC_Stream(t *testing.T) {
 	}
 }
 
-func TestGRPCClient_Ping(t *testing.T) {
-	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+func TestGRPC_Ping(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		testGRPCClientPing(t, false)
+	})
+	t.Run("mux", func(t *testing.T) {
+		testGRPCClientPing(t, true)
+	})
+}
+
+func testGRPCClientPing(t *testing.T, multiplex bool) {
+	client, server := TestPluginGRPCConn(t, multiplex, map[string]Plugin{
 		"test": new(testGRPCInterfacePlugin),
 	})
 	defer client.Close()
@@ -110,10 +137,19 @@ func TestGRPCClient_Ping(t *testing.T) {
 	}
 }
 
-func TestGRPCClient_Reflection(t *testing.T) {
+func TestGRPC_Reflection(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		testGRPCClientReflection(t, false)
+	})
+	t.Run("mux", func(t *testing.T) {
+		testGRPCClientReflection(t, true)
+	})
+}
+
+func testGRPCClientReflection(t *testing.T, multiplex bool) {
 	ctx := context.Background()
 
-	client, server := TestPluginGRPCConn(t, map[string]Plugin{
+	client, server := TestPluginGRPCConn(t, multiplex, map[string]Plugin{
 		"test": new(testGRPCInterfacePlugin),
 	})
 	defer client.Close()

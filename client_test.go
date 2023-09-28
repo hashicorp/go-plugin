@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -65,10 +64,7 @@ func TestClient(t *testing.T) {
 // This tests a bug where Kill would start
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	td := t.TempDir()
 	defer os.RemoveAll(td)
 
 	// Start the client
@@ -115,10 +111,7 @@ func TestClient_killStart(t *testing.T) {
 
 func TestClient_testCleanup(t *testing.T) {
 	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	td := t.TempDir()
 	defer os.RemoveAll(td)
 
 	// Create a path that the helper process will write on cleanup
@@ -825,7 +818,7 @@ func TestClient_textLogLevel(t *testing.T) {
 
 func TestClient_Stdin(t *testing.T) {
 	// Overwrite stdin for this test with a temporary file
-	tf, err := ioutil.TempFile("", "terraform")
+	tf, err := os.CreateTemp("", "terraform")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

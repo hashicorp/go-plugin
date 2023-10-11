@@ -12,6 +12,7 @@ import (
 // GRPCControllerServer handles shutdown calls to terminate the server when the
 // plugin client is closed.
 type grpcControllerServer struct {
+	plugin.UnimplementedGRPCControllerServer
 	server *GRPCServer
 }
 

@@ -207,6 +207,7 @@ var testGRPCPluginMap = map[string]Plugin{
 
 // testGRPCServer is the implementation of our GRPC service.
 type testGRPCServer struct {
+	grpctest.UnimplementedTestServer
 	Impl   testInterface
 	broker *GRPCBroker
 }
@@ -273,7 +274,9 @@ func (s *testGRPCServer) PrintStdio(
 	return &empty.Empty{}, nil
 }
 
-type pingPongServer struct{}
+type pingPongServer struct {
+	grpctest.UnimplementedPingPongServer
+}
 
 func (p *pingPongServer) Ping(ctx context.Context, req *grpctest.PingRequest) (*grpctest.PongResponse, error) {
 	return &grpctest.PongResponse{

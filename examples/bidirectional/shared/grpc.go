@@ -55,6 +55,7 @@ func (m *GRPCClient) Get(key string) (int64, error) {
 
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
+	proto.UnimplementedCounterServer
 	// This is the real implementation
 	Impl Counter
 
@@ -94,6 +95,7 @@ func (m *GRPCAddHelperClient) Sum(a, b int64) (int64, error) {
 
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCAddHelperServer struct {
+	proto.UnimplementedAddHelperServer
 	// This is the real implementation
 	Impl AddHelper
 }

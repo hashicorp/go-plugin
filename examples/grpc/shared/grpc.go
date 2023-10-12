@@ -33,7 +33,6 @@ func (m *GRPCClient) Get(key string) ([]byte, error) {
 
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
-	proto.UnimplementedKVServer
 	// This is the real implementation
 	Impl KV
 }

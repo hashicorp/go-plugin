@@ -40,8 +40,6 @@ type sendErr struct {
 // connection information to/from the plugin. Implements GRPCBrokerServer and
 // streamer interfaces.
 type gRPCBrokerServer struct {
-	plugin.UnimplementedGRPCBrokerServer
-
 	// send is used to send connection info to the gRPC stream.
 	send chan *sendErr
 

@@ -3,16 +3,16 @@
 
 version: v1
 plugins:
-  - plugin: go
+  - plugin: buf.build/protocolbuffers/go
     out: .
     opt:
       - paths=source_relative
-  - plugin: go-grpc
+  - plugin: buf.build/grpc/go:v1.3.0
     out: .
     opt:
       - paths=source_relative
       - require_unimplemented_servers=false
-  - plugin: python
+  - plugin: buf.build/protocolbuffers/python:v24.4
     out: plugin-python
   - plugin: buf.build/grpc/python:v1.58.1
     out: plugin-python

@@ -49,15 +49,14 @@ func (c *counterClient) Put(ctx context.Context, in *PutRequest, opts ...grpc.Ca
 }
 
 // CounterServer is the server API for Counter service.
-// All implementations must embed UnimplementedCounterServer
+// All implementations should embed UnimplementedCounterServer
 // for forward compatibility
 type CounterServer interface {
 	Get(context.Context, *GetRequest) (*GetResponse, error)
 	Put(context.Context, *PutRequest) (*Empty, error)
-	mustEmbedUnimplementedCounterServer()
 }
 
-// UnimplementedCounterServer must be embedded to have forward compatible implementations.
+// UnimplementedCounterServer should be embedded to have forward compatible implementations.
 type UnimplementedCounterServer struct {
 }
 
@@ -67,7 +66,6 @@ func (UnimplementedCounterServer) Get(context.Context, *GetRequest) (*GetRespons
 func (UnimplementedCounterServer) Put(context.Context, *PutRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
 }
-func (UnimplementedCounterServer) mustEmbedUnimplementedCounterServer() {}
 
 // UnsafeCounterServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to CounterServer will
@@ -161,21 +159,19 @@ func (c *addHelperClient) Sum(ctx context.Context, in *SumRequest, opts ...grpc.
 }
 
 // AddHelperServer is the server API for AddHelper service.
-// All implementations must embed UnimplementedAddHelperServer
+// All implementations should embed UnimplementedAddHelperServer
 // for forward compatibility
 type AddHelperServer interface {
 	Sum(context.Context, *SumRequest) (*SumResponse, error)
-	mustEmbedUnimplementedAddHelperServer()
 }
 
-// UnimplementedAddHelperServer must be embedded to have forward compatible implementations.
+// UnimplementedAddHelperServer should be embedded to have forward compatible implementations.
 type UnimplementedAddHelperServer struct {
 }
 
 func (UnimplementedAddHelperServer) Sum(context.Context, *SumRequest) (*SumResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Sum not implemented")
 }
-func (UnimplementedAddHelperServer) mustEmbedUnimplementedAddHelperServer() {}
 
 // UnsafeAddHelperServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to AddHelperServer will

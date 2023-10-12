@@ -68,7 +68,7 @@ func (x *gRPCStdioStreamStdioClient) Recv() (*StdioData, error) {
 }
 
 // GRPCStdioServer is the server API for GRPCStdio service.
-// All implementations must embed UnimplementedGRPCStdioServer
+// All implementations should embed UnimplementedGRPCStdioServer
 // for forward compatibility
 type GRPCStdioServer interface {
 	// StreamStdio returns a stream that contains all the stdout/stderr.
@@ -77,17 +77,15 @@ type GRPCStdioServer interface {
 	//
 	// Callers should connect early to prevent blocking on the plugin process.
 	StreamStdio(*emptypb.Empty, GRPCStdio_StreamStdioServer) error
-	mustEmbedUnimplementedGRPCStdioServer()
 }
 
-// UnimplementedGRPCStdioServer must be embedded to have forward compatible implementations.
+// UnimplementedGRPCStdioServer should be embedded to have forward compatible implementations.
 type UnimplementedGRPCStdioServer struct {
 }
 
 func (UnimplementedGRPCStdioServer) StreamStdio(*emptypb.Empty, GRPCStdio_StreamStdioServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamStdio not implemented")
 }
-func (UnimplementedGRPCStdioServer) mustEmbedUnimplementedGRPCStdioServer() {}
 
 // UnsafeGRPCStdioServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to GRPCStdioServer will

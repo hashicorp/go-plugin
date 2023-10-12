@@ -39,21 +39,19 @@ func (c *gRPCControllerClient) Shutdown(ctx context.Context, in *Empty, opts ...
 }
 
 // GRPCControllerServer is the server API for GRPCController service.
-// All implementations must embed UnimplementedGRPCControllerServer
+// All implementations should embed UnimplementedGRPCControllerServer
 // for forward compatibility
 type GRPCControllerServer interface {
 	Shutdown(context.Context, *Empty) (*Empty, error)
-	mustEmbedUnimplementedGRPCControllerServer()
 }
 
-// UnimplementedGRPCControllerServer must be embedded to have forward compatible implementations.
+// UnimplementedGRPCControllerServer should be embedded to have forward compatible implementations.
 type UnimplementedGRPCControllerServer struct {
 }
 
 func (UnimplementedGRPCControllerServer) Shutdown(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
 }
-func (UnimplementedGRPCControllerServer) mustEmbedUnimplementedGRPCControllerServer() {}
 
 // UnsafeGRPCControllerServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to GRPCControllerServer will

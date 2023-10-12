@@ -11,6 +11,7 @@ plugins:
     out: .
     opt:
       - paths=source_relative
+      - require_unimplemented_servers=false
   - plugin: python
     out: plugin-python
   - plugin: buf.build/grpc/python:v1.58.1

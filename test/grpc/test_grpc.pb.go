@@ -102,7 +102,7 @@ func (c *testClient) PrintStdio(ctx context.Context, in *PrintStdioRequest, opts
 }
 
 // TestServer is the server API for Test service.
-// All implementations must embed UnimplementedTestServer
+// All implementations should embed UnimplementedTestServer
 // for forward compatibility
 type TestServer interface {
 	Double(context.Context, *TestRequest) (*TestResponse, error)
@@ -110,10 +110,9 @@ type TestServer interface {
 	Bidirectional(context.Context, *BidirectionalRequest) (*BidirectionalResponse, error)
 	Stream(Test_StreamServer) error
 	PrintStdio(context.Context, *PrintStdioRequest) (*emptypb.Empty, error)
-	mustEmbedUnimplementedTestServer()
 }
 
-// UnimplementedTestServer must be embedded to have forward compatible implementations.
+// UnimplementedTestServer should be embedded to have forward compatible implementations.
 type UnimplementedTestServer struct {
 }
 
@@ -132,7 +131,6 @@ func (UnimplementedTestServer) Stream(Test_StreamServer) error {
 func (UnimplementedTestServer) PrintStdio(context.Context, *PrintStdioRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PrintStdio not implemented")
 }
-func (UnimplementedTestServer) mustEmbedUnimplementedTestServer() {}
 
 // UnsafeTestServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to TestServer will
@@ -303,21 +301,19 @@ func (c *pingPongClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc
 }
 
 // PingPongServer is the server API for PingPong service.
-// All implementations must embed UnimplementedPingPongServer
+// All implementations should embed UnimplementedPingPongServer
 // for forward compatibility
 type PingPongServer interface {
 	Ping(context.Context, *PingRequest) (*PongResponse, error)
-	mustEmbedUnimplementedPingPongServer()
 }
 
-// UnimplementedPingPongServer must be embedded to have forward compatible implementations.
+// UnimplementedPingPongServer should be embedded to have forward compatible implementations.
 type UnimplementedPingPongServer struct {
 }
 
 func (UnimplementedPingPongServer) Ping(context.Context, *PingRequest) (*PongResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedPingPongServer) mustEmbedUnimplementedPingPongServer() {}
 
 // UnsafePingPongServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to PingPongServer will

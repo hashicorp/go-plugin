@@ -49,15 +49,14 @@ func (c *kVClient) Put(ctx context.Context, in *PutRequest, opts ...grpc.CallOpt
 }
 
 // KVServer is the server API for KV service.
-// All implementations must embed UnimplementedKVServer
+// All implementations should embed UnimplementedKVServer
 // for forward compatibility
 type KVServer interface {
 	Get(context.Context, *GetRequest) (*GetResponse, error)
 	Put(context.Context, *PutRequest) (*Empty, error)
-	mustEmbedUnimplementedKVServer()
 }
 
-// UnimplementedKVServer must be embedded to have forward compatible implementations.
+// UnimplementedKVServer should be embedded to have forward compatible implementations.
 type UnimplementedKVServer struct {
 }
 
@@ -67,7 +66,6 @@ func (UnimplementedKVServer) Get(context.Context, *GetRequest) (*GetResponse, er
 func (UnimplementedKVServer) Put(context.Context, *PutRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
 }
-func (UnimplementedKVServer) mustEmbedUnimplementedKVServer() {}
 
 // UnsafeKVServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to KVServer will

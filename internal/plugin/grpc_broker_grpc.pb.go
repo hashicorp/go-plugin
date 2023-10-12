@@ -61,21 +61,19 @@ func (x *gRPCBrokerStartStreamClient) Recv() (*ConnInfo, error) {
 }
 
 // GRPCBrokerServer is the server API for GRPCBroker service.
-// All implementations must embed UnimplementedGRPCBrokerServer
+// All implementations should embed UnimplementedGRPCBrokerServer
 // for forward compatibility
 type GRPCBrokerServer interface {
 	StartStream(GRPCBroker_StartStreamServer) error
-	mustEmbedUnimplementedGRPCBrokerServer()
 }
 
-// UnimplementedGRPCBrokerServer must be embedded to have forward compatible implementations.
+// UnimplementedGRPCBrokerServer should be embedded to have forward compatible implementations.
 type UnimplementedGRPCBrokerServer struct {
 }
 
 func (UnimplementedGRPCBrokerServer) StartStream(GRPCBroker_StartStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartStream not implemented")
 }
-func (UnimplementedGRPCBrokerServer) mustEmbedUnimplementedGRPCBrokerServer() {}
 
 // UnsafeGRPCBrokerServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to GRPCBrokerServer will

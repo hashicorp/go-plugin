@@ -49,6 +49,9 @@ $ export KV_PLUGIN="./kv-go-netrpc"
 This plugin is written in Python:
 
 ```
+$ python -m venv plugin-python/.venv
+$ source plugin-python/.venv/bin/activate
+$ pip install -r plugin-python/requirements.txt
 $ export KV_PLUGIN="python plugin-python/plugin.py"
 ```
 
@@ -58,14 +61,6 @@ If you update the protocol buffers file, you can regenerate the file
 using the following command from this directory. You do not need to run
 this if you're just trying the example.
 
-For Go:
-
 ```sh
-$ protoc -I proto/ proto/kv.proto --go_out=plugins=grpc:proto/
-```
-
-For Python:
-
-```sh
-$ python -m grpc_tools.protoc -I ./proto/ --python_out=./plugin-python/ --grpc_python_out=./plugin-python/ ./proto/kv.proto
+$ buf generate
 ```

@@ -5,6 +5,8 @@ syntax = "proto3";
 
 package grpctest;
 
+option go_package = "./grpctest";
+
 import "google/protobuf/empty.proto";
 
 message TestRequest {

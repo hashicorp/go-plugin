@@ -252,16 +252,15 @@ type UnixSocketConfig struct {
 	// client process must be a member of this group or chown will fail.
 	Group string
 
-	// The directory to create Unix sockets in. Internally managed by go-plugin
-	// and deleted when the plugin is killed.
-	directory string
-}
+	// TempDir specifies the base directory to use when creating a plugin-specific
+	// temporary directory. It is expected to already exist and be writable. If
+	// not set, defaults to the directory chosen by os.MkdirTemp.
+	TempDir string
 
-func unixSocketConfigFromEnv() UnixSocketConfig {
-	return UnixSocketConfig{
-		Group:     os.Getenv(EnvUnixSocketGroup),
-		directory: os.Getenv(EnvUnixSocketDir),
-	}
+	// The directory to create Unix sockets in. Internally created and managed
+	// by go-plugin and deleted when the plugin is killed. Will be created
+	// inside TempDir if specified.
+	socketDir string
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -467,7 +466,7 @@ func (c *Client) Kill() {
 	c.l.Lock()
 	runner := c.runner
 	addr := c.address
-	hostSocketDir := c.unixSocketCfg.directory
+	hostSocketDir := c.unixSocketCfg.socketDir
 	c.l.Unlock()
 
 	// If there is no runner or ID, there is nothing to kill.

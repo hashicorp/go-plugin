@@ -1,3 +1,9 @@
+## v1.5.2
+
+ENHANCEMENTS:
+
+client: New `UnixSocketConfig.TempDir` option allows setting the directory to use when creating plugin-specific Unix socket directories [[GH-282](https://github.com/hashicorp/go-plugin/pull/282)]
+
 ## v1.5.1
 
 BUGS:

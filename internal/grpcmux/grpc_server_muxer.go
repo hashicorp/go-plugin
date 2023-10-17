@@ -75,6 +75,7 @@ func (m *GRPCServerMuxer) acceptSession(ln net.Listener) {
 	cfg.Logger = m.logger.Named("yamux").StandardLogger(&hclog.StandardLoggerOptions{
 		InferLevels: true,
 	})
+	cfg.LogOutput = nil
 	m.sess, err = yamux.Server(conn, cfg)
 	if err != nil {
 		m.sessionErrCh <- err

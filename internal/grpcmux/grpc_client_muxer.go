@@ -46,6 +46,7 @@ func NewGRPCClientMuxer(logger hclog.Logger, addr net.Addr) (*GRPCClientMuxer, e
 	cfg.Logger = logger.Named("yamux").StandardLogger(&hclog.StandardLoggerOptions{
 		InferLevels: true,
 	})
+	cfg.LogOutput = nil
 	sess, err := yamux.Client(conn, cfg)
 	if err != nil {
 		return nil, err

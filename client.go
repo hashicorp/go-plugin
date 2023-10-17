@@ -814,7 +814,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line = strings.TrimSpace(line)
-		parts := strings.SplitN(line, "|", 6)
+		parts := strings.Split(line, "|")
 		if len(parts) < 4 {
 			errText := fmt.Sprintf("Unrecognized remote plugin message: %s", line)
 			if !ok {
@@ -900,6 +900,20 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			err := c.loadServerCert(parts[5])
 			if err != nil {
 				return nil, fmt.Errorf("error parsing server cert: %s", err)
+			}
+		}
+
+		if c.config.GRPCBrokerMultiplex && c.protocol == ProtocolGRPC {
+			if len(parts) <= 6 {
+				return nil, errors.New("client requested gRPC broker multiplexing but plugin does not " +
+					"support the feature; for Go plugins, you will need to update the github.com/hashicorp/go-plugin" +
+					"dependency and recompile")
+			}
+			if muxSupported, err := strconv.ParseBool(parts[6]); err != nil {
+				return nil, fmt.Errorf("error parsing %q as a boolean for gRPC broker multiplexing support", parts[6])
+			} else if !muxSupported {
+				return nil, errors.New("client requested gRPC broker multiplexing but plugin does not " +
+					"support the feature")
 			}
 		}
 	}

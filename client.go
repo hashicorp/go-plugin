@@ -64,6 +64,13 @@ var (
 	// ErrSecureConfigAndReattach is returned when both Reattach and
 	// SecureConfig are set.
 	ErrSecureConfigAndReattach = errors.New("only one of Reattach or SecureConfig can be set")
+
+	// ErrGRPCBrokerMuxNotSupported is returned when the client requests
+	// multiplexing over the gRPC broker, but the plugin does not support the
+	// feature. In most cases, this should be resolvable by updating and
+	// rebuilding the plugin, or restarting the plugin with
+	// ClientConfig.GRPCBrokerMultiplex set to false.
+	ErrGRPCBrokerMuxNotSupported = errors.New("client requested gRPC broker multiplexing but plugin does not support the feature")
 )
 
 // Client handles the lifecycle of a plugin application. It launches
@@ -905,15 +912,13 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		if c.config.GRPCBrokerMultiplex && c.protocol == ProtocolGRPC {
 			if len(parts) <= 6 {
-				return nil, errors.New("client requested gRPC broker multiplexing but plugin does not " +
-					"support the feature; for Go plugins, you will need to update the github.com/hashicorp/go-plugin" +
-					"dependency and recompile")
+				return nil, fmt.Errorf("%w; for Go plugins, you will need to update the "+
+					"github.com/hashicorp/go-plugin dependency and recompile", ErrGRPCBrokerMuxNotSupported)
 			}
 			if muxSupported, err := strconv.ParseBool(parts[6]); err != nil {
 				return nil, fmt.Errorf("error parsing %q as a boolean for gRPC broker multiplexing support", parts[6])
 			} else if !muxSupported {
-				return nil, errors.New("client requested gRPC broker multiplexing but plugin does not " +
-					"support the feature")
+				return nil, ErrGRPCBrokerMuxNotSupported
 			}
 		}
 	}

@@ -389,7 +389,7 @@ func Serve(opts *ServeConfig) {
 
 	case ProtocolGRPC:
 		var muxer *grpcmux.GRPCServerMuxer
-		if multiplex := os.Getenv(envMultiplexGRPC); multiplex == "true" || multiplex == "1" {
+		if multiplex, _ := strconv.ParseBool(os.Getenv(envMultiplexGRPC)); multiplex {
 			muxer = grpcmux.NewGRPCServerMuxer(logger, listener)
 			listener = muxer
 		}
@@ -439,7 +439,7 @@ func Serve(opts *ServeConfig) {
 		// If the environment variable is set, we assume the client is new enough
 		// to handle a seventh segment, as it should now use
 		// strings.Split(line, "|") and always handle each segment individually.
-		if multiplex := os.Getenv(envMultiplexGRPC); multiplex != "" {
+		if os.Getenv(envMultiplexGRPC) != "" {
 			protocolLine += fmt.Sprintf("|%v", grpcBrokerMultiplexingSupported)
 		}
 		fmt.Printf("%s\n", protocolLine)

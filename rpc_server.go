@@ -114,6 +114,7 @@ func (s *RPCServer) ServeConn(conn io.ReadWriteCloser) {
 		broker:  broker,
 		plugins: s.Plugins,
 	})
+
 	server.ServeConn(control)
 }
 

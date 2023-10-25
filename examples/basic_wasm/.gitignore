@@ -1,0 +1,5 @@
+# Ignore Go WASM glue file
+wasm_exec.js
+# Ignore binaries
+plugin/greeter
+basic

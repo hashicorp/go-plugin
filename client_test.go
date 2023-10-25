@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -902,6 +903,34 @@ func TestClient_SkipHostEnv(t *testing.T) {
 
 			if !process.ProcessState.Success() {
 				t.Fatal("process didn't exit cleanly")
+			}
+		})
+	}
+}
+
+func TestClient_RequestGRPCMultiplexing_UnsupportedByPlugin(t *testing.T) {
+	for _, name := range []string{
+		"mux-grpc-with-old-plugin",
+		"mux-grpc-with-unsupported-plugin",
+	} {
+		t.Run(name, func(t *testing.T) {
+			process := helperProcess(name)
+			c := NewClient(&ClientConfig{
+				Cmd:                 process,
+				HandshakeConfig:     testHandshake,
+				Plugins:             testGRPCPluginMap,
+				AllowedProtocols:    []Protocol{ProtocolGRPC},
+				GRPCBrokerMultiplex: true,
+			})
+			defer c.Kill()
+
+			_, err := c.Start()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+
+			if !errors.Is(err, ErrGRPCBrokerMuxNotSupported) {
+				t.Fatalf("expected %s, but got %s", ErrGRPCBrokerMuxNotSupported, err)
 			}
 		})
 	}

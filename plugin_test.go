@@ -688,6 +688,25 @@ func TestHelperProcess(*testing.T) {
 		}
 
 		os.Exit(1)
+	case "mux-grpc-with-old-plugin":
+		// gRPC broker multiplexing requested, but plugin has no awareness of the
+		// feature, so just prints 6 segments in the protocol negotiation line.
+		// Client should fail with a helpful error.
+		if os.Getenv(envMultiplexGRPC) == "" {
+			fmt.Println("failed precondition for mux test")
+			os.Exit(1)
+		}
+		fmt.Printf("%d|%d|tcp|:1234|%s|\n", CoreProtocolVersion, testHandshake.ProtocolVersion, ProtocolGRPC)
+		<-make(chan int)
+	case "mux-grpc-with-unsupported-plugin":
+		// gRPC broker multiplexing requested, but plugin explicitly does not
+		// support it. Client should fail with a helpful error.
+		if os.Getenv(envMultiplexGRPC) == "" {
+			fmt.Println("failed precondition for mux test")
+			os.Exit(1)
+		}
+		fmt.Printf("%d|%d|tcp|:1234|%s||false\n", CoreProtocolVersion, testHandshake.ProtocolVersion, ProtocolGRPC)
+		<-make(chan int)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", cmd)
 		os.Exit(2)

@@ -507,7 +507,7 @@ func (b *GRPCBroker) muxDial(id uint32) func(string, time.Duration) (net.Conn, e
 		b.dialMutex.Lock()
 		defer b.dialMutex.Unlock()
 
-		// Tell the client the listener ID it should give the next stream to.
+		// Tell the other side the listener ID it should give the next stream to.
 		err := b.knock(id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to knock before dialling client: %w", err)

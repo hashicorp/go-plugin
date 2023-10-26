@@ -18,10 +18,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"google.golang.org/grpc"
+	empty "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Test that NetRPCUnsupportedPlugin implements the correct interfaces.

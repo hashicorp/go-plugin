@@ -65,8 +65,8 @@ var (
 	ErrSecureConfigAndReattach = errors.New("only one of Reattach or SecureConfig can be set")
 )
 
-// defaultLogBufferSize is the default size of the buffer used to read from stderr
-const defaultLogBufferSize = 64 * 1024
+// defaultPluginLogBufferSize is the default size of the buffer used to read from stderr for plugin log lines.
+const defaultPluginLogBufferSize = 64 * 1024
 
 // Client handles the lifecycle of a plugin application. It launches
 // plugins, connects to them, dispenses interface implementations, and handles
@@ -212,9 +212,9 @@ type ClientConfig struct {
 	// it will default to hclog's default logger.
 	Logger hclog.Logger
 
-	// LogBufferSize is the amount of bytes to read from stderr for log lines.
+	// PluginLogBufferSize is the buffer size(bytes) to read from stderr for plugin log lines.
 	// If this is 0, then the default of 64KB is used.
-	LogBufferSize int
+	PluginLogBufferSize int
 
 	// AutoMTLS has the client and server automatically negotiate mTLS for
 	// transport authentication. This ensures that only the original client will
@@ -400,8 +400,8 @@ func NewClient(config *ClientConfig) (c *Client) {
 		})
 	}
 
-	if config.LogBufferSize == 0 {
-		config.LogBufferSize = defaultLogBufferSize
+	if config.PluginLogBufferSize == 0 {
+		config.PluginLogBufferSize = defaultPluginLogBufferSize
 	}
 
 	c = &Client{
@@ -1092,7 +1092,7 @@ func (c *Client) logStderr(name string, r io.Reader) {
 	defer c.stderrWaitGroup.Done()
 	l := c.logger.Named(filepath.Base(name))
 
-	reader := bufio.NewReaderSize(r, c.config.LogBufferSize)
+	reader := bufio.NewReaderSize(r, c.config.PluginLogBufferSize)
 	// continuation indicates the previous line was a prefix
 	continuation := false
 

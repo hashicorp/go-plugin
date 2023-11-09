@@ -1085,6 +1085,8 @@ func (c *Client) logStderr(name string, r io.Reader) {
 	reader := bufio.NewReaderSize(r, stdErrBufferSize)
 	// continuation indicates the previous line was a prefix
 	continuation := false
+	// continuation indicates the previous line was a panic output
+	panic := false
 
 	for {
 		line, isPrefix, err := reader.ReadLine()
@@ -1121,19 +1123,32 @@ func (c *Client) logStderr(name string, r io.Reader) {
 			// string prefixes
 			switch line := string(line); {
 			case strings.HasPrefix(line, "[TRACE]"):
+				panic = false
 				l.Trace(line)
 			case strings.HasPrefix(line, "[DEBUG]"):
+				panic = false
 				l.Debug(line)
 			case strings.HasPrefix(line, "[INFO]"):
+				panic = false
 				l.Info(line)
 			case strings.HasPrefix(line, "[WARN]"):
+				panic = false
 				l.Warn(line)
 			case strings.HasPrefix(line, "[ERROR]"):
+				panic = false
+				l.Error(line)
+			case strings.HasPrefix(line, "panic:"):
+				panic = true
 				l.Error(line)
 			default:
-				l.Debug(line)
+				if panic {
+					l.Error(line)
+				} else {
+					l.Debug(line)
+				}
 			}
 		} else {
+			panic = false
 			out := flattenKVPairs(entry.KVPairs)
 
 			out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))

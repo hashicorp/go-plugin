@@ -3,7 +3,7 @@
 CHANGES:
 
 * plugin: Plugins written in other languages can optionally start to advertise whether they support gRPC broker multiplexing.
-  If the environment variable `PLUGIN_GRPC_MULTIPLEX` is set, it is safe to include a seventh field containing a boolean 
+  If the environment variable `PLUGIN_MULTIPLEX_GRPC` is set, it is safe to include a seventh field containing a boolean 
   value in the `|`-separated protocol negotiation line.
 
 ENHANCEMENTS:

@@ -14,10 +14,7 @@ import (
 	"github.com/hashicorp/go-plugin/examples/grpc/shared"
 )
 
-func main() {
-	// We don't want to see the plugin logs.
-	log.SetOutput(ioutil.Discard)
-
+func run() error {
 	// We're a host. Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
@@ -31,15 +28,13 @@ func main() {
 	// Connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
-		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	// Request the plugin
 	raw, err := rpcClient.Dispense("kv_grpc")
 	if err != nil {
-		fmt.Println("Error:", err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	// We should have a KV store now! This feels like a normal interface
@@ -50,8 +45,7 @@ func main() {
 	case "get":
 		result, err := kv.Get(os.Args[1])
 		if err != nil {
-			fmt.Println("Error:", err.Error())
-			os.Exit(1)
+			return err
 		}
 
 		fmt.Println(string(result))
@@ -59,13 +53,24 @@ func main() {
 	case "put":
 		err := kv.Put(os.Args[1], []byte(os.Args[2]))
 		if err != nil {
-			fmt.Println("Error:", err.Error())
-			os.Exit(1)
+			return err
 		}
 
 	default:
-		fmt.Printf("Please only use 'get' or 'put', given: %q", os.Args[0])
+		return fmt.Errorf("Please only use 'get' or 'put', given: %q", os.Args[0])
+	}
+
+	return nil
+}
+
+func main() {
+	// We don't want to see the plugin logs.
+	log.SetOutput(ioutil.Discard)
+
+	if err := run(); err != nil {
+		fmt.Printf("error: %+v\n", err)
 		os.Exit(1)
 	}
+
 	os.Exit(0)
 }

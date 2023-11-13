@@ -7,8 +7,8 @@ import time
 
 import grpc
 
-import kv_pb2
-import kv_pb2_grpc
+from proto import kv_pb2
+from proto import kv_pb2_grpc
 
 from grpc_health.v1.health import HealthServicer
 from grpc_health.v1 import health_pb2, health_pb2_grpc

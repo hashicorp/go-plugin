@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"syscall"
 	"testing"
@@ -29,6 +30,11 @@ func TestSetGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	baseTempDir := t.TempDir()
+	baseTempDir, err = filepath.EvalSymlinks(baseTempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for name, tc := range map[string]struct {
 		group string
 	}{
@@ -41,7 +47,8 @@ func TestSetGroup(t *testing.T) {
 				HandshakeConfig: testHandshake,
 				Plugins:         testPluginMap,
 				UnixSocketConfig: &UnixSocketConfig{
-					Group: tc.group,
+					Group:   tc.group,
+					TempDir: baseTempDir,
 				},
 				RunnerFunc: func(l hclog.Logger, cmd *exec.Cmd, tmpDir string) (runner.Runner, error) {
 					// Run tests inside the RunnerFunc to ensure we don't race
@@ -49,6 +56,9 @@ func TestSetGroup(t *testing.T) {
 					// to start properly.
 
 					// Test that it creates a directory with the proper owners and permissions.
+					if filepath.Dir(tmpDir) != baseTempDir {
+						t.Errorf("Expected base TempDir to be %s, but tmpDir was %s", baseTempDir, tmpDir)
+					}
 					info, err := os.Lstat(tmpDir)
 					if err != nil {
 						t.Fatal(err)

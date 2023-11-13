@@ -51,6 +51,9 @@ type testStreamer interface {
 	Stream(int32, int32) ([]int32, error)
 }
 
+// testInterfacePlugin implements the Plugin interface
+var _ Plugin = (*testInterfacePlugin)(nil)
+
 // testInterfacePlugin is the implementation of Plugin to create
 // RPC client/server implementations for testInterface.
 type testInterfacePlugin struct {
@@ -78,6 +81,10 @@ func (p *testInterfacePlugin) impl() testInterface {
 		}),
 	}
 }
+
+// testGRPCInterfacePlugin implements both Plugin and GRPCPlugin interfaces
+var _ Plugin = (*testGRPCInterfacePlugin)(nil)
+var _ GRPCPlugin = (*testGRPCInterfacePlugin)(nil)
 
 // testGRPCInterfacePlugin is a test implementation of the GRPCPlugin interface
 type testGRPCInterfacePlugin struct {
@@ -116,6 +123,8 @@ func (p *testGRPCInterfacePlugin) impl() testInterface {
 }
 
 // testInterfaceImpl implements testInterface concretely
+var _ testInterface = (*testInterfaceImpl)(nil)
+
 type testInterfaceImpl struct {
 	logger hclog.Logger
 }
@@ -241,16 +250,16 @@ func (s *testGRPCServer) PrintKV(
 func (s *testGRPCServer) Bidirectional(ctx context.Context, req *grpctest.BidirectionalRequest) (*grpctest.BidirectionalResponse, error) {
 	conn, err := s.broker.Dial(req.Id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("server dial error: %w", err)
 	}
 
 	pingPongClient := grpctest.NewPingPongClient(conn)
 	resp, err := pingPongClient.Ping(ctx, &grpctest.PingRequest{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("server Ping() error: %w", err)
 	}
 	if resp.Msg != "pong" {
-		return nil, errors.New("Bad PingPong")
+		return nil, errors.New("server Bad PingPong")
 	}
 
 	nextID := s.broker.NextId()
@@ -352,21 +361,21 @@ func (c *testGRPCClient) Bidirectional() error {
 		Id: nextID,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("client Bidirectional() error: %w", err)
 	}
 
 	conn, err := c.broker.Dial(resp.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("client dial error: %w", err)
 	}
 
 	pingPongClient := grpctest.NewPingPongClient(conn)
 	pResp, err := pingPongClient.Ping(context.Background(), &grpctest.PingRequest{})
 	if err != nil {
-		return err
+		return fmt.Errorf("client Ping() error: %w", err)
 	}
 	if pResp.Msg != "pong" {
-		return errors.New("Bad PingPong")
+		return errors.New("client Bad PingPong")
 	}
 	return nil
 }
@@ -679,6 +688,25 @@ func TestHelperProcess(*testing.T) {
 		}
 
 		os.Exit(1)
+	case "mux-grpc-with-old-plugin":
+		// gRPC broker multiplexing requested, but plugin has no awareness of the
+		// feature, so just prints 6 segments in the protocol negotiation line.
+		// Client should fail with a helpful error.
+		if os.Getenv(envMultiplexGRPC) == "" {
+			fmt.Println("failed precondition for mux test")
+			os.Exit(1)
+		}
+		fmt.Printf("%d|%d|tcp|:1234|%s|\n", CoreProtocolVersion, testHandshake.ProtocolVersion, ProtocolGRPC)
+		<-make(chan int)
+	case "mux-grpc-with-unsupported-plugin":
+		// gRPC broker multiplexing requested, but plugin explicitly does not
+		// support it. Client should fail with a helpful error.
+		if os.Getenv(envMultiplexGRPC) == "" {
+			fmt.Println("failed precondition for mux test")
+			os.Exit(1)
+		}
+		fmt.Printf("%d|%d|tcp|:1234|%s||false\n", CoreProtocolVersion, testHandshake.ProtocolVersion, ProtocolGRPC)
+		<-make(chan int)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %q\n", cmd)
 		os.Exit(2)

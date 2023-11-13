@@ -73,6 +73,9 @@ var (
 	ErrGRPCBrokerMuxNotSupported = errors.New("client requested gRPC broker multiplexing but plugin does not support the feature")
 )
 
+// defaultPluginLogBufferSize is the default size of the buffer used to read from stderr for plugin log lines.
+const defaultPluginLogBufferSize = 64 * 1024
+
 // Client handles the lifecycle of a plugin application. It launches
 // plugins, connects to them, dispenses interface implementations, and handles
 // killing the process.
@@ -219,6 +222,10 @@ type ClientConfig struct {
 	// Logger is the logger that the client will used. If none is provided,
 	// it will default to hclog's default logger.
 	Logger hclog.Logger
+
+	// PluginLogBufferSize is the buffer size(bytes) to read from stderr for plugin log lines.
+	// If this is 0, then the default of 64KB is used.
+	PluginLogBufferSize int
 
 	// AutoMTLS has the client and server automatically negotiate mTLS for
 	// transport authentication. This ensures that only the original client will
@@ -414,6 +421,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 			Level:  hclog.Trace,
 			Name:   "plugin",
 		})
+	}
+
+	if config.PluginLogBufferSize == 0 {
+		config.PluginLogBufferSize = defaultPluginLogBufferSize
 	}
 
 	c = &Client{
@@ -1146,14 +1157,12 @@ func (c *Client) getGRPCMuxer(addr net.Addr) (*grpcmux.GRPCClientMuxer, error) {
 	return c.grpcMuxer, nil
 }
 
-var stdErrBufferSize = 64 * 1024
-
 func (c *Client) logStderr(name string, r io.Reader) {
 	defer c.clientWaitGroup.Done()
 	defer c.stderrWaitGroup.Done()
 	l := c.logger.Named(filepath.Base(name))
 
-	reader := bufio.NewReaderSize(r, stdErrBufferSize)
+	reader := bufio.NewReaderSize(r, c.config.PluginLogBufferSize)
 	// continuation indicates the previous line was a prefix
 	continuation := false
 

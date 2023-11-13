@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -1483,18 +1484,13 @@ func testClient_logger(t *testing.T, proto string) {
 
 // Test that we continue to consume stderr over long lines.
 func TestClient_logStderr(t *testing.T) {
-	orig := stdErrBufferSize
-	stdErrBufferSize = 32
-	defer func() {
-		stdErrBufferSize = orig
-	}()
-
 	stderr := bytes.Buffer{}
 	c := NewClient(&ClientConfig{
 		Stderr: &stderr,
 		Cmd: &exec.Cmd{
 			Path: "test",
 		},
+		PluginLogBufferSize: 32,
 	})
 	c.clientWaitGroup.Add(1)
 
@@ -1513,5 +1509,57 @@ this line is short
 
 	if read != msg {
 		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
+	}
+}
+
+func TestClient_logStderrParseJSON(t *testing.T) {
+	logBuf := bytes.Buffer{}
+	c := NewClient(&ClientConfig{
+		Stderr:              bytes.NewBuffer(nil),
+		Cmd:                 &exec.Cmd{Path: "test"},
+		PluginLogBufferSize: 64,
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:       "test-logger",
+			Level:      hclog.Trace,
+			Output:     &logBuf,
+			JSONFormat: true,
+		}),
+	})
+	c.clientWaitGroup.Add(1)
+
+	msg := `{"@message": "this is a message", "@level": "info"}
+{"@message": "this is a large message that is more than 64 bytes long", "@level": "info"}`
+	reader := strings.NewReader(msg)
+
+	c.stderrWaitGroup.Add(1)
+	c.logStderr(c.config.Cmd.Path, reader)
+	logs := strings.Split(strings.TrimSpace(logBuf.String()), "\n")
+
+	wants := []struct {
+		wantLevel   string
+		wantMessage string
+	}{
+		{"info", "this is a message"},
+		{"debug", `{"@message": "this is a large message that is more than 64 bytes`},
+		{"debug", ` long", "@level": "info"}`},
+	}
+
+	if len(logs) != len(wants) {
+		t.Fatalf("expected %d logs, got %d", len(wants), len(logs))
+	}
+
+	for i, tt := range wants {
+		l := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(logs[i]), &l); err != nil {
+			t.Fatal(err)
+		}
+
+		if l["@level"] != tt.wantLevel {
+			t.Fatalf("expected level %q, got %q", tt.wantLevel, l["@level"])
+		}
+
+		if l["@message"] != tt.wantMessage {
+			t.Fatalf("expected message %q, got %q", tt.wantMessage, l["@message"])
+		}
 	}
 }

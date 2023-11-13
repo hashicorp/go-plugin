@@ -27,6 +27,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/cmdrunner"
+	"github.com/hashicorp/go-plugin/internal/grpcmux"
 	"github.com/hashicorp/go-plugin/runner"
 	"google.golang.org/grpc"
 )
@@ -63,6 +64,13 @@ var (
 	// ErrSecureConfigAndReattach is returned when both Reattach and
 	// SecureConfig are set.
 	ErrSecureConfigAndReattach = errors.New("only one of Reattach or SecureConfig can be set")
+
+	// ErrGRPCBrokerMuxNotSupported is returned when the client requests
+	// multiplexing over the gRPC broker, but the plugin does not support the
+	// feature. In most cases, this should be resolvable by updating and
+	// rebuilding the plugin, or restarting the plugin with
+	// ClientConfig.GRPCBrokerMultiplex set to false.
+	ErrGRPCBrokerMuxNotSupported = errors.New("client requested gRPC broker multiplexing but plugin does not support the feature")
 )
 
 // Client handles the lifecycle of a plugin application. It launches
@@ -102,6 +110,9 @@ type Client struct {
 	processKilled bool
 
 	unixSocketCfg UnixSocketConfig
+
+	grpcMuxerOnce sync.Once
+	grpcMuxer     *grpcmux.GRPCClientMuxer
 }
 
 // NegotiatedVersion returns the protocol version negotiated with the server.
@@ -237,6 +248,19 @@ type ClientConfig struct {
 	// protocol.
 	GRPCDialOptions []grpc.DialOption
 
+	// GRPCBrokerMultiplex turns on multiplexing for the gRPC broker. The gRPC
+	// broker will multiplex all brokered gRPC servers over the plugin's original
+	// listener socket instead of making a new listener for each server. The
+	// go-plugin library currently only includes a Go implementation for the
+	// server (i.e. plugin) side of gRPC broker multiplexing.
+	//
+	// Does not support reattaching.
+	//
+	// Multiplexed gRPC streams MUST be established sequentially, i.e. after
+	// calling AcceptAndServe from one side, wait for the other side to Dial
+	// before calling AcceptAndServe again.
+	GRPCBrokerMultiplex bool
+
 	// SkipHostEnv allows plugins to run without inheriting the parent process'
 	// environment variables.
 	SkipHostEnv bool
@@ -352,7 +376,7 @@ func CleanupClients() {
 	wg.Wait()
 }
 
-// Creates a new plugin client which manages the lifecycle of an external
+// NewClient creates a new plugin client which manages the lifecycle of an external
 // plugin and gets the address for the RPC connection.
 //
 // The client must be cleaned up at some point by calling Kill(). If
@@ -374,10 +398,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 
 	if config.SyncStdout == nil {
-		config.SyncStdout = ioutil.Discard
+		config.SyncStdout = io.Discard
 	}
 	if config.SyncStderr == nil {
-		config.SyncStderr = ioutil.Discard
+		config.SyncStderr = io.Discard
 	}
 
 	if config.AllowedProtocols == nil {
@@ -572,6 +596,10 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if c.config.SecureConfig != nil && c.config.Reattach != nil {
 			return nil, ErrSecureConfigAndReattach
 		}
+
+		if c.config.GRPCBrokerMultiplex && c.config.Reattach != nil {
+			return nil, fmt.Errorf("gRPC broker multiplexing is not supported with Reattach config")
+		}
 	}
 
 	if c.config.Reattach != nil {
@@ -602,6 +630,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
 		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
 		fmt.Sprintf("PLUGIN_PROTOCOL_VERSIONS=%s", strings.Join(versionStrings, ",")),
+	}
+	if c.config.GRPCBrokerMultiplex {
+		env = append(env, fmt.Sprintf("%s=true", envMultiplexGRPC))
 	}
 
 	cmd := c.config.Cmd
@@ -790,7 +821,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Trim the line and split by "|" in order to get the parts of
 		// the output.
 		line = strings.TrimSpace(line)
-		parts := strings.SplitN(line, "|", 6)
+		parts := strings.Split(line, "|")
 		if len(parts) < 4 {
 			errText := fmt.Sprintf("Unrecognized remote plugin message: %s", line)
 			if !ok {
@@ -878,6 +909,18 @@ func (c *Client) Start() (addr net.Addr, err error) {
 				return nil, fmt.Errorf("error parsing server cert: %s", err)
 			}
 		}
+
+		if c.config.GRPCBrokerMultiplex && c.protocol == ProtocolGRPC {
+			if len(parts) <= 6 {
+				return nil, fmt.Errorf("%w; for Go plugins, you will need to update the "+
+					"github.com/hashicorp/go-plugin dependency and recompile", ErrGRPCBrokerMuxNotSupported)
+			}
+			if muxSupported, err := strconv.ParseBool(parts[6]); err != nil {
+				return nil, fmt.Errorf("error parsing %q as a boolean for gRPC broker multiplexing support", parts[6])
+			} else if !muxSupported {
+				return nil, ErrGRPCBrokerMuxNotSupported
+			}
+		}
 	}
 
 	c.address = addr
@@ -951,12 +994,11 @@ func (c *Client) reattach() (net.Addr, error) {
 
 	if c.config.Reattach.Test {
 		c.negotiatedVersion = c.config.Reattach.ProtocolVersion
-	}
-
-	// If we're in test mode, we do NOT set the process. This avoids the
-	// process being killed (the only purpose we have for c.process), since
-	// in test mode the process is responsible for exiting on its own.
-	if !c.config.Reattach.Test {
+	} else {
+		// If we're in test mode, we do NOT set the runner. This avoids the
+		// runner being killed (the only purpose we have for setting c.runner
+		// when reattaching), since in test mode the process is responsible for
+		// exiting on its own.
 		c.runner = r
 	}
 
@@ -1061,9 +1103,22 @@ func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) 
 // dialer is compatible with grpc.WithDialer and creates the connection
 // to the plugin.
 func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
-	conn, err := netAddrDialer(c.address)("", timeout)
+	muxer, err := c.getGRPCMuxer(c.address)
 	if err != nil {
 		return nil, err
+	}
+
+	var conn net.Conn
+	if muxer.Enabled() {
+		conn, err = muxer.Dial()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		conn, err = netAddrDialer(c.address)("", timeout)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// If we have a TLS config we wrap our connection. We only do this
@@ -1073,6 +1128,22 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func (c *Client) getGRPCMuxer(addr net.Addr) (*grpcmux.GRPCClientMuxer, error) {
+	if c.protocol != ProtocolGRPC || !c.config.GRPCBrokerMultiplex {
+		return nil, nil
+	}
+
+	var err error
+	c.grpcMuxerOnce.Do(func() {
+		c.grpcMuxer, err = grpcmux.NewGRPCClientMuxer(c.logger, addr)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return c.grpcMuxer, nil
 }
 
 var stdErrBufferSize = 64 * 1024

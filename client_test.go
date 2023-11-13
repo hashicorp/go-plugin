@@ -7,9 +7,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -65,10 +65,7 @@ func TestClient(t *testing.T) {
 // This tests a bug where Kill would start
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	td := t.TempDir()
 	defer os.RemoveAll(td)
 
 	// Start the client
@@ -115,10 +112,7 @@ func TestClient_killStart(t *testing.T) {
 
 func TestClient_testCleanup(t *testing.T) {
 	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	td := t.TempDir()
 	defer os.RemoveAll(td)
 
 	// Create a path that the helper process will write on cleanup
@@ -825,7 +819,7 @@ func TestClient_textLogLevel(t *testing.T) {
 
 func TestClient_Stdin(t *testing.T) {
 	// Overwrite stdin for this test with a temporary file
-	tf, err := ioutil.TempFile("", "terraform")
+	tf, err := os.CreateTemp("", "terraform")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -909,6 +903,34 @@ func TestClient_SkipHostEnv(t *testing.T) {
 
 			if !process.ProcessState.Success() {
 				t.Fatal("process didn't exit cleanly")
+			}
+		})
+	}
+}
+
+func TestClient_RequestGRPCMultiplexing_UnsupportedByPlugin(t *testing.T) {
+	for _, name := range []string{
+		"mux-grpc-with-old-plugin",
+		"mux-grpc-with-unsupported-plugin",
+	} {
+		t.Run(name, func(t *testing.T) {
+			process := helperProcess(name)
+			c := NewClient(&ClientConfig{
+				Cmd:                 process,
+				HandshakeConfig:     testHandshake,
+				Plugins:             testGRPCPluginMap,
+				AllowedProtocols:    []Protocol{ProtocolGRPC},
+				GRPCBrokerMultiplex: true,
+			})
+			defer c.Kill()
+
+			_, err := c.Start()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+
+			if !errors.Is(err, ErrGRPCBrokerMuxNotSupported) {
+				t.Fatalf("expected %s, but got %s", ErrGRPCBrokerMuxNotSupported, err)
 			}
 		})
 	}

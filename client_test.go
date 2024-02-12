@@ -1503,7 +1503,7 @@ this line is short
 
 	reader := strings.NewReader(msg)
 
-	c.stderrWaitGroup.Add(1)
+	c.pipesWaitGroup.Add(1)
 	c.logStderr(c.config.Cmd.Path, reader)
 	read := stderr.String()
 
@@ -1531,7 +1531,7 @@ func TestClient_logStderrParseJSON(t *testing.T) {
 {"@message": "this is a large message that is more than 64 bytes long", "@level": "info"}`
 	reader := strings.NewReader(msg)
 
-	c.stderrWaitGroup.Add(1)
+	c.pipesWaitGroup.Add(1)
 	c.logStderr(c.config.Cmd.Path, reader)
 	logs := strings.Split(strings.TrimSpace(logBuf.String()), "\n")
 

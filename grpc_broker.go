@@ -523,9 +523,12 @@ func (b *GRPCBroker) muxDial(id uint32) func(string, time.Duration) (net.Conn, e
 }
 
 // Dial opens a connection by ID.
-func (b *GRPCBroker) Dial(id uint32) (conn *grpc.ClientConn, err error) {
+func (b *GRPCBroker) Dial(id uint32) (conn *grpc.ClientConn, err error) { return b.DialWithOptions(id) }
+
+// Dial opens a connection by ID with options.
+func (b *GRPCBroker) DialWithOptions(id uint32, opts ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
 	if b.muxer.Enabled() {
-		return dialGRPCConn(b.tls, b.muxDial(id))
+		return dialGRPCConn(b.tls, b.muxDial(id), opts...)
 	}
 
 	var c *plugin.ConnInfo
@@ -560,7 +563,7 @@ func (b *GRPCBroker) Dial(id uint32) (conn *grpc.ClientConn, err error) {
 		return nil, err
 	}
 
-	return dialGRPCConn(b.tls, netAddrDialer(addr))
+	return dialGRPCConn(b.tls, netAddrDialer(addr), opts...)
 }
 
 // NextId returns a unique ID to use next.

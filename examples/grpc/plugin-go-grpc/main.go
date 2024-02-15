@@ -28,7 +28,7 @@ func main() {
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"kv": &shared.KVGRPCPlugin{Impl: &KV{}},
+			"kv_grpc": &shared.KVGRPCPlugin{Impl: &KV{}},
 		},
 
 		// A non-nil value here enables gRPC serving for this plugin...

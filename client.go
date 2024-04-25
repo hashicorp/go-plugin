@@ -82,7 +82,7 @@ const defaultPluginLogBufferSize = 64 * 1024
 //
 // Plugin hosts should use one Client for each plugin executable. To
 // dispense a plugin type, use the `Client.Client` function, and then
-// cal `Dispense`. This awkward API is mostly historical but is used to split
+// call `Dispense`. This awkward API is mostly historical but is used to split
 // the client that deals with subprocess management and the client that
 // does RPC management.
 //

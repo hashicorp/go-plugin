@@ -199,6 +199,11 @@ type ClientConfig struct {
 	// This isn't the output of synced stderr.
 	Stderr io.Writer
 
+	// DisableLogStderr discards anything streamed from os.Stderr of the subprocess.
+	// This won't impact the synced stderr though.
+	// The main purpose is to reduce performance consumption when working with a wordy provider.
+	DisableLogStderr bool
+
 	// SyncStdout, SyncStderr can be set to override the
 	// respective os.Std* values in the plugin. Care should be taken to
 	// avoid races here. If these are nil, then this will be set to
@@ -1176,6 +1181,10 @@ func (c *Client) logStderr(name string, r io.Reader) {
 		case err != nil:
 			l.Error("reading plugin stderr", "error", err)
 			return
+		}
+
+		if c.config.DisableLogStderr {
+			continue
 		}
 
 		c.config.Stderr.Write(line)

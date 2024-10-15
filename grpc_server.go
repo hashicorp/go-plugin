@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/grpcmux"
 	"github.com/hashicorp/go-plugin/internal/plugin"
@@ -48,6 +49,10 @@ type GRPCServer struct {
 	// the connection will not have transport security.
 	TLS *tls.Config
 
+	// PanicHandler provides a hook for plugin to handle the panic before
+	// exit, if any.
+	PanicHandler func(p interface{}) error
+
 	// DoneCh is the channel that is closed when this server has exited.
 	DoneCh chan struct{}
 
@@ -73,6 +78,21 @@ func (s *GRPCServer) Init() error {
 	if s.TLS != nil {
 		opts = append(opts, grpc.Creds(credentials.NewTLS(s.TLS)))
 	}
+
+	if s.PanicHandler != nil {
+		ropts := []recovery.Option{
+			recovery.WithRecoveryHandler(s.PanicHandler),
+		}
+		opts = append(opts,
+			grpc.UnaryInterceptor(
+				recovery.UnaryServerInterceptor(ropts...),
+			),
+			grpc.StreamInterceptor(
+				recovery.StreamServerInterceptor(ropts...),
+			),
+		)
+	}
+
 	s.server = s.Server(opts)
 
 	// Register the health service

@@ -66,6 +66,10 @@ type ServeConfig struct {
 	// TLSProvider is a function that returns a configured tls.Config.
 	TLSProvider func() (*tls.Config, error)
 
+	// PanicHandler provides a hook for plugin to handle the panic before
+	// exit, if any.
+	PanicHandler func(p interface{}) error
+
 	// Plugins are the plugins that are served.
 	// The implied version of this PluginSet is the Handshake.ProtocolVersion.
 	Plugins PluginSet
@@ -396,14 +400,15 @@ func Serve(opts *ServeConfig) {
 
 		// Create the gRPC server
 		server = &GRPCServer{
-			Plugins: pluginSet,
-			Server:  opts.GRPCServer,
-			TLS:     tlsConfig,
-			Stdout:  stdout_r,
-			Stderr:  stderr_r,
-			DoneCh:  doneCh,
-			logger:  logger,
-			muxer:   muxer,
+			Plugins:      pluginSet,
+			Server:       opts.GRPCServer,
+			TLS:          tlsConfig,
+			PanicHandler: opts.PanicHandler,
+			Stdout:       stdout_r,
+			Stderr:       stderr_r,
+			DoneCh:       doneCh,
+			logger:       logger,
+			muxer:        muxer,
 		}
 
 	default:

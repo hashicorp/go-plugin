@@ -7,9 +7,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -27,10 +28,12 @@ import (
 
 func TestClient(t *testing.T) {
 	process := helperProcess("mock")
+	logger := &trackingLogger{Logger: hclog.Default()}
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
+		Logger:          logger,
 	})
 	defer c.Kill()
 
@@ -60,15 +63,15 @@ func TestClient(t *testing.T) {
 	if !c.killed() {
 		t.Fatal("Client should have failed")
 	}
+
+	// One error for connection refused, one for plugin exited.
+	assertLines(t, logger.errorLogs, 2)
 }
 
 // This tests a bug where Kill would start
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	td := t.TempDir()
 	defer os.RemoveAll(td)
 
 	// Start the client
@@ -114,22 +117,19 @@ func TestClient_killStart(t *testing.T) {
 }
 
 func TestClient_testCleanup(t *testing.T) {
-	// Create a temporary dir to store the result file
-	td, err := ioutil.TempDir("", "plugin")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer os.RemoveAll(td)
+	t.Parallel()
 
 	// Create a path that the helper process will write on cleanup
-	path := filepath.Join(td, "output")
+	path := filepath.Join(t.TempDir(), "output")
 
 	// Test the cleanup
 	process := helperProcess("cleanup", path)
+	logger := &trackingLogger{Logger: hclog.Default()}
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,
 		Plugins:         testPluginMap,
+		Logger:          logger,
 	})
 
 	// Grab the client so the process starts
@@ -145,6 +145,61 @@ func TestClient_testCleanup(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	assertLines(t, logger.errorLogs, 0)
+}
+
+func TestClient_noStdoutScannerRace(t *testing.T) {
+	t.Parallel()
+
+	process := helperProcess("test-grpc")
+	logger := &trackingLogger{Logger: hclog.Default()}
+	c := NewClient(&ClientConfig{
+		RunnerFunc: func(l hclog.Logger, cmd *exec.Cmd, tmpDir string) (runner.Runner, error) {
+			process.Env = append(process.Env, cmd.Env...)
+			concreteRunner, err := cmdrunner.NewCmdRunner(l, process)
+			if err != nil {
+				return nil, err
+			}
+			// Inject a delay before calling .Read() method on the command's
+			// stdout reader. This ensures that if there is a race between the
+			// stdout scanner loop reading stdout and runner.Wait() closing
+			// stdout, .Wait() will win and trigger a scanner error in the logs.
+			return &delayedStdoutCmdRunner{concreteRunner}, nil
+		},
+		HandshakeConfig:  testHandshake,
+		Plugins:          testGRPCPluginMap,
+		AllowedProtocols: []Protocol{ProtocolGRPC},
+		Logger:           logger,
+	})
+
+	// Grab the client so the process starts
+	if _, err := c.Client(); err != nil {
+		c.Kill()
+		t.Fatalf("err: %s", err)
+	}
+
+	// Kill it gracefully
+	c.Kill()
+
+	assertLines(t, logger.errorLogs, 0)
+}
+
+type delayedStdoutCmdRunner struct {
+	*cmdrunner.CmdRunner
+}
+
+func (m *delayedStdoutCmdRunner) Stdout() io.ReadCloser {
+	return &delayedReader{m.CmdRunner.Stdout()}
+}
+
+type delayedReader struct {
+	io.ReadCloser
+}
+
+func (d *delayedReader) Read(p []byte) (n int, err error) {
+	time.Sleep(100 * time.Millisecond)
+	return d.ReadCloser.Read(p)
 }
 
 func TestClient_testInterface(t *testing.T) {
@@ -825,7 +880,7 @@ func TestClient_textLogLevel(t *testing.T) {
 
 func TestClient_Stdin(t *testing.T) {
 	// Overwrite stdin for this test with a temporary file
-	tf, err := ioutil.TempFile("", "terraform")
+	tf, err := os.CreateTemp("", "terraform")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -909,6 +964,34 @@ func TestClient_SkipHostEnv(t *testing.T) {
 
 			if !process.ProcessState.Success() {
 				t.Fatal("process didn't exit cleanly")
+			}
+		})
+	}
+}
+
+func TestClient_RequestGRPCMultiplexing_UnsupportedByPlugin(t *testing.T) {
+	for _, name := range []string{
+		"mux-grpc-with-old-plugin",
+		"mux-grpc-with-unsupported-plugin",
+	} {
+		t.Run(name, func(t *testing.T) {
+			process := helperProcess(name)
+			c := NewClient(&ClientConfig{
+				Cmd:                 process,
+				HandshakeConfig:     testHandshake,
+				Plugins:             testGRPCPluginMap,
+				AllowedProtocols:    []Protocol{ProtocolGRPC},
+				GRPCBrokerMultiplex: true,
+			})
+			defer c.Kill()
+
+			_, err := c.Start()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+
+			if !errors.Is(err, ErrGRPCBrokerMuxNotSupported) {
+				t.Fatalf("expected %s, but got %s", ErrGRPCBrokerMuxNotSupported, err)
 			}
 		})
 	}
@@ -1461,18 +1544,13 @@ func testClient_logger(t *testing.T, proto string) {
 
 // Test that we continue to consume stderr over long lines.
 func TestClient_logStderr(t *testing.T) {
-	orig := stdErrBufferSize
-	stdErrBufferSize = 32
-	defer func() {
-		stdErrBufferSize = orig
-	}()
-
 	stderr := bytes.Buffer{}
 	c := NewClient(&ClientConfig{
 		Stderr: &stderr,
 		Cmd: &exec.Cmd{
 			Path: "test",
 		},
+		PluginLogBufferSize: 32,
 	})
 	c.clientWaitGroup.Add(1)
 
@@ -1485,11 +1563,83 @@ this line is short
 
 	reader := strings.NewReader(msg)
 
-	c.stderrWaitGroup.Add(1)
+	c.pipesWaitGroup.Add(1)
 	c.logStderr(c.config.Cmd.Path, reader)
 	read := stderr.String()
 
 	if read != msg {
 		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
+	}
+}
+
+func TestClient_logStderrParseJSON(t *testing.T) {
+	logBuf := bytes.Buffer{}
+	c := NewClient(&ClientConfig{
+		Stderr:              bytes.NewBuffer(nil),
+		Cmd:                 &exec.Cmd{Path: "test"},
+		PluginLogBufferSize: 64,
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Name:       "test-logger",
+			Level:      hclog.Trace,
+			Output:     &logBuf,
+			JSONFormat: true,
+		}),
+	})
+	c.clientWaitGroup.Add(1)
+
+	msg := `{"@message": "this is a message", "@level": "info"}
+{"@message": "this is a large message that is more than 64 bytes long", "@level": "info"}`
+	reader := strings.NewReader(msg)
+
+	c.pipesWaitGroup.Add(1)
+	c.logStderr(c.config.Cmd.Path, reader)
+	logs := strings.Split(strings.TrimSpace(logBuf.String()), "\n")
+
+	wants := []struct {
+		wantLevel   string
+		wantMessage string
+	}{
+		{"info", "this is a message"},
+		{"debug", `{"@message": "this is a large message that is more than 64 bytes`},
+		{"debug", ` long", "@level": "info"}`},
+	}
+
+	if len(logs) != len(wants) {
+		t.Fatalf("expected %d logs, got %d", len(wants), len(logs))
+	}
+
+	for i, tt := range wants {
+		l := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(logs[i]), &l); err != nil {
+			t.Fatal(err)
+		}
+
+		if l["@level"] != tt.wantLevel {
+			t.Fatalf("expected level %q, got %q", tt.wantLevel, l["@level"])
+		}
+
+		if l["@message"] != tt.wantMessage {
+			t.Fatalf("expected message %q, got %q", tt.wantMessage, l["@message"])
+		}
+	}
+}
+
+type trackingLogger struct {
+	hclog.Logger
+	errorLogs []string
+}
+
+func (l *trackingLogger) Error(msg string, args ...interface{}) {
+	l.errorLogs = append(l.errorLogs, fmt.Sprintf("%s: %v", msg, args))
+	l.Logger.Error(msg, args...)
+}
+
+func assertLines(t *testing.T, lines []string, expected int) {
+	t.Helper()
+	if len(lines) != expected {
+		t.Errorf("expected %d, got %d", expected, len(lines))
+		for _, log := range lines {
+			t.Error(log)
+		}
 	}
 }

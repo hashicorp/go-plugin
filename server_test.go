@@ -208,10 +208,7 @@ func TestRmListener(t *testing.T) {
 	}
 
 	// Create the listener and test close
-	rmL := &rmListener{
-		Listener: l,
-		Path:     path,
-	}
+	rmL := newDeleteFileListener(l, path)
 	if err := rmL.Close(); err != nil {
 		t.Fatalf("err: %s", err)
 	}

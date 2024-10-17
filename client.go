@@ -1085,7 +1085,7 @@ func (c *Client) logStderr(name string, r io.Reader) {
 	reader := bufio.NewReaderSize(r, stdErrBufferSize)
 	// continuation indicates the previous line was a prefix
 	continuation := false
-	// continuation indicates the previous line was a panic output
+	// panic indicates the previous line was the start of a panic output
 	panic := false
 
 	for {

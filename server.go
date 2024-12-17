@@ -526,6 +526,11 @@ func Serve(opts *ServeConfig) {
 }
 
 func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
+
+	if os.Getenv("PLUGIN_TRANSPORT") == "tcp" {
+		return serverListener_tcp();
+	}
+
 	if runtime.GOOS == "windows" {
 		return serverListener_tcp()
 	}

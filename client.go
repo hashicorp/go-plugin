@@ -90,6 +90,7 @@ const defaultPluginLogBufferSize = 64 * 1024
 type Client struct {
 	config            *ClientConfig
 	exited            bool
+	external          string
 	l                 sync.Mutex
 	address           net.Addr
 	runner            runner.AttachedRunner
@@ -163,6 +164,7 @@ type ClientConfig struct {
 	// that is already running. This isn't common.
 	Cmd      *exec.Cmd
 	Reattach *ReattachConfig
+	External *ExternalConfig
 
 	// RunnerFunc allows consumers to provide their own implementation of
 	// runner.Runner and control the context within which a plugin is executed.
@@ -184,6 +186,9 @@ type ClientConfig struct {
 	// user is fully responsible for making sure to Kill all plugin
 	// clients. By default the client is _not_ managed.
 	Managed bool
+
+	// Address to connecto to the remote GRPC service
+	Address net.Addr
 
 	// The minimum and maximum port to use for communicating with
 	// the subprocess. If not set, this defaults to 10,000 and 25,000
@@ -313,6 +318,14 @@ type ReattachConfig struct {
 	// process and instead will rely on the plugin to terminate itself. This
 	// should not be used in non-test environments.
 	Test bool
+}
+
+// ExternalConfig is used to configure a client to connect to an
+// already-running external plugin process.
+type ExternalConfig struct {
+	Protocol        Protocol
+	ProtocolVersion int
+	Addr            net.Addr
 }
 
 // SecureConfig is used to configure a client to verify the integrity of an
@@ -597,11 +610,14 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		if c.config.Reattach != nil {
 			mutuallyExclusiveOptions += 1
 		}
+		if c.config.External != nil {
+			mutuallyExclusiveOptions += 1
+		}
 		if c.config.RunnerFunc != nil {
 			mutuallyExclusiveOptions += 1
 		}
 		if mutuallyExclusiveOptions != 1 {
-			return nil, fmt.Errorf("exactly one of Cmd, or Reattach, or RunnerFunc must be set")
+			return nil, fmt.Errorf("exactly one of Cmd, External or Reattach, or RunnerFunc must be set")
 		}
 
 		if c.config.SecureConfig != nil && c.config.Reattach != nil {
@@ -634,6 +650,24 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	var versionStrings []string
 	for v := range c.config.VersionedPlugins {
 		versionStrings = append(versionStrings, strconv.Itoa(v))
+	}
+
+	if ( c.config.External != nil ){
+		version, pluginSet, _ := c.checkProtoVersion(strconv.Itoa(c.config.External.ProtocolVersion))
+
+		// set the Plugins value to the compatible set, so the version
+		// doesn't need to be passed through to the ClientProtocol
+		// implementation.
+		c.config.Plugins = pluginSet
+		c.negotiatedVersion = version
+
+		c.protocol = c.config.External.Protocol
+		c.address = c.config.External.Addr
+
+		// Create a context for when we kill
+		c.doneCtx, c.ctxCancel = context.WithCancel(context.Background())
+
+		return
 	}
 
 	env := []string{
@@ -978,24 +1012,27 @@ func (c *Client) reattach() (net.Addr, error) {
 	c.doneCtx, c.ctxCancel = context.WithCancel(context.Background())
 
 	c.clientWaitGroup.Add(1)
-	// Goroutine to mark exit status
-	go func(r runner.AttachedRunner) {
-		defer c.clientWaitGroup.Done()
 
-		// ensure the context is cancelled when we're done
-		defer c.ctxCancel()
+	if (r != nil) {
+		// Goroutine to mark exit status
+		go func(r runner.AttachedRunner) {
+			defer c.clientWaitGroup.Done()
 
-		// Wait for the process to die
-		r.Wait(context.Background())
+			// ensure the context is cancelled when we're done
+			defer c.ctxCancel()
 
-		// Log so we can see it
-		c.logger.Debug("reattached plugin process exited")
+			// Wait for the process to die
+			r.Wait(context.Background())
 
-		// Mark it
-		c.l.Lock()
-		defer c.l.Unlock()
-		c.exited = true
-	}(r)
+			// Log so we can see it
+			c.logger.Debug("reattached plugin process exited")
+
+			// Mark it
+			c.l.Lock()
+			defer c.l.Unlock()
+			c.exited = true
+		}(r)
+	}
 
 	// Set the address and protocol
 	c.address = c.config.Reattach.Addr

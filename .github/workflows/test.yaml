@@ -52,3 +52,5 @@ jobs:
           name: Coverage-report
     - name: Display Coverage report
       run: go tool cover -func=coverage.out
+    - name: Build Go
+      run: go build ./...

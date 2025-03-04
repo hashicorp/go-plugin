@@ -14,14 +14,17 @@ permissions:
 
 jobs:
   go-fmt-and-vet:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
-    - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+    - name: Checkout Code
+      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+    - name: Setup Go
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
       with:
         go-version: '>=1.21'
         cache: true
-    - run: |
+    - name: Go formatting
+      run: |
         files=$(go fmt ./...)
         if [ -n "$files" ]; then
           echo "The following file(s) do not conform to go fmt:"
@@ -30,12 +33,22 @@ jobs:
         fi
   go-test:
     needs: go-fmt-and-vet
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
-    - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+    - name: Checkout Code
+      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+    - name: Setup Go
+      uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
       with:
         go-version: '>=1.21'
         cache: true
-    - run: |
-        go test -race ./...
+    - name: Run test and generate coverage report
+      run: |
+        go test -race ./... -v -coverprofile=coverage.out
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+      with:
+          path: coverage.out
+          name: Coverage-report
+    - name: Display Coverage report
+      run: go tool cover -func=coverage.out

@@ -1,0 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+package proto;
+option go_package = "./proto";
+
+message Read {
+  message Request {
+    string path = 1;
+  }
+  message Response {
+    bytes read_bytes = 1;
+    string error = 2;
+  }
+}
+
+message Write {
+  message Request {
+    string path = 1;
+    bytes bytes_to_write = 2;
+  }
+  message Response {
+    string error = 1;
+  }
+}
+
+service StreamerService {
+  rpc Read(Read.Request) returns (stream Read.Response);
+  rpc Write(stream Write.Request) returns (Write.Response);
+}

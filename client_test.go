@@ -72,7 +72,7 @@ func TestClient(t *testing.T) {
 func TestClient_killStart(t *testing.T) {
 	// Create a temporary dir to store the result file
 	td := t.TempDir()
-	defer os.RemoveAll(td)
+	defer func() { _ = os.RemoveAll(td) }()
 
 	// Start the client
 	path := filepath.Join(td, "booted")
@@ -281,7 +281,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.runner.Kill(context.Background())
+	_ = c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -682,7 +682,7 @@ func TestClient_reattachNotFound(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	addr := l.Addr()
-	l.Close()
+	_ = l.Close()
 
 	// Reattach
 	c := NewClient(&ClientConfig{
@@ -884,8 +884,8 @@ func TestClient_Stdin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	defer os.Remove(tf.Name())
-	defer tf.Close()
+	defer func() { _ = os.Remove(tf.Name()) }()
+	defer func() { _ = tf.Close() }()
 
 	if _, err = tf.WriteString("hello"); err != nil {
 		t.Fatalf("error: %s", err)
@@ -1023,7 +1023,7 @@ func TestClient_SecureConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hash := sha256.New()
 
@@ -1338,7 +1338,7 @@ func TestClient_versionedClient(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	c.runner.Kill(context.Background())
+	_ = c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1394,7 +1394,7 @@ func TestClient_mtlsClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.runner.Kill(context.Background())
+	_ = c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():
@@ -1440,7 +1440,7 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 		t.Fatal("invalid response", n)
 	}
 
-	c.runner.Kill(context.Background())
+	_ = c.runner.Kill(context.Background())
 
 	select {
 	case <-c.doneCtx.Done():

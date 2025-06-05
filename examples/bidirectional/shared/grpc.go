@@ -66,7 +66,7 @@ func (m *GRPCServer) Put(ctx context.Context, req *proto.PutRequest) (*proto.Emp
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	a := &GRPCAddHelperClient{proto.NewAddHelperClient(conn)}
 	return &proto.Empty{}, m.Impl.Put(req.Key, req.Value, a)

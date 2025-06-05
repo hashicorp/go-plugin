@@ -382,7 +382,7 @@ func (b *GRPCBroker) AcceptAndServe(id uint32, newGRPCServer func([]grpc.ServerO
 		log.Printf("[ERR] plugin: plugin acceptAndServe error: %s", err)
 		return
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	var opts []grpc.ServerOption
 	if b.tls != nil {
@@ -418,7 +418,7 @@ func (b *GRPCBroker) AcceptAndServe(id uint32, newGRPCServer func([]grpc.ServerO
 	}
 
 	// Block until we are done
-	g.Run()
+	_ = g.Run()
 }
 
 // Close closes the stream and all servers.

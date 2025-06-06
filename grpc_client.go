@@ -70,7 +70,7 @@ func newGRPCClient(doneCtx context.Context, c *Client) (*GRPCClient, error) {
 	brokerGRPCClient := newGRPCBrokerClient(conn)
 	broker := newGRPCBroker(brokerGRPCClient, c.config.TLSConfig, c.unixSocketCfg, c.runner, muxer)
 	go broker.Run()
-	go brokerGRPCClient.StartStream()
+	go func() { _ = brokerGRPCClient.StartStream() }()
 
 	// Start the stdio client
 	stdioClient, err := newGRPCStdioClient(doneCtx, c.logger.Named("stdio"), conn)
@@ -103,8 +103,8 @@ type GRPCClient struct {
 
 // ClientProtocol impl.
 func (c *GRPCClient) Close() error {
-	c.broker.Close()
-	c.controller.Shutdown(c.doneCtx, &plugin.Empty{})
+	_ = c.broker.Close()
+	_, _ = c.controller.Shutdown(c.doneCtx, &plugin.Empty{})
 	return c.Conn.Close()
 }
 

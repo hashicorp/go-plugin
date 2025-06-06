@@ -141,13 +141,13 @@ func (i *testInterfaceImpl) Bidirectional() error {
 
 func (i *testInterfaceImpl) PrintStdio(stdout, stderr []byte) {
 	if len(stdout) > 0 {
-		fmt.Fprint(os.Stdout, string(stdout))
-		os.Stdout.Sync()
+		_, _ = fmt.Fprint(os.Stdout, string(stdout))
+		_ = os.Stdout.Sync()
 	}
 
 	if len(stderr) > 0 {
-		fmt.Fprint(os.Stderr, string(stderr))
-		os.Stderr.Sync()
+		_, _ = fmt.Fprint(os.Stderr, string(stderr))
+		_ = os.Stderr.Sync()
 	}
 }
 
@@ -405,7 +405,7 @@ func (impl *testGRPCClient) Stream(start, stop int32) ([]int32, error) {
 		resp = append(resp, out.Output)
 	}
 
-	streamClient.CloseSend()
+	_ = streamClient.CloseSend()
 
 	return resp, nil
 }
@@ -500,20 +500,20 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(1)
 	case "stderr":
 		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
-		os.Stderr.WriteString("HELLO\n")
-		os.Stderr.WriteString("WORLD\n")
+		_, _ = os.Stderr.WriteString("HELLO\n")
+		_, _ = os.Stderr.WriteString("WORLD\n")
 	case "stderr-json":
 		// write values that might be JSON, but aren't KVs
-		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
-		os.Stderr.WriteString("[\"HELLO\"]\n")
-		os.Stderr.WriteString("12345\n")
-		os.Stderr.WriteString("{\"a\":1}\n")
+		_, _ = fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		_, _ = os.Stderr.WriteString("[\"HELLO\"]\n")
+		_, _ = os.Stderr.WriteString("12345\n")
+		_, _ = os.Stderr.WriteString("{\"a\":1}\n")
 	case "level-warn-text":
 		// write values that might be JSON, but aren't KVs
-		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
-		os.Stderr.WriteString("[WARN] test line 98765\n")
+		_, _ = fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		_, _ = os.Stderr.WriteString("[WARN] test line 98765\n")
 	case "stdin":
-		fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
+		_, _ = fmt.Printf("%d|%d|tcp|:1234\n", CoreProtocolVersion, testHandshake.ProtocolVersion)
 		data := make([]byte, 5)
 		if _, err := os.Stdin.Read(data); err != nil {
 			log.Printf("stdin read error: %s", err)

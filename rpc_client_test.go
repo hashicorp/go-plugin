@@ -28,7 +28,7 @@ func TestClient_App(t *testing.T) {
 	client, _ := TestPluginRPCConn(t, map[string]Plugin{
 		"test": &testInterfacePlugin{Impl: testPlugin},
 	}, nil)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	raw, err := client.Dispense("test")
 	if err != nil {
@@ -64,18 +64,18 @@ func TestClient_syncStreams(t *testing.T) {
 	stderr := &safeBuffer{
 		b: bytes.NewBufferString("stderrtest"),
 	}
-	go client.SyncStreams(&stdout_out, &stderr_out)
-	go io.Copy(stdout_w, stdout)
-	go io.Copy(stderr_w, stderr)
+	go func() { _ = client.SyncStreams(&stdout_out, &stderr_out) }()
+	go func() { _, _ = io.Copy(stdout_w, stdout) }()
+	go func() { _, _ = io.Copy(stderr_w, stderr) }()
 
 	// Unfortunately I can't think of a better way to make sure all the
 	// copies above go through so let's just exit.
 	time.Sleep(100 * time.Millisecond)
 
 	// Close everything, and lets test the result
-	client.Close()
-	stdout_w.Close()
-	stderr_w.Close()
+	_ = client.Close()
+	_ = stdout_w.Close()
+	_ = stderr_w.Close()
 
 	if v := stdout_out.String(); v != "stdouttest" {
 		t.Fatalf("bad: %q", v)

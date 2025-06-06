@@ -33,7 +33,7 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	}
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
+		_ = tcpConn.SetKeepAlive(true)
 	}
 
 	if c.config.TLSConfig != nil {
@@ -43,7 +43,7 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 	// Create the actual RPC client
 	result, err := NewRPCClient(conn, c.config.Plugins)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 
@@ -52,7 +52,7 @@ func newRPCClient(c *Client) (*RPCClient, error) {
 		c.config.SyncStdout,
 		c.config.SyncStderr)
 	if err != nil {
-		result.Close()
+		_ = result.Close()
 		return nil, err
 	}
 
@@ -65,14 +65,14 @@ func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClien
 	// Create the yamux client so we can multiplex
 	mux, err := yamux.Client(conn, nil)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 
 	// Connect to the control stream.
 	control, err := mux.Open()
 	if err != nil {
-		mux.Close()
+		_ = mux.Close()
 		return nil, err
 	}
 
@@ -81,7 +81,7 @@ func NewRPCClient(conn io.ReadWriteCloser, plugins map[string]Plugin) (*RPCClien
 	for i, _ := range stdstream {
 		stdstream[i], err = mux.Open()
 		if err != nil {
-			mux.Close()
+			_ = mux.Close()
 			return nil, err
 		}
 	}

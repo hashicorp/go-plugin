@@ -35,7 +35,7 @@ func TestUnixSocketGroupPermissions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer ln.Close()
+			defer func() { _ = ln.Close() }()
 
 			info, err := os.Lstat(ln.Addr().String())
 			if err != nil {

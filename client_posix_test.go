@@ -47,7 +47,7 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 		c.Kill()
 		t.Fatalf("couldn't find process: %s", err)
 	}
-	defer p.Kill()
+	defer func() { _ = p.Kill() }()
 
 	// Reattach
 	c = NewClient(&ClientConfig{

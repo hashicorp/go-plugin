@@ -345,7 +345,7 @@ func (s *SecureConfig) Check(filePath string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(s.Hash, file)
 	if err != nil {
@@ -514,7 +514,7 @@ func (c *Client) Kill() {
 		c.clientWaitGroup.Wait()
 
 		if hostSocketDir != "" {
-			os.RemoveAll(hostSocketDir)
+			_ = os.RemoveAll(hostSocketDir)
 		}
 
 		// Make sure there is no reference to the old process after it has been
@@ -743,7 +743,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		rErr := recover()
 
 		if err != nil || rErr != nil {
-			runner.Kill(context.Background())
+			_ = runner.Kill(context.Background())
 		}
 
 		if rErr != nil {
@@ -780,7 +780,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			c.logger.Info("plugin process exited", "plugin", runner.Name(), "id", runner.ID())
 		}
 
-		os.Stderr.Sync()
+		_ = os.Stderr.Sync()
 
 		// Set that we exited, which takes a lock
 		c.l.Lock()
@@ -986,7 +986,7 @@ func (c *Client) reattach() (net.Addr, error) {
 		defer c.ctxCancel()
 
 		// Wait for the process to die
-		r.Wait(context.Background())
+		_ = r.Wait(context.Background())
 
 		// Log so we can see it
 		c.logger.Debug("reattached plugin process exited")
@@ -1106,7 +1106,7 @@ func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) 
 		}
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
 			// Make sure to set keep alive so that the connection doesn't die
-			tcpConn.SetKeepAlive(true)
+			_ = tcpConn.SetKeepAlive(true)
 		}
 
 		return conn, nil
@@ -1180,7 +1180,7 @@ func (c *Client) logStderr(name string, r io.Reader) {
 			return
 		}
 
-		c.config.Stderr.Write(line)
+		_, _ = c.config.Stderr.Write(line)
 
 		// The line was longer than our max token size, so it's likely
 		// incomplete and won't unmarshal.
@@ -1189,14 +1189,14 @@ func (c *Client) logStderr(name string, r io.Reader) {
 
 			// if we're finishing a continued line, add the newline back in
 			if !isPrefix {
-				c.config.Stderr.Write([]byte{'\n'})
+				_, _ = c.config.Stderr.Write([]byte{'\n'})
 			}
 
 			continuation = isPrefix
 			continue
 		}
 
-		c.config.Stderr.Write([]byte{'\n'})
+		_, _ = c.config.Stderr.Write([]byte{'\n'})
 
 		entry, err := parseJSON(line)
 		// If output is not JSON format, print directly to Debug

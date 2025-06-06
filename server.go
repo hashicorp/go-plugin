@@ -290,7 +290,7 @@ func Serve(opts *ServeConfig) {
 	// Close the listener on return. We wrap this in a func() on purpose
 	// because the "listener" reference may change to TLS.
 	defer func() {
-		listener.Close()
+		_ = listener.Close()
 	}()
 
 	var tlsConfig *tls.Config
@@ -443,7 +443,7 @@ func Serve(opts *ServeConfig) {
 			protocolLine += fmt.Sprintf("|%v", grpcBrokerMultiplexingSupported)
 		}
 		fmt.Printf("%s\n", protocolLine)
-		os.Stdout.Sync()
+		_ = os.Stdout.Sync()
 	} else if ch := opts.Test.ReattachConfigCh; ch != nil {
 		// Send back the reattach config that can be used. This isn't
 		// quite ready if they connect immediately but the client should
@@ -505,7 +505,7 @@ func Serve(opts *ServeConfig) {
 		// Cancellation. We can stop the server by closing the listener.
 		// This isn't graceful at all but this is currently only used by
 		// tests and its our only way to stop.
-		listener.Close()
+		_ = listener.Close()
 
 		// If this is a grpc server, then we also ask the server itself to
 		// end which will kill all connections. There isn't an easy way to do

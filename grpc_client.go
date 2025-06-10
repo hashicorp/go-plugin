@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"time"
 
 	"github.com/hashicorp/go-plugin/internal/plugin"
 	"google.golang.org/grpc"
@@ -17,12 +16,12 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func dialGRPCConn(tls *tls.Config, dialer func(string, time.Duration) (net.Conn, error), dialOpts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Conn, error), dialOpts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	// Build dialing options.
 	opts := make([]grpc.DialOption, 0)
 
 	// We use a custom dialer so that we can connect over unix domain sockets.
-	opts = append(opts, grpc.WithDialer(dialer))
+	opts = append(opts, grpc.WithContextDialer(dialer))
 
 	// Fail right away
 	opts = append(opts, grpc.FailOnNonTempDialError(true))

@@ -502,8 +502,8 @@ func (b *GRPCBroker) knock(id uint32) error {
 	return nil
 }
 
-func (b *GRPCBroker) muxDial(id uint32) func(string, time.Duration) (net.Conn, error) {
-	return func(string, time.Duration) (net.Conn, error) {
+func (b *GRPCBroker) muxDial(id uint32) func(context.Context, string) (net.Conn, error) {
+	return func(context.Context, string) (net.Conn, error) {
 		b.dialMutex.Lock()
 		defer b.dialMutex.Unlock()
 

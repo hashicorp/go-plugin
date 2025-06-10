@@ -1097,8 +1097,8 @@ func (c *Client) Protocol() Protocol {
 	return c.protocol
 }
 
-func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) {
-	return func(_ string, _ time.Duration) (net.Conn, error) {
+func netAddrDialer(addr net.Addr) func(context.Context, string) (net.Conn, error) {
+	return func(context.Context, string) (net.Conn, error) {
 		// Connect to the client
 		conn, err := net.Dial(addr.Network(), addr.String())
 		if err != nil {
@@ -1115,7 +1115,7 @@ func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) 
 
 // dialer is compatible with grpc.WithDialer and creates the connection
 // to the plugin.
-func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
+func (c *Client) dialer(ctx context.Context, _ string) (net.Conn, error) {
 	muxer, err := c.getGRPCMuxer(c.address)
 	if err != nil {
 		return nil, err
@@ -1128,7 +1128,7 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 			return nil, err
 		}
 	} else {
-		conn, err = netAddrDialer(c.address)("", timeout)
+		conn, err = netAddrDialer(c.address)(ctx, "")
 		if err != nil {
 			return nil, err
 		}

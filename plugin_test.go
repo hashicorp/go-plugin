@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
@@ -185,7 +184,6 @@ func (impl *testInterfaceClient) PrintStdio(stdout, stderr []byte) {
 	// way (see rpc_client_test.go). We probably should test this way
 	// but very few people use the net/rpc protocol nowadays so we didn'
 	// put in the effort.
-	return
 }
 
 // testInterfaceServer is the RPC server for testInterfaceClient
@@ -304,8 +302,6 @@ func (s testGRPCServer) Stream(stream grpctest.Test_StreamServer) error {
 			return err
 		}
 	}
-
-	return nil
 }
 
 // testGRPCClient is an implementation of TestInterface that communicates
@@ -482,7 +478,7 @@ func TestHelperProcess(*testing.T) {
 		// If we have an arg, we write there on start
 		if len(args) > 0 {
 			path := args[0]
-			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			err := os.WriteFile(path, []byte("foo"), 0644)
 			if err != nil {
 				panic(err)
 			}
@@ -530,7 +526,7 @@ func TestHelperProcess(*testing.T) {
 		// up properly versus just calling os.Exit
 		path := args[0]
 		defer func() {
-			err := ioutil.WriteFile(path, []byte("foo"), 0644)
+			err := os.WriteFile(path, []byte("foo"), 0644)
 			if err != nil {
 				panic(err)
 			}
@@ -728,7 +724,6 @@ func helperTLSProvider() (*tls.Config, error) {
 		ClientAuth:   tls.VerifyClientCertIfGiven,
 		ServerName:   "127.0.0.1",
 	}
-	tlsConfig.BuildNameToCertificate()
 
 	return tlsConfig, nil
 }

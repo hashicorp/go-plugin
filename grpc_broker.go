@@ -100,8 +100,6 @@ func (s *gRPCBrokerServer) StartStream(stream plugin.GRPCBroker_StartStreamServe
 		case s.recv <- i:
 		}
 	}
-
-	return nil
 }
 
 // Send is used by the GRPCBroker to pass connection information into the stream
@@ -210,8 +208,6 @@ func (s *gRPCBrokerClientImpl) StartStream() error {
 		case s.recv <- i:
 		}
 	}
-
-	return nil
 }
 
 // Send is used by the GRPCBroker to pass connection information into the stream
@@ -557,7 +553,7 @@ func (b *GRPCBroker) DialWithOptions(id uint32, opts ...grpc.DialOption) (conn *
 	case "unix":
 		addr, err = net.ResolveUnixAddr("unix", address)
 	default:
-		err = fmt.Errorf("Unknown address type: %s", c.Address)
+		err = fmt.Errorf("unknown address type: %s", c.Address)
 	}
 	if err != nil {
 		return nil, err

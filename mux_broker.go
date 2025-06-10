@@ -199,9 +199,7 @@ func (m *MuxBroker) timeoutWait(id uint32, p *muxBrokerPending) {
 	// If we timed out, then check if we have a channel in the buffer,
 	// and if so, close it.
 	if timeout {
-		select {
-		case s := <-p.ch:
-			_ = s.Close()
-		}
+		s := <-p.ch
+		_ = s.Close()
 	}
 }

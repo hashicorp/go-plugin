@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -16,7 +16,7 @@ import (
 
 func main() {
 	// We don't want to see the plugin logs.
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 
 	plugins := map[int]plugin.PluginSet{}
 

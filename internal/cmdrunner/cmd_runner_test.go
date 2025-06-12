@@ -35,7 +35,7 @@ func TestAdditionalNotesAboutCommand(t *testing.T) {
 			t.Errorf("Expected notes to contain macOS information:\n%s", notes)
 		}
 
-		if strings.Contains(file, "amd64") && !(strings.Contains(notes, "amd64") || strings.Contains(notes, "EM_X86_64") || strings.Contains(notes, "CpuAmd64")) {
+		if strings.Contains(file, "amd64") && !strings.Contains(notes, "amd64") && !strings.Contains(notes, "EM_X86_64") && !strings.Contains(notes, "CpuAmd64") {
 			t.Errorf("Expected notes to contain amd64 information:\n%s", notes)
 		}
 

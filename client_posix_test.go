@@ -39,6 +39,7 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 	if reattach == nil {
 		c.Kill()
 		t.Fatal("reattach config should be non-nil")
+		return // Required for staticcheck SA5011
 	}
 
 	// Find the process and defer a kill so we know it is gone

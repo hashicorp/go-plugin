@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/grpc/shared"
@@ -17,11 +17,11 @@ type KVGRPC struct{}
 
 func (KVGRPC) Put(key string, value []byte) error {
 	value = []byte(fmt.Sprintf("%s\n\nWritten from plugin version 3\n", string(value)))
-	return ioutil.WriteFile("kv_"+key, value, 0644)
+	return os.WriteFile("kv_"+key, value, 0644)
 }
 
 func (KVGRPC) Get(key string) ([]byte, error) {
-	d, err := ioutil.ReadFile("kv_" + key)
+	d, err := os.ReadFile("kv_" + key)
 	if err != nil {
 		return nil, err
 	}
@@ -34,11 +34,11 @@ type KV struct{}
 
 func (KV) Put(key string, value []byte) error {
 	value = []byte(fmt.Sprintf("%s\n\nWritten from plugin version 2\n", string(value)))
-	return ioutil.WriteFile("kv_"+key, value, 0644)
+	return os.WriteFile("kv_"+key, value, 0644)
 }
 
 func (KV) Get(key string) ([]byte, error) {
-	d, err := ioutil.ReadFile("kv_" + key)
+	d, err := os.ReadFile("kv_" + key)
 	if err != nil {
 		return nil, err
 	}

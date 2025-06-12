@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -202,7 +201,7 @@ type ClientConfig struct {
 	// SyncStdout, SyncStderr can be set to override the
 	// respective os.Std* values in the plugin. Care should be taken to
 	// avoid races here. If these are nil, then this will be set to
-	// ioutil.Discard.
+	// io.Discard.
 	SyncStdout io.Writer
 	SyncStderr io.Writer
 
@@ -401,7 +400,7 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 
 	if config.Stderr == nil {
-		config.Stderr = ioutil.Discard
+		config.Stderr = io.Discard
 	}
 
 	if config.SyncStdout == nil {
@@ -853,15 +852,15 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			var coreProtocol int
 			coreProtocol, err = strconv.Atoi(parts[0])
 			if err != nil {
-				err = fmt.Errorf("Error parsing core protocol version: %s", err)
+				err = fmt.Errorf("error parsing core protocol version: %s", err)
 				return
 			}
 
 			if coreProtocol != CoreProtocolVersion {
-				err = fmt.Errorf("Incompatible core API version with plugin. "+
+				err = fmt.Errorf("incompatible core API version with plugin. "+
 					"Plugin version: %s, Core version: %d\n\n"+
 					"To fix this, the plugin usually only needs to be recompiled.\n"+
-					"Please report this to the plugin author.", parts[0], CoreProtocolVersion)
+					"Please report this to the plugin author", parts[0], CoreProtocolVersion)
 				return
 			}
 		}
@@ -887,10 +886,16 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		switch network {
 		case "tcp":
 			addr, err = net.ResolveTCPAddr("tcp", address)
+			if err != nil {
+				return nil, err
+			}
 		case "unix":
 			addr, err = net.ResolveUnixAddr("unix", address)
+			if err != nil {
+				return nil, err
+			}
 		default:
-			err = fmt.Errorf("Unknown address type: %s", address)
+			return nil, fmt.Errorf("unknown address type: %s", address)
 		}
 
 		// If we have a server type, then record that. We default to net/rpc
@@ -908,7 +913,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			}
 		}
 		if !found {
-			err = fmt.Errorf("Unsupported plugin protocol %q. Supported: %v",
+			err = fmt.Errorf("unsupported plugin protocol %q. Supported: %v",
 				c.protocol, c.config.AllowedProtocols)
 			return addr, err
 		}
@@ -1041,7 +1046,7 @@ func (c *Client) checkProtoVersion(protoVersion string) (int, PluginSet, error) 
 		return version, plugins, nil
 	}
 
-	return 0, nil, fmt.Errorf("Incompatible API version with plugin. "+
+	return 0, nil, fmt.Errorf("incompatible API version with plugin. "+
 		"Plugin version: %d, Client versions: %d", serverVersion, clientVersions)
 }
 
@@ -1097,8 +1102,8 @@ func (c *Client) Protocol() Protocol {
 	return c.protocol
 }
 
-func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) {
-	return func(_ string, _ time.Duration) (net.Conn, error) {
+func netAddrDialer(addr net.Addr) func(context.Context, string) (net.Conn, error) {
+	return func(context.Context, string) (net.Conn, error) {
 		// Connect to the client
 		conn, err := net.Dial(addr.Network(), addr.String())
 		if err != nil {
@@ -1115,7 +1120,7 @@ func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) 
 
 // dialer is compatible with grpc.WithDialer and creates the connection
 // to the plugin.
-func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
+func (c *Client) dialer(ctx context.Context, _ string) (net.Conn, error) {
 	muxer, err := c.getGRPCMuxer(c.address)
 	if err != nil {
 		return nil, err
@@ -1128,7 +1133,7 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 			return nil, err
 		}
 	} else {
-		conn, err = netAddrDialer(c.address)("", timeout)
+		conn, err = netAddrDialer(c.address)(ctx, "")
 		if err != nil {
 			return nil, err
 		}

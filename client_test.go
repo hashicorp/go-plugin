@@ -668,7 +668,7 @@ func testClient_reattachGRPC(t *testing.T, useReattachFunc bool) {
 
 func TestClient_reattachNotFound(t *testing.T) {
 	// Find a bad pid
-	var pid int = 5000
+	pid := 5000
 	for i := pid; i < 32000; i++ {
 		if _, err := os.FindProcess(i); err != nil {
 			pid = i
@@ -916,11 +916,7 @@ func TestClient_Stdin(t *testing.T) {
 		t.Fatalf("error: %s", err)
 	}
 
-	for {
-		if c.Exited() {
-			break
-		}
-
+	for !c.Exited() {
 		time.Sleep(50 * time.Millisecond)
 	}
 
@@ -954,10 +950,7 @@ func TestClient_SkipHostEnv(t *testing.T) {
 				t.Fatalf("error: %s", err)
 			}
 
-			for {
-				if c.Exited() {
-					break
-				}
+			for !c.Exited() {
 
 				time.Sleep(50 * time.Millisecond)
 			}
@@ -1072,7 +1065,7 @@ func TestClient_TLS(t *testing.T) {
 	}
 
 	// Grab the impl
-	raw, err := clientBad.Dispense("test")
+	_, err = clientBad.Dispense("test")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1101,7 +1094,7 @@ func TestClient_TLS(t *testing.T) {
 	}
 
 	// Grab the impl
-	raw, err = client.Dispense("test")
+	raw, err := client.Dispense("test")
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}

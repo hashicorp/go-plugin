@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"syscall"
 	"testing"
 
@@ -22,10 +21,6 @@ import (
 )
 
 func TestSetGroup(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("go-plugin doesn't support unix sockets on Windows")
-	}
-
 	group, err := user.LookupGroupId(fmt.Sprintf("%d", os.Getgid()))
 	if err != nil {
 		t.Fatal(err)

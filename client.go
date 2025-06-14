@@ -226,6 +226,10 @@ type ClientConfig struct {
 	// If this is 0, then the default of 64KB is used.
 	PluginLogBufferSize int
 
+	// ClientScanerBufferSize is the buffer size(bytes) to read from stderr for plugin log lines.
+	// If this is 0, then the default of 64KB is used.
+	ClientScanerBufferSize int
+
 	// AutoMTLS has the client and server automatically negotiate mTLS for
 	// transport authentication. This ensures that only the original client will
 	// be allowed to connect to the server, and all other connections will be
@@ -424,6 +428,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 
 	if config.PluginLogBufferSize == 0 {
 		config.PluginLogBufferSize = defaultPluginLogBufferSize
+	}
+
+	if config.ClientScanerBufferSize == 0 {
+		config.ClientScanerBufferSize = bufio.MaxScanTokenSize
 	}
 
 	c = &Client{
@@ -798,6 +806,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		defer close(linesCh)
 
 		scanner := bufio.NewScanner(runner.Stdout())
+		buf := make([]byte, c.config.ClientScanerBufferSize)
+		scanner.Buffer(buf, c.config.ClientScanerBufferSize)
+
 		for scanner.Scan() {
 			linesCh <- scanner.Text()
 		}

@@ -1237,8 +1237,11 @@ func (c *Client) logStderr(name string, r io.Reader) {
 		} else {
 			panic = false
 			out := flattenKVPairs(entry.KVPairs)
-
-			out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+			if !entry.Timestamp.IsZero() {
+				// no point in including a zero timestamp
+				// this can happen if the upstream logger has DisableTime set to true
+				out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+			}
 			switch hclog.LevelFromString(entry.Level) {
 			case hclog.Trace:
 				l.Trace(entry.Message, out...)

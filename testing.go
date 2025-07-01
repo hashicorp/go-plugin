@@ -120,8 +120,10 @@ func TestGRPCConn(t testing.TB, register func(*grpc.Server)) (*grpc.ClientConn, 
 	go func() { _ = server.Serve(l) }()
 
 	// Connect to the server
+	//nolint:staticcheck //SA1019: grpc.Dial is deprecated: use NewClient instead.
 	conn, err := grpc.Dial(
 		l.Addr().String(),
+		//nolint:staticcheck //SA1019: grpc.WithBlock is deprecated: this DialOption is not supported by NewClient.
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

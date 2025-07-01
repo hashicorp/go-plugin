@@ -25,6 +25,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Con
 	opts = append(opts, grpc.WithContextDialer(dialer))
 
 	// Fail right away
+	//nolint:staticcheck //SA1019: grpc.FailOnNonTempDialError is deprecated: this DialOption is not supported by NewClient
 	opts = append(opts, grpc.FailOnNonTempDialError(true))
 
 	// If we have no TLS configuration set, we need to explicitly tell grpc
@@ -45,6 +46,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Con
 
 	// Connect. Note the first parameter is unused because we use a custom
 	// dialer that has the state to see the address.
+	//nolint:staticcheck //SA1019: grpc.Dial is deprecated: use NewClient instead.
 	conn, err := grpc.Dial("unused", opts...)
 	if err != nil {
 		return nil, err

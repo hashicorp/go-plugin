@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-func BenchmarkClientLogging_enabled(b *testing.B) {
+func BenchmarkClientLogging(b *testing.B) {
 	// We're not actually going to start the process in this benchmark,
 	// so this is just a placeholder to satisfy the ClientConfig.
 	process := helperProcess("bad-version")
@@ -50,7 +50,10 @@ func BenchmarkClientLogging_enabled(b *testing.B) {
 					b.Fatal("failed to write to pipe")
 				}
 			}
-			w.Close() // causes the c.logStderr goroutine to exit
+			err := w.Close() // causes the c.logStderr goroutine to exit
+			if err != nil {
+				b.Fatalf("failed to close write end of pipe: %s", err)
+			}
 		})
 	}
 }

@@ -1253,7 +1253,7 @@ func (c *Client) logStderr(name string, r io.Reader) {
 			panic = false
 
 			logLevel := hclog.LevelFromString(entry.Level)
-			if logLevel < loggerLevel {
+			if logLevel != hclog.NoLevel && logLevel < loggerLevel {
 				// The logger will ignore this log entry anyway, so we
 				// won't spend any more time preparing it.
 				continue

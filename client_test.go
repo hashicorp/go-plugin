@@ -1454,7 +1454,7 @@ func testClient_logger(t *testing.T, proto string) {
 	// Custom hclog.Logger
 	clientLogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "test-logger",
-		Level:  hclog.Trace,
+		Level:  hclog.Debug,
 		Output: stderr,
 		Mutex:  mutex,
 	})

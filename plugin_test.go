@@ -43,6 +43,7 @@ type testInterface interface {
 	PrintKV(string, interface{})
 	Bidirectional() error
 	PrintStdio(stdout, stderr []byte)
+	Panic(msg string) error
 }
 
 // testStreamer is used to test the grpc streaming interface
@@ -150,6 +151,10 @@ func (i *testInterfaceImpl) PrintStdio(stdout, stderr []byte) {
 	}
 }
 
+func (i *testInterfaceImpl) Panic(msg string) error {
+	panic(msg)
+}
+
 // testInterfaceClient implements testInterface to communicate over RPC
 type testInterfaceClient struct {
 	Client *rpc.Client
@@ -186,6 +191,10 @@ func (impl *testInterfaceClient) PrintStdio(stdout, stderr []byte) {
 	// put in the effort.
 }
 
+func (impl *testInterfaceClient) Panic(msg string) error {
+	return nil
+}
+
 // testInterfaceServer is the RPC server for testInterfaceClient
 type testInterfaceServer struct {
 	Broker *MuxBroker
@@ -214,6 +223,7 @@ var testGRPCPluginMap = map[string]Plugin{
 
 // testGRPCServer is the implementation of our GRPC service.
 type testGRPCServer struct {
+	grpctest.UnimplementedTestServer
 	Impl   testInterface
 	broker *GRPCBroker
 }
@@ -280,7 +290,14 @@ func (s *testGRPCServer) PrintStdio(
 	return &empty.Empty{}, nil
 }
 
-type pingPongServer struct{}
+func (s *testGRPCServer) Panic(ctx context.Context, req *grpctest.PanicRequest) (*empty.Empty, error) {
+	err := s.Impl.Panic(req.Message)
+	return &empty.Empty{}, err
+}
+
+type pingPongServer struct {
+	grpctest.UnimplementedPingPongServer
+}
 
 func (p *pingPongServer) Ping(ctx context.Context, req *grpctest.PingRequest) (*grpctest.PongResponse, error) {
 	return &grpctest.PongResponse{
@@ -414,6 +431,11 @@ func (c *testGRPCClient) PrintStdio(stdout, stderr []byte) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (c *testGRPCClient) Panic(msg string) error {
+	_, err := c.Client.Panic(context.Background(), &grpctest.PanicRequest{Message: msg})
+	return err
 }
 
 func helperProcess(s ...string) *exec.Cmd {

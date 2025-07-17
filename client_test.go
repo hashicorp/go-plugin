@@ -1443,7 +1443,7 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 }
 
 func TestClient_logger(t *testing.T) {
-	t.Run("net/rpc", func(t *testing.T) { testClient_logger(t, "netrpc") })
+	t.Run("netrpc", func(t *testing.T) { testClient_logger(t, "netrpc") })
 	t.Run("grpc", func(t *testing.T) { testClient_logger(t, "grpc") })
 }
 
@@ -1459,11 +1459,16 @@ func testClient_logger(t *testing.T, proto string) {
 		Mutex:  mutex,
 	})
 
+	plugins := map[string]map[string]Plugin{
+		"netrpc": testPluginMap,
+		"grpc":   testGRPCPluginMap,
+	}
+
 	process := helperProcess("test-interface-logger-" + proto)
 	c := NewClient(&ClientConfig{
 		Cmd:              process,
 		HandshakeConfig:  testHandshake,
-		Plugins:          testGRPCPluginMap,
+		Plugins:          plugins[proto],
 		Logger:           clientLogger,
 		AllowedProtocols: []Protocol{ProtocolNetRPC, ProtocolGRPC},
 	})
@@ -1486,7 +1491,7 @@ func testClient_logger(t *testing.T, proto string) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	{
+	t.Run("-1", func(t *testing.T) {
 		// Discard everything else, and capture the output we care about
 		mutex.Lock()
 		buffer.Reset()
@@ -1502,9 +1507,9 @@ func testClient_logger(t *testing.T, proto string) {
 		if !strings.Contains(line, "foo=bar") {
 			t.Fatalf("bad: %q", line)
 		}
-	}
+	})
 
-	{
+	t.Run("-2", func(t *testing.T) {
 		// Try an integer type
 		mutex.Lock()
 		buffer.Reset()
@@ -1520,7 +1525,7 @@ func testClient_logger(t *testing.T, proto string) {
 		if !strings.Contains(line, "foo=12") {
 			t.Fatalf("bad: %q", line)
 		}
-	}
+	})
 
 	// Kill it
 	c.Kill()

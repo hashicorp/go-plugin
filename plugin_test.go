@@ -599,7 +599,7 @@ func TestHelperProcess(*testing.T) {
 	case "test-interface-logger-grpc":
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,
-			Plugins:         testPluginMap,
+			Plugins:         testGRPCPluginMap,
 			GRPCServer:      DefaultGRPCServer,
 		})
 		// Shouldn't reach here but make sure we exit anyways

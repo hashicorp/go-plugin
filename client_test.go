@@ -1535,6 +1535,84 @@ func testClient_logger(t *testing.T, proto string) {
 	}
 }
 
+func TestServerLogPanic(t *testing.T) {
+	var buffer bytes.Buffer
+	mutex := new(sync.Mutex)
+	stderr := io.MultiWriter(os.Stderr, &buffer)
+	// Custom hclog.Logger
+	clientLogger := hclog.New(&hclog.LoggerOptions{
+		Name:   "test-logger",
+		Level:  hclog.Error,
+		Output: stderr,
+		Mutex:  mutex,
+	})
+
+	process := helperProcess("test-interface-logger-grpc")
+	c := NewClient(&ClientConfig{
+		Cmd:              process,
+		HandshakeConfig:  testHandshake,
+		Plugins:          testGRPCPluginMap,
+		Logger:           clientLogger,
+		AllowedProtocols: []Protocol{ProtocolNetRPC, ProtocolGRPC},
+	})
+	defer c.Kill()
+
+	// Grab the RPC client
+	client, err := c.Client()
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	impl, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	mutex.Lock()
+	buffer.Reset()
+	mutex.Unlock()
+	err = impl.Panic("invalid foo bar")
+	time.Sleep(100 * time.Millisecond)
+	mutex.Lock()
+
+	panicFound := false
+	stackLines := 0
+
+	for _, line := range strings.Split(buffer.String(), "\n") {
+		if strings.Contains(line, "[ERROR] test-logger.go-plugin.test: panic: invalid foo bar") {
+			panicFound = true
+			continue
+		}
+
+		// make sure we are not just capturing the panic line, and have the rest
+		// of the output too
+		if panicFound {
+			// there should only be [ERROR] lines past this point, but the log
+			// level is Error, so we can just verify there are lines
+			stackLines++
+		}
+	}
+
+	if !panicFound {
+		t.Fatal("failed to find panic in error log output")
+	}
+
+	if stackLines < 10 {
+		t.Fatalf("only found %d stack lines after panic", stackLines)
+	}
+
+	mutex.Unlock()
+	if err == nil {
+		t.Fatal("expected error due to panic")
+	}
+}
+
 // Test that we continue to consume stderr over long lines.
 func TestClient_logStderr(t *testing.T) {
 	stderr := bytes.Buffer{}

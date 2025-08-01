@@ -502,17 +502,17 @@ func Serve(opts *ServeConfig) {
 	}
 	select {
 	case <-ctx.Done():
-		// Cancellation. We can stop the server by closing the listener.
-		// This isn't graceful at all but this is currently only used by
-		// tests and its our only way to stop.
-		_ = listener.Close()
-
 		// If this is a grpc server, then we also ask the server itself to
 		// end which will kill all connections. There isn't an easy way to do
 		// this for net/rpc currently but net/rpc is more and more unused.
 		if s, ok := server.(*GRPCServer); ok {
 			s.Stop()
 		}
+
+		// Cancellation. We can stop the server by closing the listener.
+		// This isn't graceful at all but this is currently only used by
+		// tests and its our only way to stop.
+		_ = listener.Close()
 
 		// Wait for the server itself to shut down
 		<-doneCh
@@ -526,7 +526,7 @@ func Serve(opts *ServeConfig) {
 }
 
 func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && unixSocketCfg.socketDir == "" {
 		return serverListener_tcp()
 	}
 

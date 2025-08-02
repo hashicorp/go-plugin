@@ -104,6 +104,9 @@ func TestServer_testMode(t *testing.T) {
 }
 
 func TestServer_testMode_AutoMTLS(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv(EnvUnixSocketDir, tmpDir)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

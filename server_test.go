@@ -10,17 +10,16 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"golang.org/x/sys/windows"
 )
 
 func TestServer_testMode(t *testing.T) {
-	tmpDir := t.TempDir()
-	t.Setenv(EnvUnixSocketDir, tmpDir)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -104,9 +103,6 @@ func TestServer_testMode(t *testing.T) {
 }
 
 func TestServer_testMode_AutoMTLS(t *testing.T) {
-	tmpDir := t.TempDir()
-	t.Setenv(EnvUnixSocketDir, tmpDir)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -328,6 +324,12 @@ func TestServer_testStdLogger(t *testing.T) {
 }
 
 func TestUnixSocketDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		major, _, build := windows.RtlGetNtVersionNumbers()
+		if major < 10 || build < 17063 {
+			t.Skip("go-plugin doesn't support unix sockets on Windows")
+		}
+	}
 	tmpDir := t.TempDir()
 	t.Setenv(EnvUnixSocketDir, tmpDir)
 

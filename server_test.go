@@ -324,7 +324,7 @@ func TestServer_testStdLogger(t *testing.T) {
 
 func TestUnixSocketDir(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		if isSupportUnix() {
+		if !isSupportUnix() {
 			t.Skip("go-plugin doesn't support unix sockets on Windows")
 		}
 	}

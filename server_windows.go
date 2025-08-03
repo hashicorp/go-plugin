@@ -17,8 +17,7 @@ import (
 )
 
 func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
-	major, _, build := windows.RtlGetNtVersionNumbers()
-	if major >= 10 && build >= 17063 {
+	if isSupportUnix() {
 		unixSocketCfg.Group = ""
 		return serverListener_unix(unixSocketCfg)
 	}
@@ -65,4 +64,9 @@ func serverListener_tcp() (net.Listener, error) {
 	}
 
 	return nil, errors.New("couldn't bind plugin TCP listener")
+}
+
+func isSupportUnix() bool {
+	major, _, build := windows.RtlGetNtVersionNumbers()
+	return major >= 10 && build >= 17063
 }

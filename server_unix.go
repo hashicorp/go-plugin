@@ -7,3 +7,7 @@
 package plugin
 
 var serverListener = serverListener_unix
+
+func isSupportUnix() bool {
+	return true
+}

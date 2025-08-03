@@ -16,7 +16,6 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"golang.org/x/sys/windows"
 )
 
 func TestServer_testMode(t *testing.T) {
@@ -325,8 +324,7 @@ func TestServer_testStdLogger(t *testing.T) {
 
 func TestUnixSocketDir(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		major, _, build := windows.RtlGetNtVersionNumbers()
-		if major < 10 || build < 17063 {
+		if isSupportUnix() {
 			t.Skip("go-plugin doesn't support unix sockets on Windows")
 		}
 	}

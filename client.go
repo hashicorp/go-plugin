@@ -1167,7 +1167,10 @@ func (c *Client) getGRPCMuxer(addr net.Addr) (*grpcmux.GRPCClientMuxer, error) {
 func (c *Client) logStderr(name string, r io.Reader) {
 	defer c.clientWaitGroup.Done()
 	defer c.pipesWaitGroup.Done()
+
 	l := c.logger.Named(filepath.Base(name))
+	loggerLevel := l.GetLevel()
+	loggerDisabled := loggerLevel == hclog.Off
 
 	reader := bufio.NewReaderSize(r, c.config.PluginLogBufferSize)
 	// continuation indicates the previous line was a prefix
@@ -1203,6 +1206,18 @@ func (c *Client) logStderr(name string, r io.Reader) {
 
 		_, _ = c.config.Stderr.Write([]byte{'\n'})
 
+		//
+		// Any side-effects other than writing to the hclog logger must be
+		// above this point!
+		//
+
+		if loggerDisabled {
+			// If the logger we'd be writing to is completely disabled then
+			// we can skip all of the parsing work to decide what log level
+			// we'd use to write this line.
+			continue
+		}
+
 		entry, err := parseJSON(line)
 		// If output is not JSON format, print directly to Debug
 		if err != nil {
@@ -1236,10 +1251,17 @@ func (c *Client) logStderr(name string, r io.Reader) {
 			}
 		} else {
 			panic = false
-			out := flattenKVPairs(entry.KVPairs)
 
+			logLevel := hclog.LevelFromString(entry.Level)
+			if logLevel != hclog.NoLevel && logLevel < loggerLevel {
+				// The logger will ignore this log entry anyway, so we
+				// won't spend any more time preparing it.
+				continue
+			}
+
+			out := flattenKVPairs(entry.KVPairs)
 			out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
-			switch hclog.LevelFromString(entry.Level) {
+			switch logLevel {
 			case hclog.Trace:
 				l.Trace(entry.Message, out...)
 			case hclog.Debug:

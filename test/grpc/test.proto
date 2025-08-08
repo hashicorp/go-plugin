@@ -42,12 +42,17 @@ message PrintStdioRequest {
     bytes stderr = 2;
 }
 
+message PanicRequest {
+    string message = 1;
+}
+
 service Test {
     rpc Double(TestRequest) returns (TestResponse) {}
     rpc PrintKV(PrintKVRequest) returns (PrintKVResponse) {}
     rpc Bidirectional(BidirectionalRequest) returns (BidirectionalResponse) {}
     rpc Stream(stream TestRequest) returns (stream TestResponse) {}
     rpc PrintStdio(PrintStdioRequest) returns (google.protobuf.Empty) {}
+    rpc Panic(PanicRequest) returns (google.protobuf.Empty) {}
 }
 
 message PingRequest {

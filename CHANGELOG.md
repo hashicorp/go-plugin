@@ -1,3 +1,10 @@
+## v1.7.0
+
+CHANGES:
+
+* When go-plugin encounters a stack trace on the server stderr stream, it now raises output to a log-level of Error instead of Debug. [[GH-292](https://github.com/hashicorp/go-plugin/pull/292)]
+
+
 ## v1.6.2
 
 ENHANCEMENTS:

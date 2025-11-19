@@ -669,7 +669,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	// Setup a temporary certificate for client/server mtls, and send the public
 	// certificate to the plugin.
 	if c.config.AutoMTLS {
-		c.logger.Info("configuring client automatic mTLS")
+		c.logger.Debug("configuring client automatic mTLS")
 		certPEM, keyPEM, err := generateCert()
 		if err != nil {
 			c.logger.Error("failed to generate client certificate", "error", err)

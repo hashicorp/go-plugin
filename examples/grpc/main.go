@@ -7,14 +7,21 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
 	"os/exec"
+	"slices"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-plugin/examples/grpc/shared"
 )
 
 func run() error {
+	pluginName := os.Getenv("KV_PLUGIN_NAME")
+	if _, ok := shared.PluginMap[pluginName]; !ok {
+		return fmt.Errorf("please set KV_PLUGIN_NAME to one of %q", slices.Collect(maps.Keys(shared.PluginMap)))
+	}
+
 	// We're a host. Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
@@ -32,7 +39,7 @@ func run() error {
 	}
 
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	raw, err := rpcClient.Dispense(pluginName)
 	if err != nil {
 		return err
 	}

@@ -25,7 +25,7 @@ class KVServicer(kv_pb2_grpc.KVServicer):
 
     def Put(self, request, context):
         filename = "kv_"+request.key
-        value = "{0}\n\nWritten from plugin-python".format(request.value)
+        value = "{0}\n\nWritten from plugin-python".format(request.value.decode('utf-8'))
         with open(filename, 'w') as f:
             f.write(value)
 

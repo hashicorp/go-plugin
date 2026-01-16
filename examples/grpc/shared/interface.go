@@ -14,6 +14,11 @@ import (
 	"github.com/hashicorp/go-plugin/examples/grpc/proto"
 )
 
+const (
+	PluginNetRPC = "kv"
+	PluginGRPC   = "kv_grpc"
+)
+
 // Handshake is a common handshake that is shared by plugin and host.
 var Handshake = plugin.HandshakeConfig{
 	// This isn't required when using VersionedPlugins
@@ -24,8 +29,8 @@ var Handshake = plugin.HandshakeConfig{
 
 // PluginMap is the map of plugins we can dispense.
 var PluginMap = map[string]plugin.Plugin{
-	"kv_grpc": &KVGRPCPlugin{},
-	"kv":      &KVPlugin{},
+	PluginGRPC:   &KVGRPCPlugin{},
+	PluginNetRPC: &KVPlugin{},
 }
 
 // KV is the interface that we're exposing as a plugin.

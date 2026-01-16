@@ -29,7 +29,7 @@ type AddHelper interface {
 	Sum(int64, int64) (int64, error)
 }
 
-// KV is the interface that we're exposing as a plugin.
+// Counter is the interface that we're exposing as a plugin.
 type Counter interface {
 	Put(key string, value int64, a AddHelper) error
 	Get(key string) (int64, error)

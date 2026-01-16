@@ -31,8 +31,19 @@ func run() error {
 		return err
 	}
 
+	var pluginName string
+	switch os.Getenv("KV_PROTO") {
+	case "netrpc":
+		pluginName = shared.PluginNetRPC
+	case "grpc":
+		pluginName = shared.PluginGRPC
+	default:
+		fmt.Println("must set KV_PROTO to netrpc or grpc")
+		os.Exit(1)
+	}
+
 	// Request the plugin
-	raw, err := rpcClient.Dispense("kv_grpc")
+	raw, err := rpcClient.Dispense(pluginName)
 	if err != nil {
 		return err
 	}

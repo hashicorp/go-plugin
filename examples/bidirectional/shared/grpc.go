@@ -77,7 +77,7 @@ func (m *GRPCServer) Get(ctx context.Context, req *proto.GetRequest) (*proto.Get
 	return &proto.GetResponse{Value: v}, err
 }
 
-// GRPCClient is an implementation of KV that talks over RPC.
+// GRPCAddHelperClient is an implementation of AddHelper that talks over RPC.
 type GRPCAddHelperClient struct{ client proto.AddHelperClient }
 
 func (m *GRPCAddHelperClient) Sum(a, b int64) (int64, error) {
@@ -92,7 +92,7 @@ func (m *GRPCAddHelperClient) Sum(a, b int64) (int64, error) {
 	return resp.R, err
 }
 
-// Here is the gRPC server that GRPCClient talks to.
+// Here is the gRPC server that GRPCAddHelperClient talks to.
 type GRPCAddHelperServer struct {
 	// This is the real implementation
 	Impl AddHelper

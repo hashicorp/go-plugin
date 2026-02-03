@@ -29,11 +29,11 @@ due to the argument passed to the client above.
 Install protobuf tooling
 
 ```
-brew install protobuf
+brew install protobuf@29
 ```
 
 ```
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.1
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 ```
 

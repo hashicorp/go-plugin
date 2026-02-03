@@ -1,8 +1,11 @@
 # gRPC streaming Example
 
-This example builds a plugin & client which can stream larger amount of data
+This example builds a plugin & client which can stream a large amount of data
 between them while staying below reasonable message size limits of the gRPC
 protocol.
+
+>Note: [hashicorp/go-plugin sets an upper limit on message size](https://github.com/hashicorp/go-plugin/blob/d0d30899ca2d91b0869cb73db95afca180e769cf/grpc_client.go#L39-L41). At time of writing, that value is `math.MaxInt32` bytes, or approximately 2GB.
+
 
 ## To execute
 

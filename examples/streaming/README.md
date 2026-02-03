@@ -20,6 +20,9 @@ Finally launch the client:
 ```
 go run main.go myfile
 ```
+The client will first write data to the steamer plugin, and then the client will read that
+data back from the plugin. The plugin writes the data it receives in a file called `myfile`,
+due to the argument passed to the client above.
 
 ## To re-generate protobuf definitions
 

@@ -15,7 +15,7 @@ Build the plugin
 go build -o ./plugin/streamer ./plugin
 ```
 
-launch client
+Finally launch the client:
 
 ```
 go run main.go myfile

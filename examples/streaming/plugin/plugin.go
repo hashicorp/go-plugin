@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 
@@ -29,7 +30,10 @@ func (fs *FileStreamer) Read(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		cErr := f.Close()
+		err = errors.Join(err, cErr)
+	}()
 	return io.ReadAll(f)
 }
 
@@ -39,7 +43,10 @@ func (fs *FileStreamer) Write(ctx context.Context, b []byte) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		cErr := f.Close()
+		err = errors.Join(err, cErr)
+	}()
 
 	n, err := f.Write(b)
 	if err != nil {

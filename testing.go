@@ -10,10 +10,12 @@ import (
 	"net"
 	"net/rpc"
 	"testing"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/grpcmux"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -120,13 +122,24 @@ func TestGRPCConn(t testing.TB, register func(*grpc.Server)) (*grpc.ClientConn, 
 	go func() { _ = server.Serve(l) }()
 
 	// Connect to the server
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		l.Addr().String(),
-		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+
+	// Wait for the connection to be established before closing the listener
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn.Connect()
+
+	// Wait until connection reaches Ready state
+	for state := conn.GetState(); state != connectivity.Ready; state = conn.GetState() {
+		if !conn.WaitForStateChange(ctx, state) {
+			t.Fatalf("failed to establish connection, final state: %v", conn.GetState())
+		}
 	}
 
 	// Connection successful, close the listener

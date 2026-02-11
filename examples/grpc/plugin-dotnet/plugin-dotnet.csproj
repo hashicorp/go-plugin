@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <RootNamespace>plugin_dotnet</RootNamespace>
+    <LangVersion>LATEST</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- https://github.com/grpc/grpc/blob/master/src/csharp/BUILD-INTEGRATION.md#i-just-want-to-generate-proto-and-grpc-c-sources-from-my-proto-files-no-c-compile -->
+    <Protobuf Include="../proto/*.proto" OutputDir="./Proto" CompileOutputs="false" />
+    <Protobuf Include="**/*.proto" OutputDir="./Proto" CompileOutputs="false" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- https://github.com/grpc/grpc/blob/master/src/csharp/BUILD-INTEGRATION.md#i-am-getting-a-warning-about-a-missing-expected-file -->
+    <Protobuf_NoWarnMissingExpected>true</Protobuf_NoWarnMissingExpected>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.6.1" />
+    <PackageReference Include="Grpc" Version="1.*" />
+    <PackageReference Include="Grpc.Tools" Version="1.*" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

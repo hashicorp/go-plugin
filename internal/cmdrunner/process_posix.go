@@ -15,6 +15,9 @@ import (
 func _pidAlive(pid int) bool {
 	proc, err := os.FindProcess(pid)
 	if err == nil {
+		// On Linux with Go 1.23+, FindProcess opens a pidfd which must be
+		// released or it leaks an FD on every call.
+		defer proc.Release()
 		err = proc.Signal(syscall.Signal(0))
 	}
 

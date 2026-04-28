@@ -16,8 +16,10 @@ func _pidAlive(pid int) bool {
 	proc, err := os.FindProcess(pid)
 	if err == nil {
 		// On Linux with Go 1.23+, FindProcess opens a pidfd which must be
-		// released or it leaks an FD on every call.
-		defer proc.Release()
+		// released or it leaks an FD on every call. Release errors are
+		// intentionally ignored; the handle is short-lived and there's
+		// nothing actionable to recover from a release failure.
+		defer func() { _ = proc.Release() }()
 		err = proc.Signal(syscall.Signal(0))
 	}
 

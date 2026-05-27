@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect

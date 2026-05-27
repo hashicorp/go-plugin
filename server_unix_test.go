@@ -25,7 +25,7 @@ func TestUnixSocketGroupPermissions(t *testing.T) {
 		"as name":    {group.Name},
 	} {
 		t.Run(name, func(t *testing.T) {
-			ln, err := serverListener_unix(UnixSocketConfig{Group: tc.group})
+			ln, err := serverListener(UnixSocketConfig{Group: tc.group})
 			if err != nil {
 				t.Fatal(err)
 			}

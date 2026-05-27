@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -580,6 +581,45 @@ func serverListener_tcp() (net.Listener, error) {
 */
 
 func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: use a named pipe — no temp file needed
+		name := fmt.Sprintf("go-plugin-%d", os.Getpid())
+		return secureListenWindows(name)
+
+	default:
+		// Unix: create a temp file to get a unique path, then replace with socket
+		tf, err := os.CreateTemp(unixSocketCfg.socketDir, "plugin")
+		if err != nil {
+			return nil, err
+		}
+		path := tf.Name()
+		if err := tf.Close(); err != nil {
+			return nil, err
+		}
+		if err := os.Remove(path); err != nil {
+			return nil, err
+		}
+
+		l, err := secureListenUnix(path)
+		if err != nil {
+			return nil, err
+		}
+
+		// set group permissions if configured
+		if unixSocketCfg.Group != "" {
+			if err = setGroupWritable(path, unixSocketCfg.Group, 0o660); err != nil {
+				return nil, err
+			}
+		}
+
+		// wrap so socket file is deleted on close
+		return newDeleteFileListener(l, path), nil
+	}
+}
+
+/*
+func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
 	tf, err := os.CreateTemp(unixSocketCfg.socketDir, "plugin")
 	if err != nil {
 		return nil, err
@@ -615,6 +655,7 @@ func serverListener(unixSocketCfg UnixSocketConfig) (net.Listener, error) {
 	// is removed on close.
 	return newDeleteFileListener(l, path), nil
 }
+*/
 
 func setGroupWritable(path, groupString string, mode os.FileMode) error {
 	groupID, err := strconv.Atoi(groupString)

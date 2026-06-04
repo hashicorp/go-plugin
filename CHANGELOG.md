@@ -1,3 +1,8 @@
+## Unreleased
+
+SECURITY:
+* deps: Updated google.golang.org/grpc to v1.81.1 [[GH-383](https://github.com/hashicorp/go-plugin/pull/383)]
+
 ## v1.7.0
 
 CHANGES:

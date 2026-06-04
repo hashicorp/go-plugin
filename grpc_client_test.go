@@ -179,7 +179,7 @@ func testGRPCClientReflection(t *testing.T, multiplex bool) {
 		methodNames = append(methodNames, m.GetName())
 	}
 
-	expectedMethodNames := []string{"Check", "Watch"}
+	expectedMethodNames := []string{"Check", "List", "Watch"}
 
 	if !reflect.DeepEqual(methodNames, expectedMethodNames) {
 		t.Fatalf("expected: %v\ngot: %v", expectedMethodNames, methodNames)

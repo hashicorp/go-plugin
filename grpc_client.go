@@ -25,7 +25,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Con
 	opts = append(opts, grpc.WithContextDialer(dialer))
 
 	// Fail right away
-	opts = append(opts, grpc.FailOnNonTempDialError(true))
+	opts = append(opts, grpc.FailOnNonTempDialError(true)) //nolint:staticcheck
 
 	// If we have no TLS configuration set, we need to explicitly tell grpc
 	// that we're connecting with an insecure connection.
@@ -45,7 +45,7 @@ func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Con
 
 	// Connect. Note the first parameter is unused because we use a custom
 	// dialer that has the state to see the address.
-	conn, err := grpc.Dial("unused", opts...)
+	conn, err := grpc.Dial("unused", opts...) //nolint:staticcheck
 	if err != nil {
 		return nil, err
 	}

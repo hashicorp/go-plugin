@@ -3,6 +3,9 @@
 SECURITY:
 * deps: Updated google.golang.org/grpc to v1.81.1 [[GH-383](https://github.com/hashicorp/go-plugin/pull/383)]
 
+ENHANCEMENTS:
+* deps: Removed direct use of deprecated `github.com/golang/protobuf` in favour of `google.golang.org/protobuf` [[GH-388](https://github.com/hashicorp/go-plugin/pull/388)]
+
 ## v1.7.0
 
 CHANGES:

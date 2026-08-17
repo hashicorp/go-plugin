@@ -636,10 +636,12 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	}
 
 	env := []string{
-		fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue),
 		fmt.Sprintf("PLUGIN_MIN_PORT=%d", c.config.MinPort),
 		fmt.Sprintf("PLUGIN_MAX_PORT=%d", c.config.MaxPort),
 		fmt.Sprintf("PLUGIN_PROTOCOL_VERSIONS=%s", strings.Join(versionStrings, ",")),
+	}
+	if len(c.config.MagicCookieKey) > 0 {
+		env = append(env, fmt.Sprintf("%s=%s", c.config.MagicCookieKey, c.config.MagicCookieValue))
 	}
 	if c.config.GRPCBrokerMultiplex {
 		env = append(env, fmt.Sprintf("%s=true", envMultiplexGRPC))

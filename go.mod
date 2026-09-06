@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/yamux v0.1.2
-	github.com/jhump/protoreflect v1.18.0
+	github.com/jhump/protoreflect v1.18.1
 	github.com/oklog/run v1.2.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12

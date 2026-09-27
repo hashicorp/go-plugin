@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package plugin
@@ -120,9 +120,9 @@ func TestGRPCConn(t testing.TB, register func(*grpc.Server)) (*grpc.ClientConn, 
 	go func() { _ = server.Serve(l) }()
 
 	// Connect to the server
-	conn, err := grpc.Dial(
+	conn, err := grpc.Dial( //nolint:staticcheck
 		l.Addr().String(),
-		grpc.WithBlock(),
+		grpc.WithBlock(), //nolint:staticcheck
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {

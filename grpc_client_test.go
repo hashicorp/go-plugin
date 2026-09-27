@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package plugin
@@ -179,7 +179,7 @@ func testGRPCClientReflection(t *testing.T, multiplex bool) {
 		methodNames = append(methodNames, m.GetName())
 	}
 
-	expectedMethodNames := []string{"Check", "Watch"}
+	expectedMethodNames := []string{"Check", "List", "Watch"}
 
 	if !reflect.DeepEqual(methodNames, expectedMethodNames) {
 		t.Fatalf("expected: %v\ngot: %v", expectedMethodNames, methodNames)

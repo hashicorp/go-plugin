@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package plugin
@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	"github.com/hashicorp/go-hclog"
 	grpctest "github.com/hashicorp/go-plugin/test/grpc"
 	"google.golang.org/grpc"
+	empty "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Test that NetRPCUnsupportedPlugin implements the correct interfaces.
@@ -285,14 +285,14 @@ func (s *testGRPCServer) Bidirectional(ctx context.Context, req *grpctest.Bidire
 func (s *testGRPCServer) PrintStdio(
 	ctx context.Context,
 	req *grpctest.PrintStdioRequest,
-) (*emptypb.Empty, error) {
+) (*empty.Empty, error) {
 	s.Impl.PrintStdio(req.Stdout, req.Stderr)
-	return &emptypb.Empty{}, nil
+	return &empty.Empty{}, nil
 }
 
-func (s *testGRPCServer) Panic(ctx context.Context, req *grpctest.PanicRequest) (*emptypb.Empty, error) {
+func (s *testGRPCServer) Panic(ctx context.Context, req *grpctest.PanicRequest) (*empty.Empty, error) {
 	err := s.Impl.Panic(req.Message)
-	return &emptypb.Empty{}, err
+	return &empty.Empty{}, err
 }
 
 type pingPongServer struct {

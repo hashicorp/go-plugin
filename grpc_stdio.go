@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package plugin
@@ -9,12 +9,12 @@ import (
 	"context"
 	"io"
 
-	"google.golang.org/protobuf/types/known/emptypb"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin/internal/plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	empty "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // grpcStdioBuffer is the buffer size we try to fill when sending a chunk of
@@ -49,7 +49,7 @@ func newGRPCStdioServer(log hclog.Logger, srcOut, srcErr io.Reader) *grpcStdioSe
 
 // StreamStdio streams our stdout/err as the response.
 func (s *grpcStdioServer) StreamStdio(
-	_ *emptypb.Empty,
+	_ *empty.Empty,
 	srv plugin.GRPCStdio_StreamStdioServer,
 ) error {
 	// Share the same data value between runs. Sending this over the wire
@@ -101,7 +101,7 @@ func newGRPCStdioClient(
 	client := plugin.NewGRPCStdioClient(conn)
 
 	// Connect immediately to the endpoint
-	stdioClient, err := client.StreamStdio(ctx, &emptypb.Empty{})
+	stdioClient, err := client.StreamStdio(ctx, &empty.Empty{})
 
 	// If we get an Unavailable or Unimplemented error, this means that the plugin isn't
 	// updated and linking to the latest version of go-plugin that supports

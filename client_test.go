@@ -899,11 +899,8 @@ func TestClient_Stdin(t *testing.T) {
 		t.Fatalf("error: %s", err)
 	}
 
-	oldStdin := os.Stdin
-	defer func() { os.Stdin = oldStdin }()
-	os.Stdin = tf
-
 	process := helperProcess("stdin")
+	process.Stdin = tf
 	c := NewClient(&ClientConfig{
 		Cmd:             process,
 		HandshakeConfig: testHandshake,

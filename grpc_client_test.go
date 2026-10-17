@@ -13,6 +13,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+func TestGRPCMaxMessageSize(t *testing.T) {
+	if maxGRPCMessageSize != int(^uint(0)>>1) {
+		t.Fatalf("expected gRPC message size limit %d, got %d", int(^uint(0)>>1), maxGRPCMessageSize)
+	}
+}
+
 func TestGRPC_App(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		testGRPCClientApp(t, false)

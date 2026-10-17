@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+const maxGRPCMessageSize = math.MaxInt
+
 func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Conn, error), dialOpts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	// Build dialing options.
 	opts := make([]grpc.DialOption, 0)
@@ -37,8 +39,8 @@ func dialGRPCConn(tls *tls.Config, dialer func(context.Context, string) (net.Con
 	}
 
 	opts = append(opts,
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32)),
-		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(math.MaxInt32)))
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGRPCMessageSize)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(maxGRPCMessageSize)))
 
 	// Add our custom options if we have any
 	opts = append(opts, dialOpts...)

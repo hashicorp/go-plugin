@@ -126,9 +126,16 @@ func (c *GRPCClient) Dispense(name string) (interface{}, error) {
 // ClientProtocol impl.
 func (c *GRPCClient) Ping() error {
 	client := grpc_health_v1.NewHealthClient(c.Conn)
-	_, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{
+	resp, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{
 		Service: GRPCServiceName,
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+		return fmt.Errorf("plugin %q health check returned non-SERVING status: %s", GRPCServiceName, resp.Status)
+	}
+
+	return nil
 }

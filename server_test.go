@@ -9,7 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -67,6 +67,21 @@ func TestServer_testMode(t *testing.T) {
 	// Pinging should work
 	if err := client.Ping(); err != nil {
 		t.Fatalf("should not err: %s", err)
+	}
+	// Grab the impl
+	raw, err := client.Dispense("test")
+	if err != nil {
+		t.Fatalf("err should be nil, got %s", err)
+	}
+
+	tester, ok := raw.(testInterface)
+	if !ok {
+		t.Fatalf("bad: %#v", raw)
+	}
+
+	n := tester.Double(3)
+	if n != 6 {
+		t.Fatal("invalid response", n)
 	}
 
 	// Kill which should do nothing
@@ -309,9 +324,10 @@ func TestServer_testStdLogger(t *testing.T) {
 
 func TestUnixSocketDir(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("go-plugin doesn't support unix sockets on Windows")
+		if !isSupportUnix() {
+			t.Skip("go-plugin doesn't support unix sockets on Windows")
+		}
 	}
-
 	tmpDir := t.TempDir()
 	t.Setenv(EnvUnixSocketDir, tmpDir)
 
@@ -344,8 +360,8 @@ func TestUnixSocketDir(t *testing.T) {
 		t.Fatal("should've received reattach")
 	}
 
-	actualDir := path.Clean(path.Dir(cfg.Addr.String()))
-	expectedDir := path.Clean(tmpDir)
+	actualDir := filepath.Clean(filepath.Dir(cfg.Addr.String()))
+	expectedDir := filepath.Clean(tmpDir)
 	if actualDir != expectedDir {
 		t.Fatalf("Expected socket in dir: %s, but was in %s", expectedDir, actualDir)
 	}

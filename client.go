@@ -307,7 +307,7 @@ type ReattachConfig struct {
 	// At least one of Pid or ReattachFunc must be set.
 	ReattachFunc runner.ReattachFunc
 
-	// Test is set to true if this is reattaching to to a plugin in "test mode"
+	// Test is set to true if this is reattaching to a plugin in "test mode"
 	// (see ServeConfig.Test). In this mode, client.Kill will NOT kill the
 	// process and instead will rely on the plugin to terminate itself. This
 	// should not be used in non-test environments.

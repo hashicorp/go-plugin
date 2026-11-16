@@ -5,6 +5,7 @@ SECURITY:
 
 ENHANCEMENTS:
 * deps: Removed direct use of deprecated `github.com/golang/protobuf` in favour of `google.golang.org/protobuf` [[GH-388](https://github.com/hashicorp/go-plugin/pull/388)]
+* client: New `ClientConfig` field `KillTimeout` makes the `Kill()` graceful exit period configurable; the default remains 2 seconds
 
 ## v1.7.0
 

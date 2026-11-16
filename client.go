@@ -193,6 +193,11 @@ type ClientConfig struct {
 	// has started successfully.
 	StartTimeout time.Duration
 
+	// KillTimeout is the graceful period Kill waits for the plugin
+	// process to exit after closing the client, before forcefully
+	// killing it. If not set, this defaults to 2 seconds.
+	KillTimeout time.Duration
+
 	// If non-nil, then the stderr of the client will be written to here
 	// (as well as the log). This is the original os.Stderr of the subprocess.
 	// This isn't the output of synced stderr.
@@ -399,6 +404,10 @@ func NewClient(config *ClientConfig) (c *Client) {
 		config.StartTimeout = 1 * time.Minute
 	}
 
+	if config.KillTimeout == 0 {
+		config.KillTimeout = 2 * time.Second
+	}
+
 	if config.Stderr == nil {
 		config.Stderr = io.Discard
 	}
@@ -556,7 +565,7 @@ func (c *Client) Kill() {
 		case <-c.doneCtx.Done():
 			c.logger.Debug("plugin exited")
 			return
-		case <-time.After(2 * time.Second):
+		case <-time.After(c.config.KillTimeout):
 		}
 	}
 

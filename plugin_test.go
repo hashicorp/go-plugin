@@ -561,6 +561,14 @@ func TestHelperProcess(*testing.T) {
 
 		// Exit
 		return
+	case "hang-on-exit":
+		// Serve, then hang after the client closes so Kill must
+		// wait out the grace period and force-kill the process.
+		Serve(&ServeConfig{
+			HandshakeConfig: testHandshake,
+			Plugins:         testPluginMap,
+		})
+		<-make(chan int)
 	case "test-grpc":
 		Serve(&ServeConfig{
 			HandshakeConfig: testHandshake,

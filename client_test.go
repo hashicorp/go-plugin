@@ -149,6 +149,52 @@ func TestClient_testCleanup(t *testing.T) {
 	assertLines(t, logger.errorLogs, 0)
 }
 
+func TestClient_defaultKillTimeout(t *testing.T) {
+	c := NewClient(&ClientConfig{
+		Cmd:             helperProcess("mock"),
+		HandshakeConfig: testHandshake,
+	})
+	defer c.Kill()
+
+	if c.config.KillTimeout != 2*time.Second {
+		t.Fatalf("default KillTimeout = %s, want 2s", c.config.KillTimeout)
+	}
+}
+
+func TestClient_killTimeout(t *testing.T) {
+	t.Parallel()
+
+	process := helperProcess("hang-on-exit")
+	c := NewClient(&ClientConfig{
+		Cmd:             process,
+		HandshakeConfig: testHandshake,
+		Plugins:         testPluginMap,
+		KillTimeout:     200 * time.Millisecond,
+	})
+
+	if _, err := c.Client(); err != nil {
+		c.Kill()
+		t.Fatalf("err: %s", err)
+	}
+
+	start := time.Now()
+	c.Kill()
+	elapsed := time.Since(start)
+
+	if !c.Exited() {
+		t.Fatal("should say client has exited")
+	}
+	if !c.killed() {
+		t.Fatal("process should have been force killed after the grace period")
+	}
+	if elapsed < 200*time.Millisecond {
+		t.Fatalf("Kill returned before KillTimeout elapsed: %s", elapsed)
+	}
+	if elapsed >= 2*time.Second {
+		t.Fatalf("Kill waited the old hardcoded 2s default, took %s", elapsed)
+	}
+}
+
 func TestClient_noStdoutScannerRace(t *testing.T) {
 	t.Parallel()
 
